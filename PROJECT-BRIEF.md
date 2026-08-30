@@ -1,24 +1,24 @@
-# Tempo — Project Brief
+# TimeForYou — Project Brief
 
-**Module:** ITMDA3-B34 · **Team size:** 6 · **Status:** Planning (Deliverable 1)
+**Module:** ITMDA3-B34 · **Team size:** 6 · **Status:** Planning (Deliverable 3)
 **Last updated:** 2026-08-29
 
 ---
 
 ## 0. How to use this document
 
-This is the **single source of truth** for the Tempo project. Every one of the seven
-Deliverable 1 documents is expanded out of a section of this brief:
+This is the **single source of truth** for the TimeForYou project. Every one of the seven
+Deliverable 3 documents is expanded out of a section of this brief:
 
-| Deliverable | Source section | Owner |
-| --- | --- | --- |
-| Topic selection & use case description | §1, §2, §3 | TBD |
-| PRD | §1–§8 | TBD |
-| Functional & non-functional requirements | §6, §7 | TBD |
-| User stories & use case diagram | §8, §9 | TBD |
-| Wireframes / mockups | §10 | TBD |
-| Architecture design | §12 | TBD |
-| Data design (ERD) | §13 | Nicholas |
+| Deliverable                              | Source section | Owner    |
+| ---------------------------------------- | -------------- | -------- |
+| Topic selection & use case description   | §1, §2, §3     | TBD      |
+| PRD                                      | §1–§8          | TBD      |
+| Functional & non-functional requirements | §6, §7         | TBD      |
+| User stories & use case diagram          | §8, §9         | TBD      |
+| Wireframes / mockups                     | §10            | TBD      |
+| Architecture design                      | §12            | TBD      |
+| Data design (ERD)                        | §13            | Nicholas |
 
 **Rules for working from this doc:**
 
@@ -32,7 +32,7 @@ Deliverable 1 documents is expanded out of a section of this brief:
 
 **Domain:** Higher-education timetable management for Eduvos students.
 
-**Product:** *Tempo* — a mobile-first timetable companion that mirrors the institution's
+**Product:** _TimeForYou_ — a mobile-first timetable companion that mirrors the institution's
 WebUntis schedule, detects changes to it, and pushes those changes to the student's phone.
 
 ---
@@ -70,17 +70,17 @@ features. The answer distinguishes the two halves of the problem:
 - **Mobile performance, onboarding quality, and change notification are Untis product
   defects.** No Eduvos administrator can make the WebUntis client fast, teach it to onboard a
   new student, or make it push a cancellation to a locked phone. Those require a different
-  client — which is what Tempo is.
+  client — which is what TimeForYou is.
 
 ### 2.2 Evidence to collect
 
-| Evidence | Method | Status |
-| --- | --- | --- |
-| Cold-load time, WebUntis mobile web on 4G | Stopwatch, 5 trials, median | `TODO-MEASURE` |
-| Taps from launch → today's timetable | Count on both WebUntis web and Untis app | `TODO-MEASURE` |
-| Screenshots of the current mobile experience | Phone screenshots, annotated | `TODO-MEASURE` |
-| Student experience of missed/changed classes | Short form to the cohort (~30–50 responses) | `TODO` |
-| Eduvos response re: iCal export | Email to IT | `TODO` |
+| Evidence                                     | Method                                      | Status         |
+| -------------------------------------------- | ------------------------------------------- | -------------- |
+| Cold-load time, WebUntis mobile web on 4G    | Stopwatch, 5 trials, median                 | `TODO-MEASURE` |
+| Taps from launch → today's timetable         | Count on both WebUntis web and Untis app    | `TODO-MEASURE` |
+| Screenshots of the current mobile experience | Phone screenshots, annotated                | `TODO-MEASURE` |
+| Student experience of missed/changed classes | Short form to the cohort (~30–50 responses) | `TODO`         |
+| Eduvos response re: iCal export              | Email to IT                                 | `TODO`         |
 
 These numbers turn §7's non-functional requirements from asserted into evidenced, and they
 supply the "before" half of the showcase.
@@ -89,7 +89,7 @@ supply the "before" half of the showcase.
 
 ## 3. Solution overview
 
-Tempo is a **read-mostly mirror of the student's WebUntis timetable, plus a change-detection
+TimeForYou is a **read-mostly mirror of the student's WebUntis timetable, plus a change-detection
 service, plus two student-owned data modules.**
 
 - The student scans the QR code from their WebUntis profile **once**. No username, no
@@ -101,17 +101,17 @@ service, plus two student-owned data modules.**
 - The student's timetable is available as a **subscribable iCal feed**, restoring the feature
   Eduvos disabled.
 - The student can attach **notes** to lessons and define **custom reminder rules** — the two
-  read-write modules that make Tempo theirs rather than just a viewer.
+  read-write modules that make TimeForYou theirs rather than just a viewer.
 
 ### 3.1 One-line pitch
 
-> *WebUntis tells you what your timetable is. Tempo tells you when it changes.*
+> _WebUntis tells you what your timetable is. TimeForYou tells you when it changes._
 
 ---
 
 ## 4. Users & personas
 
-Tempo has **one** user role. There is no lecturer, admin, or institutional role — a deliberate
+TimeForYou has **one** user role. There is no lecturer, admin, or institutional role — a deliberate
 scope decision (§5).
 
 **Persona A — Thabo, 2nd-year student, Android.**
@@ -149,19 +149,19 @@ afterthought.
 
 ### 5.2 Explicitly out of scope
 
-Recording what we chose *not* to build is deliberate — each of these was considered and cut.
+Recording what we chose _not_ to build is deliberate — each of these was considered and cut.
 
-| Out of scope | Why |
-| --- | --- |
-| Personal (non-lecture) events | Product is a *timetable mirror*; personal calendar merging is Phase 2 |
-| Lecturer or admin-facing features | Single-role product; no institutional integration |
-| Homework, grades, attendance | Not exposed by the data source we have access to |
-| Social features, chat, sharing | No connection to the problem statement |
-| Email/password accounts | Contradicts the zero-friction onboarding thesis (see §11.1) |
-| Manual credential entry | Institution exposes access via QR only |
-| Redis cache | Six concurrent users; the cache solves a problem we do not have |
-| Multi-institution support | Single WebUntis tenant is sufficient to prove the concept |
-| Production hosting / uptime SLA | Showcase project on a single self-hosted node |
+| Out of scope                      | Why                                                                   |
+| --------------------------------- | --------------------------------------------------------------------- |
+| Personal (non-lecture) events     | Product is a _timetable mirror_; personal calendar merging is Phase 2 |
+| Lecturer or admin-facing features | Single-role product; no institutional integration                     |
+| Homework, grades, attendance      | Not exposed by the data source we have access to                      |
+| Social features, chat, sharing    | No connection to the problem statement                                |
+| Email/password accounts           | Contradicts the zero-friction onboarding thesis (see §11.1)           |
+| Manual credential entry           | Institution exposes access via QR only                                |
+| Redis cache                       | Six concurrent users; the cache solves a problem we do not have       |
+| Multi-institution support         | Single WebUntis tenant is sufficient to prove the concept             |
+| Production hosting / uptime SLA   | Showcase project on a single self-hosted node                         |
 
 ### 5.3 Phase 2 (documented, not built)
 
@@ -174,109 +174,109 @@ widget / lock-screen surface, timetable sharing between students.
 
 ### 6.1 Onboarding & identity
 
-| ID | Requirement |
-| --- | --- |
-| FR-1 | The app shall present an onboarding sequence explaining what Tempo does and how to locate the WebUntis QR code before requesting camera access. |
-| FR-2 | The app shall scan a WebUntis QR code using the device camera and extract the school, username, and shared secret. |
-| FR-3 | The system shall create a user identity from the scanned credentials, or match an existing identity if the same WebUntis username has been linked before. |
-| FR-4 | The system shall register the scanning device against the user identity, recording its platform and push subscription. |
-| FR-5 | The app shall support the same user identity across multiple devices by re-scanning the QR code on each device. |
-| FR-6 | The app shall request notification permission only after displaying an in-app explanation of what notifications will be used for. |
+| ID   | Requirement                                                                                                                                                        |
+| ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| FR-1 | The app shall present an onboarding sequence explaining what TimeForYou does and how to locate the WebUntis QR code before requesting camera access.               |
+| FR-2 | The app shall scan a WebUntis QR code using the device camera and extract the school, username, and shared secret.                                                 |
+| FR-3 | The system shall create a user identity from the scanned credentials, or match an existing identity if the same WebUntis username has been linked before.          |
+| FR-4 | The system shall register the scanning device against the user identity, recording its platform and push subscription.                                             |
+| FR-5 | The app shall support the same user identity across multiple devices by re-scanning the QR code on each device.                                                    |
+| FR-6 | The app shall request notification permission only after displaying an in-app explanation of what notifications will be used for.                                  |
 | FR-7 | The app shall allow the user to unlink their account, which shall delete the stored credentials and all server-side data for that user, and clear the local cache. |
-| FR-8 | The app shall offer an optional biometric / PIN lock that must be satisfied before timetable data is displayed. |
+| FR-8 | The app shall offer an optional biometric / PIN lock that must be satisfied before timetable data is displayed.                                                    |
 
 ### 6.2 Timetable display
 
-| ID | Requirement |
-| --- | --- |
-| FR-9 | The app shall display a **Today** view showing the current and next lesson prominently, plus the remainder of the day. |
-| FR-10 | The app shall display a **Week** view showing all lessons for the selected week. |
-| FR-11 | The app shall allow the user to navigate to adjacent weeks. |
-| FR-12 | The app shall display a **Lesson detail** view showing subject, lecturer, room, start and end time, current status, and the change history for that lesson. |
-| FR-13 | The app shall render timetable data from a local cache without requiring a network request. |
-| FR-14 | The app shall display the time of the last successful synchronisation on the Today view. |
-| FR-15 | The app shall support manual refresh (pull-to-refresh) with a visible loading indicator. |
+| ID    | Requirement                                                                                                                                                       |
+| ----- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| FR-9  | The app shall display a **Today** view showing the current and next lesson prominently, plus the remainder of the day.                                            |
+| FR-10 | The app shall display a **Week** view showing all lessons for the selected week.                                                                                  |
+| FR-11 | The app shall allow the user to navigate to adjacent weeks.                                                                                                       |
+| FR-12 | The app shall display a **Lesson detail** view showing subject, lecturer, room, start and end time, current status, and the change history for that lesson.       |
+| FR-13 | The app shall render timetable data from a local cache without requiring a network request.                                                                       |
+| FR-14 | The app shall display the time of the last successful synchronisation on the Today view.                                                                          |
+| FR-15 | The app shall support manual refresh (pull-to-refresh) with a visible loading indicator.                                                                          |
 | FR-16 | The app shall visually distinguish cancelled, moved, and newly added lessons from unchanged lessons using both colour and a non-colour indicator (icon or label). |
 
 ### 6.3 Change detection & notification
 
-| ID | Requirement |
-| --- | --- |
-| FR-17 | The backend shall poll WebUntis for each linked user on a configurable interval. |
-| FR-18 | The backend shall compare each poll result against the stored state across a defined field set: subject, start time, end time, room, and status. |
-| FR-19 | The backend shall restrict change detection to lessons falling within a configurable window (default: today through +14 days). |
-| FR-20 | The backend shall persist every detected change as an immutable change record capturing type, previous value, new value, and detection time. |
-| FR-21 | The backend shall send at most **one** push notification per user per poll cycle. |
-| FR-22 | Where a poll detects exactly one change, the notification shall state the affected lesson and the nature of the change (e.g. *"Maths 10:00 — cancelled"*). |
-| FR-23 | Where a poll detects more than one change, the notification shall summarise them (e.g. *"3 changes to your timetable this week"*). |
-| FR-24 | The system shall not send a notification for a change that has already been notified, including across a service restart. |
-| FR-25 | The system shall suppress notifications during user-configured quiet hours and deliver them at the end of the quiet period. |
-| FR-26 | The app shall display a **Changes** feed listing recent changes to the user's timetable, most recent first. |
-| FR-27 | The system shall deliver a reminder notification before each lesson, at a lead time set by the applicable reminder rule. |
+| ID    | Requirement                                                                                                                                                |
+| ----- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| FR-17 | The backend shall poll WebUntis for each linked user on a configurable interval.                                                                           |
+| FR-18 | The backend shall compare each poll result against the stored state across a defined field set: subject, start time, end time, room, and status.           |
+| FR-19 | The backend shall restrict change detection to lessons falling within a configurable window (default: today through +14 days).                             |
+| FR-20 | The backend shall persist every detected change as an immutable change record capturing type, previous value, new value, and detection time.               |
+| FR-21 | The backend shall send at most **one** push notification per user per poll cycle.                                                                          |
+| FR-22 | Where a poll detects exactly one change, the notification shall state the affected lesson and the nature of the change (e.g. _"Maths 10:00 — cancelled"_). |
+| FR-23 | Where a poll detects more than one change, the notification shall summarise them (e.g. _"3 changes to your timetable this week"_).                         |
+| FR-24 | The system shall not send a notification for a change that has already been notified, including across a service restart.                                  |
+| FR-25 | The system shall suppress notifications during user-configured quiet hours and deliver them at the end of the quiet period.                                |
+| FR-26 | The app shall display a **Changes** feed listing recent changes to the user's timetable, most recent first.                                                |
+| FR-27 | The system shall deliver a reminder notification before each lesson, at a lead time set by the applicable reminder rule.                                   |
 
 ### 6.4 Lesson Notes — CRUD module 1
 
-| ID | Requirement |
-| --- | --- |
-| FR-28 | The user shall be able to **create** a text note attached to a specific lesson. |
+| ID    | Requirement                                                                                                                         |
+| ----- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| FR-28 | The user shall be able to **create** a text note attached to a specific lesson.                                                     |
 | FR-29 | The user shall be able to **view** all notes attached to a lesson, and see a note indicator on that lesson in Today and Week views. |
-| FR-30 | The user shall be able to **edit** an existing note. |
-| FR-31 | The user shall be able to **delete** a note, with a confirmation prompt. |
-| FR-32 | A note shall remain attached to its lesson when that lesson's time or room changes. |
-| FR-33 | Note content shall be validated: non-empty, maximum 500 characters, with the remaining character count shown. |
+| FR-30 | The user shall be able to **edit** an existing note.                                                                                |
+| FR-31 | The user shall be able to **delete** a note, with a confirmation prompt.                                                            |
+| FR-32 | A note shall remain attached to its lesson when that lesson's time or room changes.                                                 |
+| FR-33 | Note content shall be validated: non-empty, maximum 500 characters, with the remaining character count shown.                       |
 
 ### 6.5 Custom Reminder Rules — CRUD module 2
 
-| ID | Requirement |
-| --- | --- |
+| ID    | Requirement                                                                                                                                                 |
+| ----- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | FR-34 | The user shall be able to **create** a reminder rule specifying a scope (all lessons, a specific subject, or a specific lesson) and a lead time in minutes. |
-| FR-35 | The user shall be able to **view** a list of all their reminder rules. |
-| FR-36 | The user shall be able to **edit** a reminder rule's scope, lead time, and enabled state. |
-| FR-37 | The user shall be able to **delete** a reminder rule, with a confirmation prompt. |
-| FR-38 | Where multiple rules apply to one lesson, the most specific rule shall take precedence (lesson > subject > global). |
-| FR-39 | Reminder lead time shall be validated as an integer between 0 and 1440 minutes. |
+| FR-35 | The user shall be able to **view** a list of all their reminder rules.                                                                                      |
+| FR-36 | The user shall be able to **edit** a reminder rule's scope, lead time, and enabled state.                                                                   |
+| FR-37 | The user shall be able to **delete** a reminder rule, with a confirmation prompt.                                                                           |
+| FR-38 | Where multiple rules apply to one lesson, the most specific rule shall take precedence (lesson > subject > global).                                         |
+| FR-39 | Reminder lead time shall be validated as an integer between 0 and 1440 minutes.                                                                             |
 
 ### 6.6 Calendar integration
 
-| ID | Requirement |
-| --- | --- |
-| FR-40 | The system shall expose each user's timetable as an iCalendar (`.ics`) feed at a unique, unguessable URL. |
+| ID    | Requirement                                                                                                              |
+| ----- | ------------------------------------------------------------------------------------------------------------------------ |
+| FR-40 | The system shall expose each user's timetable as an iCalendar (`.ics`) feed at a unique, unguessable URL.                |
 | FR-41 | The feed shall use a stable event identifier per lesson so that subscribing clients update rather than duplicate events. |
-| FR-42 | The feed shall include cancelled lessons marked as cancelled, rather than omitting them. |
-| FR-43 | The app shall display the feed URL in Settings with a copy-to-clipboard action and instructions for subscribing. |
-| FR-44 | The user shall be able to regenerate the feed URL, which shall immediately invalidate the previous URL. |
+| FR-42 | The feed shall include cancelled lessons marked as cancelled, rather than omitting them.                                 |
+| FR-43 | The app shall display the feed URL in Settings with a copy-to-clipboard action and instructions for subscribing.         |
+| FR-44 | The user shall be able to regenerate the feed URL, which shall immediately invalidate the previous URL.                  |
 
 ### 6.7 Settings & feedback
 
-| ID | Requirement |
-| --- | --- |
+| ID    | Requirement                                                                                                                                                             |
+| ----- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | FR-45 | The app shall provide a Settings screen exposing default reminder lead time, quiet hours, notification enable/disable, app lock, the iCal feed URL, and unlink account. |
-| FR-46 | Every user-initiated action that changes data shall produce visible feedback: a success confirmation, or an error message describing what went wrong. |
-| FR-47 | All input fields shall validate on submit and display field-level error messages. |
-| FR-48 | All destructive actions shall require confirmation. |
-| FR-49 | Any operation awaiting a network response shall display a loading indicator, and shall surface a retry option on failure. |
+| FR-46 | Every user-initiated action that changes data shall produce visible feedback: a success confirmation, or an error message describing what went wrong.                   |
+| FR-47 | All input fields shall validate on submit and display field-level error messages.                                                                                       |
+| FR-48 | All destructive actions shall require confirmation.                                                                                                                     |
+| FR-49 | Any operation awaiting a network response shall display a loading indicator, and shall surface a retry option on failure.                                               |
 
 ---
 
 ## 7. Non-functional requirements
 
-| ID | Category | Requirement |
-| --- | --- | --- |
-| NFR-1 | Performance | The Today view shall render cached timetable data within **1 second** of app launch, with no network dependency. `TODO-MEASURE: baseline comparison against WebUntis.` |
-| NFR-2 | Availability | The app shall remain fully usable for viewing timetable, notes, and reminders while the backend is unreachable, displaying the last-synced timestamp. |
-| NFR-3 | Usability | A new user shall reach a populated timetable in **3 taps or fewer** after opening the app, excluding the QR scan itself. |
-| NFR-4 | Security | WebUntis shared secrets shall be encrypted at rest using AES-256-GCM with a key supplied by environment configuration and never committed to source control. |
-| NFR-5 | Security | All client–server communication shall use HTTPS. |
-| NFR-6 | Security | iCal feed tokens shall contain at least 256 bits of cryptographic randomness and shall be revocable by the user. |
-| NFR-7 | Privacy | The system shall store only the data required to render and monitor a timetable. Unlinking an account shall delete all associated data (POPIA alignment). |
-| NFR-8 | Usability | The system shall send no more than one push notification per user per poll cycle, to prevent notification fatigue. |
-| NFR-9 | Reliability | Notification delivery shall be idempotent: a service restart shall not cause a previously delivered change to be re-notified. |
-| NFR-10 | Portability | The entire system shall start with a single `docker compose up`, including database and a mock data source, with no external accounts required. |
-| NFR-11 | Testability | The WebUntis data source shall be swappable by configuration so that the system can be exercised without live institutional access. |
-| NFR-12 | Compatibility | The product shall run as a native Android application and as an installable Progressive Web App on iOS 16.4 or later. |
-| NFR-13 | Accessibility | Status shall never be conveyed by colour alone; text shall respect OS font-scaling; contrast shall meet WCAG AA. |
-| NFR-14 | Maintainability | Code shall be organised into reusable components and services, follow a documented style guide, and carry comments on non-obvious logic. |
-| NFR-15 | Scalability | The system shall support 6 concurrent users as deployed, and shall be architecturally capable of serving a single institution's cohort without redesign. |
+| ID     | Category        | Requirement                                                                                                                                                            |
+| ------ | --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| NFR-1  | Performance     | The Today view shall render cached timetable data within **1 second** of app launch, with no network dependency. `TODO-MEASURE: baseline comparison against WebUntis.` |
+| NFR-2  | Availability    | The app shall remain fully usable for viewing timetable, notes, and reminders while the backend is unreachable, displaying the last-synced timestamp.                  |
+| NFR-3  | Usability       | A new user shall reach a populated timetable in **3 taps or fewer** after opening the app, excluding the QR scan itself.                                               |
+| NFR-4  | Security        | WebUntis shared secrets shall be encrypted at rest using AES-256-GCM with a key supplied by environment configuration and never committed to source control.           |
+| NFR-5  | Security        | All client–server communication shall use HTTPS.                                                                                                                       |
+| NFR-6  | Security        | iCal feed tokens shall contain at least 256 bits of cryptographic randomness and shall be revocable by the user.                                                       |
+| NFR-7  | Privacy         | The system shall store only the data required to render and monitor a timetable. Unlinking an account shall delete all associated data (POPIA alignment).              |
+| NFR-8  | Usability       | The system shall send no more than one push notification per user per poll cycle, to prevent notification fatigue.                                                     |
+| NFR-9  | Reliability     | Notification delivery shall be idempotent: a service restart shall not cause a previously delivered change to be re-notified.                                          |
+| NFR-10 | Portability     | The entire system shall start with a single `docker compose up`, including database and a mock data source, with no external accounts required.                        |
+| NFR-11 | Testability     | The WebUntis data source shall be swappable by configuration so that the system can be exercised without live institutional access.                                    |
+| NFR-12 | Compatibility   | The product shall run as a native Android application and as an installable Progressive Web App on iOS 16.4 or later.                                                  |
+| NFR-13 | Accessibility   | Status shall never be conveyed by colour alone; text shall respect OS font-scaling; contrast shall meet WCAG AA.                                                       |
+| NFR-14 | Maintainability | Code shall be organised into reusable components and services, follow a documented style guide, and carry comments on non-obvious logic.                               |
+| NFR-15 | Scalability     | The system shall support 6 concurrent users as deployed, and shall be architecturally capable of serving a single institution's cohort without redesign.               |
 
 ---
 
@@ -285,42 +285,48 @@ widget / lock-screen surface, timetable sharing between students.
 Each story references the functional requirements it covers.
 
 ### Onboarding
-- **US-1** — As a student, I want to link my timetable by scanning one QR code, so that I don't have to work out what my school ID and credentials are. *(FR-1, FR-2, FR-3)*
-- **US-2** — As a student, I want to be shown where to find the QR code before the camera opens, so that I'm not staring at a scanner with nothing to scan. *(FR-1)*
-- **US-3** — As a student with a phone and a tablet, I want both devices to show my timetable, so that I'm not locked to one device. *(FR-4, FR-5)*
-- **US-4** — As a student, I want to know why Tempo wants to send me notifications before my phone asks, so that I can make an informed choice. *(FR-6)*
-- **US-5** — As a student, I want to unlink my account and know my data is gone, so that I stay in control of my credentials. *(FR-7, NFR-7)*
+
+- **US-1** — As a student, I want to link my timetable by scanning one QR code, so that I don't have to work out what my school ID and credentials are. _(FR-1, FR-2, FR-3)_
+- **US-2** — As a student, I want to be shown where to find the QR code before the camera opens, so that I'm not staring at a scanner with nothing to scan. _(FR-1)_
+- **US-3** — As a student with a phone and a tablet, I want both devices to show my timetable, so that I'm not locked to one device. _(FR-4, FR-5)_
+- **US-4** — As a student, I want to know why TimeForYou wants to send me notifications before my phone asks, so that I can make an informed choice. _(FR-6)_
+- **US-5** — As a student, I want to unlink my account and know my data is gone, so that I stay in control of my credentials. _(FR-7, NFR-7)_
 
 ### Daily use
-- **US-6** — As a student on the bus, I want to open the app and immediately see where I need to be, so that I don't have to wait for a page to load. *(FR-9, FR-13, NFR-1)*
-- **US-7** — As a student with no signal, I want my timetable to still be visible, so that a dead zone doesn't leave me guessing. *(FR-13, FR-14, NFR-2)*
-- **US-8** — As a student, I want to see my whole week at a glance, so that I can plan around my classes. *(FR-10, FR-11)*
-- **US-9** — As a student, I want cancelled and moved classes to stand out visually, so that I notice them without reading every entry. *(FR-16, NFR-13)*
-- **US-10** — As a student, I want to see the details of a lesson including what's changed about it, so that I understand why it looks different. *(FR-12)*
+
+- **US-6** — As a student on the bus, I want to open the app and immediately see where I need to be, so that I don't have to wait for a page to load. _(FR-9, FR-13, NFR-1)_
+- **US-7** — As a student with no signal, I want my timetable to still be visible, so that a dead zone doesn't leave me guessing. _(FR-13, FR-14, NFR-2)_
+- **US-8** — As a student, I want to see my whole week at a glance, so that I can plan around my classes. _(FR-10, FR-11)_
+- **US-9** — As a student, I want cancelled and moved classes to stand out visually, so that I notice them without reading every entry. _(FR-16, NFR-13)_
+- **US-10** — As a student, I want to see the details of a lesson including what's changed about it, so that I understand why it looks different. _(FR-12)_
 
 ### Change awareness
-- **US-11** — As a student, I want to be told when a class is cancelled, so that I don't travel to campus for nothing. *(FR-17, FR-18, FR-20, FR-21, FR-22)*
-- **US-12** — As a student, I want the notification to say *which* class changed, so that I don't have to open the app to find out whether it matters. *(FR-22)*
-- **US-13** — As a student, I don't want eight notifications when eight things change at once, so that I don't mute the app. *(FR-21, FR-23, NFR-8)*
-- **US-14** — As a student, I don't want to be woken at 2am by a room change, so that the app respects my sleep. *(FR-25)*
-- **US-15** — As a student, I want to review everything that has changed recently in one place, so that I can catch up after being offline. *(FR-26)*
-- **US-16** — As a student, I want a reminder before each class, so that I leave on time. *(FR-27)*
+
+- **US-11** — As a student, I want to be told when a class is cancelled, so that I don't travel to campus for nothing. _(FR-17, FR-18, FR-20, FR-21, FR-22)_
+- **US-12** — As a student, I want the notification to say _which_ class changed, so that I don't have to open the app to find out whether it matters. _(FR-22)_
+- **US-13** — As a student, I don't want eight notifications when eight things change at once, so that I don't mute the app. _(FR-21, FR-23, NFR-8)_
+- **US-14** — As a student, I don't want to be woken at 2am by a room change, so that the app respects my sleep. _(FR-25)_
+- **US-15** — As a student, I want to review everything that has changed recently in one place, so that I can catch up after being offline. _(FR-26)_
+- **US-16** — As a student, I want a reminder before each class, so that I leave on time. _(FR-27)_
 
 ### Notes
-- **US-17** — As a student, I want to jot a note against a lecture, so that I remember to bring what I need. *(FR-28, FR-33)*
-- **US-18** — As a student, I want to see at a glance which lessons have notes, so that I don't have to open each one. *(FR-29)*
-- **US-19** — As a student, I want to change or remove a note, so that it stays accurate. *(FR-30, FR-31, FR-48)*
-- **US-20** — As a student, I want my note to stay with the lesson when the room changes, so that I don't lose it. *(FR-32)*
+
+- **US-17** — As a student, I want to jot a note against a lecture, so that I remember to bring what I need. _(FR-28, FR-33)_
+- **US-18** — As a student, I want to see at a glance which lessons have notes, so that I don't have to open each one. _(FR-29)_
+- **US-19** — As a student, I want to change or remove a note, so that it stays accurate. _(FR-30, FR-31, FR-48)_
+- **US-20** — As a student, I want my note to stay with the lesson when the room changes, so that I don't lose it. _(FR-32)_
 
 ### Reminders
-- **US-21** — As a student who commutes, I want a longer warning for my first class of the day, so that I can catch an earlier bus. *(FR-34, FR-38)*
-- **US-22** — As a student, I want to see and manage all my reminder rules in one place, so that I know what will fire. *(FR-35, FR-36)*
-- **US-23** — As a student, I want to delete a reminder rule I no longer need, so that I stop getting irrelevant alerts. *(FR-37)*
+
+- **US-21** — As a student who commutes, I want a longer warning for my first class of the day, so that I can catch an earlier bus. _(FR-34, FR-38)_
+- **US-22** — As a student, I want to see and manage all my reminder rules in one place, so that I know what will fire. _(FR-35, FR-36)_
+- **US-23** — As a student, I want to delete a reminder rule I no longer need, so that I stop getting irrelevant alerts. _(FR-37)_
 
 ### Calendar
-- **US-24** — As a student who lives in her calendar app, I want my lectures to appear there automatically, so that I see my whole life in one view. *(FR-40, FR-41, FR-43)*
-- **US-25** — As a student, I want cancelled lectures to show as cancelled in my calendar rather than silently disappearing, so that I know what happened. *(FR-42)*
-- **US-26** — As a student, I want to be able to invalidate my calendar link, so that a shared link doesn't expose my schedule forever. *(FR-44, NFR-6)*
+
+- **US-24** — As a student who lives in her calendar app, I want my lectures to appear there automatically, so that I see my whole life in one view. _(FR-40, FR-41, FR-43)_
+- **US-25** — As a student, I want cancelled lectures to show as cancelled in my calendar rather than silently disappearing, so that I know what happened. _(FR-42)_
+- **US-26** — As a student, I want to be able to invalidate my calendar link, so that a shared link doesn't expose my schedule forever. _(FR-44, NFR-6)_
 
 ---
 
@@ -333,7 +339,7 @@ flowchart LR
     PushSvc(("🔔<br/>Push Service"))
     CalApp(("📅<br/>Calendar App"))
 
-    subgraph Tempo["Tempo System"]
+    subgraph TimeForYou["TimeForYou System"]
         UC1(["Link account via QR"])
         UC2(["View timetable"])
         UC3(["Receive change notification"])
@@ -407,38 +413,39 @@ flowchart TD
 ### 10.2 Screen specifications
 
 **1 · Welcome**
-Full-bleed brand screen. App name, one-line value proposition — *"Your timetable, and every
-time it changes."* — three short benefit lines (instant, offline, notified), and a single
+Full-bleed brand screen. App name, one-line value proposition — _"Your timetable, and every
+time it changes."_ — three short benefit lines (instant, offline, notified), and a single
 primary button: **Get started.** No form, no account, nothing to read twice.
 
 **2 · How to find your QR code**
 The screen that answers the "no onboarding" problem. Numbered steps with a simple illustration
 per step: open WebUntis on a laptop → Profile → Data access → Display QR code. A note that a
 second device is needed. Primary button: **I'm ready to scan.** Secondary: **What is this?**
-opening a short explanation of what Tempo will and won't be able to do with the code.
+opening a short explanation of what TimeForYou will and won't be able to do with the code.
 
 **3 · QR Scanner**
 Live camera preview with a framing reticle and a one-line instruction. States to handle:
 camera permission denied (explain and deep-link to OS settings), scan succeeded (checkmark
 animation, then advance), code unreadable, and code readable but not a WebUntis credential
-(clear error — *"That doesn't look like a WebUntis code"*). Cancel returns to screen 2.
+(clear error — _"That doesn't look like a WebUntis code"_). Cancel returns to screen 2.
 
 **4 · Enable notifications**
-Pre-permission rationale — *"Tempo can tell you when a class is cancelled or moved. We'll only
-notify you about changes to your own timetable, never more than once per check."* Primary:
+Pre-permission rationale — _"TimeForYou can tell you when a class is cancelled or moved. We'll only
+notify you about changes to your own timetable, never more than once per check."_ Primary:
 **Enable notifications** (triggers the OS prompt — required as a user gesture on iOS Web Push).
 Secondary: **Not now**, which is recoverable from Settings.
 
-**5 · Today** *(home)*
+**5 · Today** _(home)_
 The most important screen in the app.
+
 - **Header:** day and date, and a quiet `Updated 3 min ago` line (FR-14).
 - **Hero card:** the current lesson if one is in progress, otherwise the next one — subject,
-  time, room, lecturer, and a countdown (*"starts in 25 min"*). If it is cancelled, the card
+  time, room, lecturer, and a countdown (_"starts in 25 min"_). If it is cancelled, the card
   is unmistakable: red, struck-through subject, `CANCELLED` label.
 - **Rest of day:** compact list of remaining lessons; past lessons dimmed.
 - **Change banner:** if anything changed since last opened, a dismissible banner —
-  *"2 changes since yesterday"* — tapping opens Changes.
-- **Empty state:** *"Nothing scheduled today."* Not a blank screen.
+  _"2 changes since yesterday"_ — tapping opens Changes.
+- **Empty state:** _"Nothing scheduled today."_ Not a blank screen.
 - Pull-to-refresh (FR-15).
 
 **6 · Week**
@@ -448,9 +455,9 @@ swipe or arrows for adjacent weeks. Changed lessons carry their status colour an
 
 **7 · Changes**
 Reverse-chronological feed of change records. Each row: change type icon, subject, what changed
-(*"Room B12 → A04"*, *"10:00 → 14:00"*, *"Cancelled"*), affected date, and how long ago it was
+(_"Room B12 → A04"_, _"10:00 → 14:00"_, _"Cancelled"_), affected date, and how long ago it was
 detected. Grouped by detection batch so a single poll's changes read together. Tapping a row
-opens the lesson. Empty state: *"No changes yet. We'll tell you when something moves."*
+opens the lesson. Empty state: _"No changes yet. We'll tell you when something moves."_
 
 **8 · Lesson detail**
 Subject (full name and code), lecturer, room, date, start and end, status badge. Below:
@@ -460,14 +467,15 @@ At the bottom, **Change history** for this lesson — every recorded change with
 
 **9 · Settings**
 Grouped list:
-- *Notifications* — master toggle, default reminder lead time, quiet hours start/end.
-- *Reminders* — row opening the reminder rules list.
-- *Calendar* — the iCal feed URL with copy button, subscribe instructions, **Regenerate URL**
+
+- _Notifications_ — master toggle, default reminder lead time, quiet hours start/end.
+- _Reminders_ — row opening the reminder rules list.
+- _Calendar_ — the iCal feed URL with copy button, subscribe instructions, **Regenerate URL**
   (destructive, confirmed).
-- *Security* — biometric / PIN lock toggle.
-- *Account* — linked WebUntis username, last sync time, **Unlink account** (destructive,
+- _Security_ — biometric / PIN lock toggle.
+- _Account_ — linked WebUntis username, last sync time, **Unlink account** (destructive,
   confirmed, explains that data will be deleted).
-- *About* — version, team, licence.
+- _About_ — version, team, licence.
 
 **10 · Note editor**
 Multiline text field, live character counter (500 max), autofocus. Save disabled while empty
@@ -475,7 +483,7 @@ or over limit, with an inline error explaining why (FR-33, FR-47). Delete availa
 editing an existing note, behind a confirmation (FR-48). Save shows a success toast (FR-46).
 
 **11 · Reminder rules list**
-List of rules showing scope and lead time (*"All lessons — 15 min"*, *"ITMDA3 — 45 min"*), each
+List of rules showing scope and lead time (_"All lessons — 15 min"_, _"ITMDA3 — 45 min"_), each
 with an enable/disable switch. Swipe or long-press to delete with confirmation. Floating
 action button to add. Empty state explains that the global default applies to everything.
 
@@ -486,7 +494,7 @@ per FR-39 with an inline message. Save and Delete both confirmed and both produc
 
 ### 10.3 Visual identity
 
-- **Name:** Tempo.
+- **Name:** TimeForYou.
 - **Palette:** near-black text on off-white; one brand accent used sparingly.
 - **Semantic status colours**, always paired with an icon or label so colour is never the sole
   carrier of meaning (NFR-13):
@@ -509,18 +517,18 @@ The user is identified by their WebUntis username, extracted from the QR code at
 There is no signup form, no password, and no password reset.
 
 **Rationale.** An email/password layer would add screens, credential storage, and session
-handling *on top of* the device registry we need regardless — while re-introducing exactly the
+handling _on top of_ the device registry we need regardless — while re-introducing exactly the
 onboarding friction named in §2. It would be strictly more work for negative product value.
 
 **Mapping to rubric item 2 (Authentication):**
 
-| Rubric expectation | How Tempo satisfies it |
-| --- | --- |
-| Functional authentication mechanism | QR credential linking = sign-up / login; **Unlink account** = logout |
-| Securely handle user credentials | WebUntis shared secret encrypted at rest with AES-256-GCM (NFR-4) |
-| Store tokens or sessions | Per-device push subscriptions; capability token for the iCal feed |
+| Rubric expectation                     | How TimeForYou satisfies it                                                           |
+| -------------------------------------- | ------------------------------------------------------------------------------------- |
+| Functional authentication mechanism    | QR credential linking = sign-up / login; **Unlink account** = logout                  |
+| Securely handle user credentials       | WebUntis shared secret encrypted at rest with AES-256-GCM (NFR-4)                     |
+| Store tokens or sessions               | Per-device push subscriptions; capability token for the iCal feed                     |
 | Restrict access to authenticated users | All API routes scoped to the calling identity; optional biometric/PIN app lock (FR-8) |
-| Identity logic for storing user data | `User → Device / Note / ReminderRule / Lesson` ownership model (§13) |
+| Identity logic for storing user data   | `User → Device / Note / ReminderRule / Lesson` ownership model (§13)                  |
 
 ### 11.2 iOS strategy: PWA with Web Push
 
@@ -556,7 +564,7 @@ Expo Go (dropped remote push support in SDK 53).
 - **Idempotency:** each change record carries `notified_at`; only unnotified records within
   the window are eligible, so a restart cannot re-notify.
 - **Lesson identity across polls:** `TODO-VERIFY — do WebUntis lesson IDs remain stable when a
-  lesson is edited?` If yes, the WebUntis ID is the natural key. If not, identity becomes a
+lesson is edited?` If yes, the WebUntis ID is the natural key. If not, identity becomes a
   composite of (user, date, period, subject) and this must be reflected in the ERD. **This
   question directly determines the data design and must be answered before the ERD is final.**
 
@@ -602,7 +610,7 @@ flowchart TB
     end
 
     subgraph Edge["Edge"]
-        CF["Cloudflare Tunnel<br/>tempo.&lt;domain&gt;"]
+        CF["Cloudflare Tunnel<br/>TimeForYou.&lt;domain&gt;"]
     end
 
     subgraph Node["Single Node — Docker Compose on macOS"]
@@ -638,13 +646,13 @@ flowchart TB
 
 ### 12.2 Services
 
-| Service | Language | Responsibility |
-| --- | --- | --- |
-| **API** | C# / ASP.NET Core | REST endpoints for the app; account linking; timetable reads; notes and reminders CRUD; iCal feed; device registration |
-| **Worker** | C# / `BackgroundService` | Scheduled polling, change detection, notification dispatch, reminder scheduling |
-| **WebUntis client** | C# library | Port of the `webuntis` npm package: QR/secret auth, timetable retrieval. Shared by API and Worker |
-| **Mock WebUntis** | Python / FastAPI | Serves fixture timetables on the same interface; mutates them on command |
-| **Database** | PostgreSQL | All persistent state |
+| Service             | Language                 | Responsibility                                                                                                         |
+| ------------------- | ------------------------ | ---------------------------------------------------------------------------------------------------------------------- |
+| **API**             | C# / ASP.NET Core        | REST endpoints for the app; account linking; timetable reads; notes and reminders CRUD; iCal feed; device registration |
+| **Worker**          | C# / `BackgroundService` | Scheduled polling, change detection, notification dispatch, reminder scheduling                                        |
+| **WebUntis client** | C# library               | Port of the `webuntis` npm package: QR/secret auth, timetable retrieval. Shared by API and Worker                      |
+| **Mock WebUntis**   | Python / FastAPI         | Serves fixture timetables on the same interface; mutates them on command                                               |
+| **Database**        | PostgreSQL               | All persistent state                                                                                                   |
 
 **On the single-language decision.** An earlier design split API (C#) and Worker (Python) across
 a network boundary. That split bought a serialisation contract, a second deployment pipeline,
@@ -729,15 +737,15 @@ sequenceDiagram
 
 ### 13.1 Entities
 
-| Entity | Purpose |
-| --- | --- |
-| **User** | One linked WebUntis identity, its encrypted secret, and its preferences |
-| **Device** | One push subscription belonging to a user (Android FCM or Web Push) |
-| **Lesson** | Current known state of one timetabled lesson for one user |
-| **LessonChange** | Immutable record of one detected difference to a lesson |
-| **Note** | User-authored text attached to a lesson *(CRUD module 1)* |
-| **ReminderRule** | User-defined reminder scope and lead time *(CRUD module 2)* |
-| **NotificationLog** | Record of each push dispatched, for idempotency and demonstration |
+| Entity              | Purpose                                                                 |
+| ------------------- | ----------------------------------------------------------------------- |
+| **User**            | One linked WebUntis identity, its encrypted secret, and its preferences |
+| **Device**          | One push subscription belonging to a user (Android FCM or Web Push)     |
+| **Lesson**          | Current known state of one timetabled lesson for one user               |
+| **LessonChange**    | Immutable record of one detected difference to a lesson                 |
+| **Note**            | User-authored text attached to a lesson _(CRUD module 1)_               |
+| **ReminderRule**    | User-defined reminder scope and lead time _(CRUD module 2)_             |
+| **NotificationLog** | Record of each push dispatched, for idempotency and demonstration       |
 
 ### 13.2 Draft ERD
 
@@ -859,33 +867,33 @@ erDiagram
 Work is divided by **feature vertical**, not by language, so that every member owns something
 demonstrable end-to-end.
 
-| # | Vertical | Scope |
-| --- | --- | --- |
-| 1 | Onboarding & identity | Screens 1–4, QR scanning, device registration, app lock |
-| 2 | Timetable UI & performance | Screens 5, 6, 8; local cache; offline behaviour |
-| 3 | Notifications & settings | Screens 7, 9, 11, 12; FCM native + Web Push; quiet hours |
-| 4 | WebUntis client (C#) | Port of the npm package; auth, retrieval, error handling |
-| 5 | Worker & diff engine | Polling, change detection, notification dispatch, iCal feed |
-| 6 | Mock WebUntis, Docker, data layer | FastAPI mock + admin triggers, compose, schema, migrations |
+| #   | Vertical                          | Scope                                                       |
+| --- | --------------------------------- | ----------------------------------------------------------- |
+| 1   | Onboarding & identity             | Screens 1–4, QR scanning, device registration, app lock     |
+| 2   | Timetable UI & performance        | Screens 5, 6, 8; local cache; offline behaviour             |
+| 3   | Notifications & settings          | Screens 7, 9, 11, 12; FCM native + Web Push; quiet hours    |
+| 4   | WebUntis client (C#)              | Port of the npm package; auth, retrieval, error handling    |
+| 5   | Worker & diff engine              | Polling, change detection, notification dispatch, iCal feed |
+| 6   | Mock WebUntis, Docker, data layer | FastAPI mock + admin triggers, compose, schema, migrations  |
 
-*(Assign names to verticals — one member per row.)*
+_(Assign names to verticals — one member per row.)_
 
 ---
 
 ## 15. Open items
 
-| # | Item | Owner | Blocks |
-| --- | --- | --- | --- |
-| 1 | `TODO-MEASURE` WebUntis cold-load time on 4G | | §2.2, NFR-1 |
-| 2 | `TODO-MEASURE` Taps from launch to timetable | | §2.2, NFR-3 |
-| 3 | `TODO-MEASURE` Screenshots of current mobile experience | | §2.2, showcase |
-| 4 | Student survey on missed/changed classes | | §2.2, PRD evidence |
-| 5 | Email Eduvos IT re: iCal export; keep the reply | | §2.1 |
-| 6 | `TODO-VERIFY` Are WebUntis lesson IDs stable across an edit? | Nicholas | §11.3, §13 ERD |
-| 7 | **Spike:** QR camera scanning inside the iOS PWA | | §11.2 — blocks iOS onboarding entirely |
-| 8 | **Spike:** Expo web export renders acceptably via react-native-web | | §11.2 |
-| 9 | **Spike:** Web Push service worker + FCM JS SDK on iOS Home Screen app | | §11.2 |
-| 10 | Assign names to the six verticals in §14 | | §14 |
+| #   | Item                                                                   | Owner    | Blocks                                 |
+| --- | ---------------------------------------------------------------------- | -------- | -------------------------------------- |
+| 1   | `TODO-MEASURE` WebUntis cold-load time on 4G                           |          | §2.2, NFR-1                            |
+| 2   | `TODO-MEASURE` Taps from launch to timetable                           |          | §2.2, NFR-3                            |
+| 3   | `TODO-MEASURE` Screenshots of current mobile experience                |          | §2.2, showcase                         |
+| 4   | Student survey on missed/changed classes                               |          | §2.2, PRD evidence                     |
+| 5   | Email Eduvos IT re: iCal export; keep the reply                        |          | §2.1                                   |
+| 6   | `TODO-VERIFY` Are WebUntis lesson IDs stable across an edit?           | Nicholas | §11.3, §13 ERD                         |
+| 7   | **Spike:** QR camera scanning inside the iOS PWA                       |          | §11.2 — blocks iOS onboarding entirely |
+| 8   | **Spike:** Expo web export renders acceptably via react-native-web     |          | §11.2                                  |
+| 9   | **Spike:** Web Push service worker + FCM JS SDK on iOS Home Screen app |          | §11.2                                  |
+| 10  | Assign names to the six verticals in §14                               |          | §14                                    |
 
 ---
 
@@ -893,16 +901,16 @@ demonstrable end-to-end.
 
 Recorded so that reviewers can see what was considered and why it was set aside.
 
-| Alternative | Rejected because |
-| --- | --- |
-| Native iOS app with APNs push | Requires paid Apple Developer Program membership; outside project budget |
-| iOS local notifications only | Cannot report a timetable change while the app is closed — defeats the core feature |
-| Expo Go for push testing | Remote push support removed in Expo SDK 53 |
-| Email/password accounts | More work than device-bound identity and reintroduces onboarding friction |
-| Separate Python worker microservice | Network boundary, second pipeline, and a serialisation contract bought nothing at 6 users |
-| Redis cache | Solves a load problem that does not exist at this scale |
-| Supabase-hosted database | Diverges the team environment from the marker's local run |
-| One-time `.ics` export | Snapshot goes stale immediately; creates an unsolvable duplicate-cleanup problem |
-| Generic "your timetable changed" notification | Forces the user to open the app to learn anything; does not solve the stated problem |
-| Diffing entire WebUntis payloads | False positives on timestamps and ID churn destroy trust in the notifications |
-| Personal (non-lecture) events | Scope expansion beyond a timetable mirror; deferred to Phase 2 |
+| Alternative                                   | Rejected because                                                                          |
+| --------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| Native iOS app with APNs push                 | Requires paid Apple Developer Program membership; outside project budget                  |
+| iOS local notifications only                  | Cannot report a timetable change while the app is closed — defeats the core feature       |
+| Expo Go for push testing                      | Remote push support removed in Expo SDK 53                                                |
+| Email/password accounts                       | More work than device-bound identity and reintroduces onboarding friction                 |
+| Separate Python worker microservice           | Network boundary, second pipeline, and a serialisation contract bought nothing at 6 users |
+| Redis cache                                   | Solves a load problem that does not exist at this scale                                   |
+| Supabase-hosted database                      | Diverges the team environment from the marker's local run                                 |
+| One-time `.ics` export                        | Snapshot goes stale immediately; creates an unsolvable duplicate-cleanup problem          |
+| Generic "your timetable changed" notification | Forces the user to open the app to learn anything; does not solve the stated problem      |
+| Diffing entire WebUntis payloads              | False positives on timestamps and ID churn destroy trust in the notifications             |
+| Personal (non-lecture) events                 | Scope expansion beyond a timetable mirror; deferred to Phase 2                            |
