@@ -1,0 +1,81 @@
+# TimeForYou — CONTRIBUTING.md §3: fix this file rather than being careful by hand.
+# Grouped by the stack that produces the junk.
+
+# ── Secrets & credentials ────────────────────────────────────
+.env
+.env.*
+!.env.example
+*.pem
+*.p8
+*.p12
+*.keystore
+google-services.json
+GoogleService-Info.plist
+secrets.json
+
+# ── Node / Expo / React Native  (app/) ───────────────────────
+node_modules/
+.expo/
+.expo-shared/
+dist/
+web-build/
+.eas/
+*.tsbuildinfo
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.metro-health-check*
+*.jsbundle
+# Expo prebuild output — generated from app.json, not hand-edited.
+# Delete these two lines if the team ever checks in native projects.
+app/android/
+app/ios/
+
+# ── .NET  (server/) ──────────────────────────────────────────
+[Bb]in/
+[Oo]bj/
+artifacts/
+[Tt]est[Rr]esults/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.nupkg
+*.snupkg
+coverage*.json
+coverage*.xml
+*.coverage
+.vs/
+
+# ── Python  (mock/) ──────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# ── Docker & local runtime state ─────────────────────────────
+docker-compose.override.yml
+pgdata/
+.docker-data/
+*.log
+logs/
+
+# ── Editors ──────────────────────────────────────────────────
+.idea/
+*.iml
+.vscode/*
+!.vscode/extensions.json
+!.vscode/launch.json
+!.vscode/settings.json
+
+# ── OS ───────────────────────────────────────────────────────
+.DS_Store
+.AppleDouble
+Thumbs.db
+ehthumbs.db

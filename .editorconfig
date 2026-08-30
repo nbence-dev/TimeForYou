@@ -1,0 +1,52 @@
+# TimeForYou — one formatting baseline for three languages and six machines.
+# Read natively by Rider and Visual Studio; VS Code needs the EditorConfig extension
+# (it is in .vscode/extensions.json, so you will be prompted on first open).
+# See CONTRIBUTING.md rule 5 — this file is what stops accidental format-only diffs.
+
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 2
+
+# ── TypeScript / JavaScript / JSON / YAML  (app/) ────────────
+[*.{ts,tsx,js,jsx,mjs,cjs,json,jsonc,yml,yaml}]
+indent_size = 2
+
+# ── C#  (server/) — dotnet format enforces these ─────────────
+[*.{cs,csx}]
+indent_size = 4
+csharp_using_directive_placement = outside_namespace:warning
+csharp_style_namespace_declarations = file_scoped:warning
+csharp_new_line_before_open_brace = all
+csharp_prefer_braces = true:warning
+dotnet_sort_system_directives_first = true
+dotnet_separate_import_directive_groups = false
+dotnet_style_require_accessibility_modifiers = for_non_interface_members:warning
+
+[*.{csproj,props,targets,config,nuspec,resx}]
+indent_size = 2
+
+# Visual Studio writes .sln with tabs and rewrites the whole file otherwise.
+[*.sln]
+indent_style = tab
+
+# ── Python  (mock/) — matches Ruff defaults ──────────────────
+[*.py]
+indent_size = 4
+max_line_length = 88
+
+# ── Markdown — two trailing spaces are a hard line break ─────
+[*.md]
+trim_trailing_whitespace = false
+
+# ── Windows scripts genuinely require CRLF ───────────────────
+[*.{cmd,bat,ps1}]
+end_of_line = crlf
+
+[Makefile]
+indent_style = tab

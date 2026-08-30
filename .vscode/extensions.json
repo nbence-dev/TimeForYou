@@ -1,0 +1,17 @@
+{
+  "//": "TimeForYou — VS Code prompts every teammate to install these on first open. See docs/dev-setup.md.",
+  "recommendations": [
+    "editorconfig.editorconfig",
+    "ms-dotnettools.csdevkit",
+    "ms-dotnettools.csharp",
+    "ms-python.python",
+    "ms-python.vscode-pylance",
+    "charliermarsh.ruff",
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    "expo.vscode-expo-tools",
+    "ms-azuretools.vscode-docker",
+    "github.vscode-pull-request-github",
+    "eamodio.gitlens"
+  ]
+}
