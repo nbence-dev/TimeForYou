@@ -7,6 +7,9 @@ schedule, detects changes to it, and pushes those changes to the student's phone
 
 **Module:** ITMDA3-B34 · **Team:** 6 · **Repo:** `nbence-dev/TimeForYou`
 
+**Just cloned this?** Go to [Running it (for a developer)](#running-it-for-a-developer) — six
+steps, and step 6 tells you whether your machine is set up correctly before you write anything.
+
 ---
 
 ## ⚠️ Status: planning

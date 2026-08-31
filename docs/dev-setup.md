@@ -128,11 +128,39 @@ winget install Microsoft.OpenJDK.17
 winget install Google.AndroidStudio
 ```
 
-Then open Android Studio once and let it install the SDK and an emulator image. On macOS, set
-`JAVA_HOME` in `~/.zshrc`:
+Then open Android Studio once and let it install the SDK and an emulator image. That is the
+**only** time you need to open it — everything after this is command line.
+
+Add all four exports to `~/.zshrc` (macOS), then `source ~/.zshrc`:
 
 ```bash
 export JAVA_HOME=/Library/Java/JavaVirtualMachines/zulu-17.jdk/Contents/Home
+export ANDROID_HOME="$HOME/Library/Android/sdk"
+export PATH="$PATH:$ANDROID_HOME/emulator"
+export PATH="$PATH:$ANDROID_HOME/platform-tools"
+```
+
+On Windows, set `ANDROID_HOME` as a user variable and add `%ANDROID_HOME%\platform-tools` and
+`%ANDROID_HOME%\emulator` to `Path`.
+
+Check it took — if `adb` is not found, the rest of this section will not work:
+
+```bash
+adb version
+emulator -list-avds        # your AVD name, e.g. Medium_Phone_API_36.1
+```
+
+**Running it.** You do not need to start the emulator yourself. From `app/`:
+
+```bash
+npm run android
+```
+
+Expo boots an emulator if none is attached, installs the app and opens it. Starting one by hand
+is only useful if you want it up before the bundler, or want a specific AVD when you have several:
+
+```bash
+emulator -avd Medium_Phone_API_36.1 &
 ```
 
 **JDK 17 specifically.** Newer JDKs break the Gradle version React Native pins. If Gradle can't
