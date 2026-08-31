@@ -128,12 +128,59 @@ winget install Microsoft.OpenJDK.17
 winget install Google.AndroidStudio
 ```
 
-Then open Android Studio once and let it install the SDK and an emulator image. On macOS, set
-`JAVA_HOME` in `~/.zshrc`:
+Then open Android Studio once and let it install the SDK and an emulator image. That is the
+**only** time you need to open it — everything after this is command line.
+
+Add all four exports to `~/.zshrc` (macOS), then `source ~/.zshrc`:
 
 ```bash
 export JAVA_HOME=/Library/Java/JavaVirtualMachines/zulu-17.jdk/Contents/Home
+export ANDROID_HOME="$HOME/Library/Android/sdk"
+export PATH="$PATH:$ANDROID_HOME/emulator"
+export PATH="$PATH:$ANDROID_HOME/platform-tools"
 ```
+
+On Windows, set `ANDROID_HOME` as a user variable and add `%ANDROID_HOME%\platform-tools` and
+`%ANDROID_HOME%\emulator` to `Path`.
+
+Check it took — if `adb` is not found, the rest of this section will not work:
+
+```bash
+adb version
+emulator -list-avds        # your AVD name, e.g. Medium_Phone_API_36.1
+```
+
+**Running it.** You do not need to start the emulator yourself. From `app/`:
+
+```bash
+npm run android      # builds and installs the dev client (push works)
+npm run android:go   # Expo Go, faster loop, no push - see the note below
+```
+
+Either boots an emulator if none is attached. Starting one by hand is only useful if you want it
+up before the bundler, or want a specific AVD when you have several:
+
+```bash
+emulator -avd Medium_Phone_API_36.1 &
+```
+
+**If the app loads but says it cannot connect to the Expo CLI**, this is why. Expo defaults to
+LAN mode and hands the emulator your Mac's LAN address (`192.168.x.x`). macOS ships with its
+firewall on, which drops that inbound connection — so the app retries forever against an address
+it cannot reach. `adb reverse tcp:8081 tcp:8081` is already in place but goes unused, because it
+only serves requests to `localhost`.
+
+`--localhost` is the fix, and it is why `android:go` carries that flag: the app dials
+`localhost:8081`, `adb reverse` forwards it, and the firewall never sees it. Confirm what the app
+is actually dialling with:
+
+```bash
+adb logcat -d | grep ReconnectingWebSocket | tail -3
+```
+
+**Do not use `--localhost` for a physical phone on Path A.** Your phone is a different machine, so
+it needs the LAN address — allow incoming connections for `node` in System Settings → Network →
+Firewall → Options, or use `npx expo start --tunnel`.
 
 **JDK 17 specifically.** Newer JDKs break the Gradle version React Native pins. If Gradle can't
 find the Homebrew JDK, `echo "java.home=$JAVA_HOME" >> ~/.gradle/gradle.properties`.
@@ -200,10 +247,17 @@ Team default is **VS Code** — it's the only editor decent at all four stacks a
 it's identical on Mac and Windows, and `.vscode/extensions.json` means all six of us get the
 same tooling from one prompt.
 
-**Rider** is a better .NET experience and worth it if you own vertical 4 or 5 (WebUntis client,
-Worker). Free for non-commercial use, and the JetBrains student pack covers us regardless. It
-reads `.editorconfig` natively. Use it for `server/` and VS Code for the rest if you like — the
-repo does not care which editor produced a diff, which is the point of `.editorconfig`.
+**Rider** is a better .NET experience and worth it if you own vertical 4, 5 or 7 (WebUntis
+client, Worker, API). Free for non-commercial use, and the JetBrains student pack covers us
+regardless. It reads `.editorconfig` natively. Use it for `server/` and VS Code for the rest if
+you like — the repo does not care which editor produced a diff, which is the point of
+`.editorconfig`.
+
+**Rider 2025.1 or newer**, though. The solution file is `TimeForYou.slnx`, the XML format that is
+now the .NET 10 default — it is a plain list of projects rather than the old GUID soup, which is
+what stops six people conflicting on it every time someone adds a project. Older Rider and
+Visual Studio below 17.14 cannot open it. If yours refuses, update the IDE; do not convert the
+file back.
 
 **Visual Studio** is not a team option: VS for Mac was retired in 2024, so it cannot be a
 standard when half the team is on macOS, and it has no React Native story. Fine as a personal

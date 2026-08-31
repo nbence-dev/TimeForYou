@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk.Worker">
+
+  <PropertyGroup>
+    <UserSecretsId>dotnet-TimeForYou.Worker-bbf04029-8706-4c5a-90c5-8d312956d356</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.7" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\TimeForYou.Domain\TimeForYou.Domain.csproj" />
+    <ProjectReference Include="..\TimeForYou.Data\TimeForYou.Data.csproj" />
+    <ProjectReference Include="..\TimeForYou.WebUntis\TimeForYou.WebUntis.csproj" />
+  </ItemGroup>
+</Project>

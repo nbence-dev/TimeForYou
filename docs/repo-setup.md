@@ -135,7 +135,7 @@ default, so always send the full body, never a partial one.
 
 | Item                                        | Blocked on                                                                                                                               |
 | ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| `.github/CODEOWNERS`                        | The six verticals need real GitHub handles. Placeholder handles fail silently — GitHub requests no reviewer at all rather than erroring. |
+| `.github/CODEOWNERS`                        | Not in the repo — optional, and left out until the verticals have real GitHub handles. Template in CONTRIBUTING §9. |
 | `require_code_owner_reviews: true`          | The file above existing first.                                                                                                           |
 | `required_status_checks`                    | CI existing. Add `app`, `server`, `mock` per CONTRIBUTING §7, one at a time, each only after it has passed on a real PR.                 |
 | Vertical labels, issue templates, milestone | Vertical ownership.                                                                                                                      |

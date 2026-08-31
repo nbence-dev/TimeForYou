@@ -7,7 +7,7 @@ What we're building: [`PROJECT-BRIEF.md`](./PROJECT-BRIEF.md). How we work on it
 
 ## The five rules
 
-1. **Stay in your vertical's folders.** Editing someone else's needs a heads-up in chat.
+1. **One issue, one branch, one person.** Your vertical is what you deliver, not where you may type.
 2. **Branch from `main`, merge back within 2 days.** Old branches are what cause conflicts.
 3. **`git pull --rebase origin main` every morning.**
 4. **Never push to `main`.** Everything goes through a PR.
@@ -15,24 +15,33 @@ What we're building: [`PROJECT-BRIEF.md`](./PROJECT-BRIEF.md). How we work on it
 
 ---
 
-## 1. The six verticals
+## 1. The verticals
 
-One word per vertical, used for branch names, commit scopes and code ownership.
+One word per vertical, used for branch names, commit scopes and review routing.
 
-| #   | Vertical                 | Tag          | Owner | Paths                                                    |
-| --- | ------------------------ | ------------ | ----- | -------------------------------------------------------- |
-| 1   | Onboarding & identity    | `onboarding` | _TBD_ | `app/src/features/onboarding/`                           |
-| 2   | Timetable UI & perf      | `timetable`  | _TBD_ | `app/src/features/timetable/`                            |
-| 3   | Notifications & settings | `notify`     | _TBD_ | `app/src/features/notifications/`, `settings/`           |
-| 4   | WebUntis client (C#)     | `webuntis`   | _TBD_ | `server/TimeForYou.WebUntis/`                            |
-| 5   | Worker & diff engine     | `worker`     | _TBD_ | `server/TimeForYou.Worker/`                              |
-| 6   | Mock, Docker, data layer | `platform`   | _TBD_ | `mock/`, `server/TimeForYou.Data/`, `docker-compose.yml` |
+| #   | Vertical                 | Tag          | Owner | Delivers                                              | Mostly works in                |
+| --- | ------------------------ | ------------ | ----- | ----------------------------------------------------- | ------------------------------ |
+| 1   | Onboarding & identity    | `onboarding` | _TBD_ | Screens 1–4, QR scan, device link                     | `app/`                         |
+| 2   | Timetable UI & perf      | `timetable`  | _TBD_ | Screens 5, 6, 8, offline cache                        | `app/`                         |
+| 3   | Notifications & settings | `notify`     | _TBD_ | Screens 7, 9, push registration, both transports      | `app/`                         |
+| 4   | WebUntis client (C#)     | `webuntis`   | _TBD_ | Auth + timetable retrieval                            | `server/TimeForYou.WebUntis/`  |
+| 5   | Worker & diff engine     | `worker`     | _TBD_ | Polling, change detection, dispatch                   | `server/TimeForYou.Worker/`    |
+| 6   | Mock, Docker, data layer | `platform`   | _TBD_ | Mock WebUntis, compose, schema + migrations           | `mock/`, `server/TimeForYou.Data/` |
+| 7   | API & iCal feed          | `api`        | _TBD_ | REST endpoints, iCal subscription feed                | `server/TimeForYou.Api/`       |
 
-**Assign owners before the first line of code.** Folder layout must match this table — a normal
-PR touches one vertical. If yours touches three, it's three PRs.
+**Assign owners before the first line of code.** Seven areas, six people — the API is the seventh, and whoever takes it should already be in C# (V5 or V6 are the natural pairs).
 
-Shared (`app/src/shared/`, `server/TimeForYou.Domain/`) belongs to everyone: announce in chat, keep
-it additive, ship it in its own small PR the same day.
+**Nobody is fenced out of a directory.** The last column says where each person spends most of
+their time, so reviews route to someone who knows the code — not who is allowed to edit it. Source
+files are organised by what they do (see the tree in [`README.md`](./README.md)), never by who owns
+them. If your PR needs a change in someone else's usual area, make it and put them on the review.
+
+What that costs you is discipline elsewhere: keep a PR to one concern, keep it under ~400 lines,
+and merge within two days. Two people in the same file for a week is what hurts, not two people in
+the same folder for an afternoon.
+
+`app/src/shared/` and `server/TimeForYou.Domain/` are the shared floor: announce changes in chat,
+keep them additive, ship them in their own small PR the same day.
 
 ---
 
@@ -86,7 +95,7 @@ Files that attract collisions, and the rule for each:
 | ------------------------------------ | ---------------------------------------------------------------------------------------- |
 | `package-lock.json`                  | Never hand-merge. `git checkout --theirs` it, run `npm install`, commit.                 |
 | `package.json`                       | Additive only, dependencies sorted alphabetically.                                       |
-| `TimeForYou.sln`, `*.csproj`         | Only V6 adds projects — a broken `.sln` blocks all six of us.                            |
+| `TimeForYou.slnx`, `*.csproj`        | Only V6 adds projects — a broken solution file blocks all six of us. Framework and warning settings live in `server/Directory.Build.props`; change them there, once. |
 | `TimeForYou.Data/Migrations/`        | Append-only, **one in flight at a time**, announce first. Never edit a merged migration. |
 | `Program.cs` / routes                | Each vertical registers itself in one line (`services.AddWorkerModule()`).               |
 | `docker-compose.yml`, `.env.example` | V6 owns. Request changes, don't edit in passing.                                         |
@@ -197,21 +206,36 @@ git rebase --abort           # undo the rebase
 git diff main...HEAD --stat  # what did I actually change?
 ```
 
-### `.github/CODEOWNERS` — highest-leverage file here; GitHub auto-requests the right reviewer
+### `.github/CODEOWNERS` — optional, and deliberately not in the repo yet
+
+GitHub uses this file to auto-request reviewers. It is **not required**, and it blocks
+nothing unless `require_code_owner_reviews` is also switched on (see
+[`docs/repo-setup.md`](docs/repo-setup.md) §5). With six people who all know who to ask, it
+buys little — and a file full of handles that do not resolve is worse than no file, because
+GitHub flags them as unknown owners and routes nothing.
+
+Add it when the verticals have real usernames. Until then this is the template, not a file
+in the repo:
 
 ```text
-*                                   @nbence-dev
-/app/src/features/onboarding/       @handle-1
-/app/src/features/timetable/        @handle-2
-/app/src/features/notifications/    @handle-3
-/app/src/features/settings/         @handle-3
-/server/TimeForYou.WebUntis/             @handle-4
-/server/TimeForYou.Worker/               @handle-5
-/mock/                              @handle-6
-/server/TimeForYou.Data/                 @handle-6
-/docker-compose.yml                 @handle-6
-/app/src/shared/                    @nbence-dev @handle-2
-/server/TimeForYou.Domain/               @nbence-dev @handle-5
+# Routes a review to someone who knows the code. It grants no exclusive right
+# to edit anything — see §1.
+
+*                              @nbence-dev
+
+/app/                          @handle-1 @handle-2 @handle-3
+/server/TimeForYou.WebUntis/   @handle-4
+/server/TimeForYou.Worker/     @handle-5
+/server/TimeForYou.Api/        @handle-7
+/server/TimeForYou.Data/       @handle-6
+/mock/                         @handle-6
+/docker-compose.yml            @handle-6
+/.env.example                  @handle-6
+
+# Shared floor — two approvals (§6)
+/app/src/shared/               @nbence-dev @handle-2
+/server/TimeForYou.Domain/     @nbence-dev @handle-5
+/server/Directory.Build.props  @nbence-dev @handle-6
 ```
 
 ### `.github/pull_request_template.md`

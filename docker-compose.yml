@@ -1,0 +1,51 @@
+# TimeForYou — the whole stack on one machine. Owned by V6 (platform).
+# CONTRIBUTING.md §4: request changes here, don't edit it in passing.
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# NOT WRITTEN YET. This file is a placeholder: it reserves the path and records
+# the shape agreed in brief §12.3, but it defines no services, so
+# `docker compose up` does NOT work yet. README.md says as much.
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# It has to satisfy one promise: a marker with Docker Desktop and nothing else
+# clones the repo, copies .env.example to .env, runs `docker compose up`, and
+# gets the entire pipeline — auth, polling, change detection, notification
+# delivery — on one machine with no Eduvos credentials (brief §12.4).
+#
+# FOUR SERVICES
+#
+#   db      postgres:17-alpine, official image, no Dockerfile
+#           POSTGRES_DB / POSTGRES_USER / POSTGRES_PASSWORD from .env
+#           named volume for the data — NOT a bind mount into the repo
+#           healthcheck: pg_isready; api and worker both depend_on it
+#           with condition: service_healthy, or they race the first migration
+#
+#   api     build: context ./server, dockerfile TimeForYou.Api/Dockerfile
+#           ports 8080:8080
+#           needs ConnectionStrings__TimeForYou, TIMEFORYOU_ENCRYPTION_KEY,
+#           WEBUNTIS_BASE_URL, VAPID_*, FIREBASE_PROJECT_ID
+#
+#   worker  build: context ./server, dockerfile TimeForYou.Worker/Dockerfile
+#           no ports — it polls outward
+#           same DB and encryption env as api, plus POLL_INTERVAL_SECONDS,
+#           QUIET_HOURS_START/END, CHANGE_WINDOW_DAYS
+#
+#   mock    build: ./mock
+#           ports 8000:8000
+#           MOCK_ADMIN_TOKEN guards POST /admin/trigger-change
+#           this is what makes the marker demo possible — see brief §12.4
+#
+# THINGS THAT WILL BITE
+#
+#   - WEBUNTIS_BASE_URL must be http://mock:8000 (the service name), not
+#     localhost. Containers resolve each other by service name.
+#   - Demo config shortens POLL_INTERVAL_SECONDS to ~30 so the marker sees the
+#     notification inside a minute. Default is 900.
+#   - The Firebase service account JSON is mounted from OUTSIDE the repo, never
+#     copied into an image. See .env.example and docs/secrets.md.
+#   - Every new env var goes into .env.example in the same PR (CONTRIBUTING §8).
+#   - docker-compose.override.yml is git-ignored — use it for local tweaks
+#     rather than editing this file.
+#
+# The Cloudflare Tunnel is the team instance only. The marker never needs it,
+# so it does not belong in this file — keep it in a separate compose overlay.
