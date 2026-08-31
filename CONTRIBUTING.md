@@ -206,7 +206,16 @@ git rebase --abort           # undo the rebase
 git diff main...HEAD --stat  # what did I actually change?
 ```
 
-### `.github/CODEOWNERS` — highest-leverage file here; GitHub auto-requests the right reviewer
+### `.github/CODEOWNERS` — optional, and deliberately not in the repo yet
+
+GitHub uses this file to auto-request reviewers. It is **not required**, and it blocks
+nothing unless `require_code_owner_reviews` is also switched on (see
+[`docs/repo-setup.md`](docs/repo-setup.md) §5). With six people who all know who to ask, it
+buys little — and a file full of handles that do not resolve is worse than no file, because
+GitHub flags them as unknown owners and routes nothing.
+
+Add it when the verticals have real usernames. Until then this is the template, not a file
+in the repo:
 
 ```text
 # Routes a review to someone who knows the code. It grants no exclusive right
