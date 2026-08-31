@@ -1,0 +1,8 @@
+<Solution>
+  <Project Path="TimeForYou.Api/TimeForYou.Api.csproj" />
+  <Project Path="TimeForYou.Data/TimeForYou.Data.csproj" />
+  <Project Path="TimeForYou.Domain/TimeForYou.Domain.csproj" />
+  <Project Path="TimeForYou.Tests/TimeForYou.Tests.csproj" />
+  <Project Path="TimeForYou.WebUntis/TimeForYou.WebUntis.csproj" />
+  <Project Path="TimeForYou.Worker/TimeForYou.Worker.csproj" />
+</Solution>
