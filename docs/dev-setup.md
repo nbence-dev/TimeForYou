@@ -153,15 +153,34 @@ emulator -list-avds        # your AVD name, e.g. Medium_Phone_API_36.1
 **Running it.** You do not need to start the emulator yourself. From `app/`:
 
 ```bash
-npm run android
+npm run android      # builds and installs the dev client (push works)
+npm run android:go   # Expo Go, faster loop, no push - see the note below
 ```
 
-Expo boots an emulator if none is attached, installs the app and opens it. Starting one by hand
-is only useful if you want it up before the bundler, or want a specific AVD when you have several:
+Either boots an emulator if none is attached. Starting one by hand is only useful if you want it
+up before the bundler, or want a specific AVD when you have several:
 
 ```bash
 emulator -avd Medium_Phone_API_36.1 &
 ```
+
+**If the app loads but says it cannot connect to the Expo CLI**, this is why. Expo defaults to
+LAN mode and hands the emulator your Mac's LAN address (`192.168.x.x`). macOS ships with its
+firewall on, which drops that inbound connection — so the app retries forever against an address
+it cannot reach. `adb reverse tcp:8081 tcp:8081` is already in place but goes unused, because it
+only serves requests to `localhost`.
+
+`--localhost` is the fix, and it is why `android:go` carries that flag: the app dials
+`localhost:8081`, `adb reverse` forwards it, and the firewall never sees it. Confirm what the app
+is actually dialling with:
+
+```bash
+adb logcat -d | grep ReconnectingWebSocket | tail -3
+```
+
+**Do not use `--localhost` for a physical phone on Path A.** Your phone is a different machine, so
+it needs the LAN address — allow incoming connections for `node` in System Settings → Network →
+Firewall → Options, or use `npx expo start --tunnel`.
 
 **JDK 17 specifically.** Newer JDKs break the Gradle version React Native pins. If Gradle can't
 find the Homebrew JDK, `echo "java.home=$JAVA_HOME" >> ~/.gradle/gradle.properties`.
