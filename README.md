@@ -11,10 +11,12 @@ schedule, detects changes to it, and pushes those changes to the student's phone
 
 ## ⚠️ Status: planning
 
-**There is no application code yet.** Deliverable 3 (2026-09-04) is documentation only. This
-repository currently holds the project documents, the team's working agreement, and repo
-configuration. The "Running it" section below describes the contract the build must satisfy —
-it is the specification, not yet a working command.
+**There are no features yet.** Deliverable 3 (2026-09-04) is documentation only. This repository
+holds the project documents, the team's working agreement, repo configuration, and — as of
+2026-08-31 — the scaffolded project tree: an Expo app, six C# projects, and a FastAPI mock, all
+of which build and do nothing. The "Running it" section below describes the contract the build
+must satisfy. `docker-compose.yml` is not written yet, so it is the specification, not yet a
+working command.
 
 ---
 
@@ -67,7 +69,7 @@ one machine. See brief §12.4.
 1. Set your machine up: **[`docs/dev-setup.md`](docs/dev-setup.md)** — Node, .NET, Python,
    Docker, and the Android emulator, for macOS and Windows.
 2. Read how the team works: **[`CONTRIBUTING.md`](CONTRIBUTING.md)** — branches, commits, PRs,
-   and the six ownership verticals. It is short and it is the actual agreement.
+   and the ownership verticals. It is short and it is the actual agreement.
 3. Make your env file:
 
 ```bash
@@ -76,6 +78,31 @@ cp .env.example .env
 
 4. Handle secrets correctly: **[`docs/secrets.md`](docs/secrets.md)**. One page. Read it before
    your first PR.
+
+5. Install each stack's dependencies. Nothing is vendored, so a fresh clone builds nothing until
+   you have run all three:
+
+```bash
+# app — Node 22, check with `node -v` first; nvm is per-shell
+cd app && npm install && cd ..
+
+# server — restores NuGet for all six projects
+cd server && dotnet restore && cd ..
+
+# mock — the venv is git-ignored, so everyone makes their own
+cd mock && python3 -m venv .venv && .venv/bin/pip install -r requirements.txt && cd ..
+```
+
+6. Confirm the baseline works before you branch. All three must pass on a clean clone:
+
+```bash
+cd app    && npx tsc --noEmit    # no output = clean
+cd ../server && dotnet build     # 0 warnings, 0 errors — warnings are errors here
+cd ../mock   && .venv/bin/python -c "import fastapi"
+```
+
+If `dotnet build` fails on a package advisory (`NU1903`), that is
+`server/Directory.Build.props` doing its job — bump the package, don't suppress the warning.
 
 ---
 
@@ -92,24 +119,35 @@ cp .env.example .env
 
 ---
 
-## Planned layout
+## Layout
 
-Ownership is by feature vertical, not by language, so each person owns something demonstrable
-end-to-end. Full table in [`CONTRIBUTING.md`](CONTRIBUTING.md) §1.
+Source is organised by what the code does, not by who owns it. Ownership is by feature vertical so
+each person delivers something demonstrable end-to-end, but nobody is fenced out of a directory —
+full table in [`CONTRIBUTING.md`](CONTRIBUTING.md) §1.
 
 ```text
 app/                      Expo / React Native — Android build + PWA web export
-  src/features/           onboarding · timetable · notifications · settings
-  src/shared/             shared by everyone; additive changes only
-server/                   one C# solution
-  TimeForYou.WebUntis/    port of the webuntis npm package
+  src/app/                routes only. Every file here is a URL (Expo Router)
+  src/features/           onboarding · timetable · changes · notes · reminders · settings
+  src/shared/             api · components · hooks · push · storage · theme
+  public/                 PWA: manifest.json, icons, service worker
+server/                   one C# solution — TimeForYou.slnx
+  TimeForYou.Api/         REST endpoints, iCal subscription feed
   TimeForYou.Worker/      polling, change detection, notification dispatch
+  TimeForYou.WebUntis/    port of the webuntis npm package
   TimeForYou.Data/        schema and migrations
   TimeForYou.Domain/      shared domain types
+  TimeForYou.Tests/       diff-engine tests, fed by the mock's fixtures
+  Directory.Build.props   pins net10.0 and warnings-as-errors for all six projects
 mock/                     Python / FastAPI — fake WebUntis + admin trigger page
+  app/ · fixtures/
 docs/                     these documents
 docker-compose.yml        API · Worker · mock · Postgres
 ```
+
+**Two rules hold this together.** `src/app/` is routes and nothing else — Expo Router turns any
+default-exporting file in there into a URL. And `features/*` import from `shared/*`, never from
+each other; when two features need the same thing, it moves to `shared/`.
 
 ---
 

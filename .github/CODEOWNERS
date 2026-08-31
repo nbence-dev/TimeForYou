@@ -1,0 +1,25 @@
+# TimeForYou — review routing.
+#
+# This file decides who GitHub asks for a review. It grants nobody an exclusive
+# right to edit anything: source is organised by what the code does, not by who
+# owns it. See CONTRIBUTING.md §1.
+#
+# Replace @handle-N with real GitHub usernames as verticals are assigned.
+# An unassigned pattern silently matches nobody, so a stale handle here is worse
+# than no line at all.
+
+*                              @nbence-dev
+
+/app/                          @handle-1 @handle-2 @handle-3
+/server/TimeForYou.WebUntis/   @handle-4
+/server/TimeForYou.Worker/     @handle-5
+/server/TimeForYou.Api/        @handle-7
+/server/TimeForYou.Data/       @handle-6
+/mock/                         @handle-6
+/docker-compose.yml            @handle-6
+/.env.example                  @handle-6
+
+# Shared floor — two approvals (CONTRIBUTING.md §6)
+/app/src/shared/               @nbence-dev @handle-2
+/server/TimeForYou.Domain/     @nbence-dev @handle-5
+/server/Directory.Build.props  @nbence-dev @handle-6

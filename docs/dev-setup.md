@@ -200,10 +200,17 @@ Team default is **VS Code** — it's the only editor decent at all four stacks a
 it's identical on Mac and Windows, and `.vscode/extensions.json` means all six of us get the
 same tooling from one prompt.
 
-**Rider** is a better .NET experience and worth it if you own vertical 4 or 5 (WebUntis client,
-Worker). Free for non-commercial use, and the JetBrains student pack covers us regardless. It
-reads `.editorconfig` natively. Use it for `server/` and VS Code for the rest if you like — the
-repo does not care which editor produced a diff, which is the point of `.editorconfig`.
+**Rider** is a better .NET experience and worth it if you own vertical 4, 5 or 7 (WebUntis
+client, Worker, API). Free for non-commercial use, and the JetBrains student pack covers us
+regardless. It reads `.editorconfig` natively. Use it for `server/` and VS Code for the rest if
+you like — the repo does not care which editor produced a diff, which is the point of
+`.editorconfig`.
+
+**Rider 2025.1 or newer**, though. The solution file is `TimeForYou.slnx`, the XML format that is
+now the .NET 10 default — it is a plain list of projects rather than the old GUID soup, which is
+what stops six people conflicting on it every time someone adds a project. Older Rider and
+Visual Studio below 17.14 cannot open it. If yours refuses, update the IDE; do not convert the
+file back.
 
 **Visual Studio** is not a team option: VS for Mac was retired in 2024, so it cannot be a
 standard when half the team is on macOS, and it has no React Native story. Fine as a personal
