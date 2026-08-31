@@ -135,18 +135,22 @@ app/                      Expo / React Native — Android build + PWA web export
   src/shared/             api · components · hooks · push · storage · theme
   public/                 PWA: manifest.json, icons, service worker
 server/                   one C# solution — TimeForYou.slnx
-  TimeForYou.Api/         REST endpoints, iCal subscription feed
-  TimeForYou.Worker/      polling, change detection, notification dispatch
+  TimeForYou.Api/         REST endpoints, iCal subscription feed  (+ Dockerfile)
+  TimeForYou.Worker/      polling, change detection, notification dispatch  (+ Dockerfile)
   TimeForYou.WebUntis/    port of the webuntis npm package
   TimeForYou.Data/        schema and migrations
   TimeForYou.Domain/      shared domain types
   TimeForYou.Tests/       diff-engine tests, fed by the mock's fixtures
   Directory.Build.props   pins net10.0 and warnings-as-errors for all six projects
 mock/                     Python / FastAPI — fake WebUntis + admin trigger page
-  app/ · fixtures/
+  app/ · fixtures/ · Dockerfile
 docs/                     these documents
 docker-compose.yml        API · Worker · mock · Postgres
 ```
+
+The `Dockerfile`s and `docker-compose.yml` exist but are **placeholders** — each records what
+belongs in it and nothing more, so the paths are fixed before anything references them.
+`docker compose up` does not work yet.
 
 **Two rules hold this together.** `src/app/` is routes and nothing else — Expo Router turns any
 default-exporting file in there into a URL. And `features/*` import from `shared/*`, never from
