@@ -134,6 +134,8 @@ If `dotnet build` fails on a package advisory (`NU1903`), that is
 | [`docs/dev-setup.md`](docs/dev-setup.md)   | Getting a machine that can run all four stacks.                                                                                      |
 | [`docs/secrets.md`](docs/secrets.md)       | Where secrets live and how not to leak them.                                                                                         |
 | [`docs/repo-setup.md`](docs/repo-setup.md) | How GitHub is configured, and how to check it when something looks broken.                                                           |
+| [`docs/backlog-process.md`](docs/backlog-process.md) | How the backlog is built, one wave at a time. Read before creating any issue.                                  |
+| [`CLAUDE.md`](CLAUDE.md)                   | Orientation for AI agents working in this repo.                                                                                      |
 | [`grill-me-1.md`](grill-me-1.md)           | Record of the planning session — why decisions went the way they did, and what was rejected.                                         |
 
 ---
