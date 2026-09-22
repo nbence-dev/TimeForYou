@@ -12,40 +12,55 @@
 # gets the entire pipeline — auth, polling, change detection, notification
 # delivery — on one machine with no Eduvos credentials (brief §12.4).
 #
-# FOUR SERVICES
+# SIX SERVICES
 #
-#   db      postgres:17-alpine, official image, no Dockerfile
-#           POSTGRES_DB / POSTGRES_USER / POSTGRES_PASSWORD from .env
-#           named volume for the data — NOT a bind mount into the repo
-#           healthcheck: pg_isready; api and worker both depend_on it
-#           with condition: service_healthy, or they race the first migration
+#   db          postgres:17-alpine, official image, no Dockerfile
+#               POSTGRES_DB / POSTGRES_USER / POSTGRES_PASSWORD from .env
+#               named volume for the data — NOT a bind mount into the repo
+#               healthcheck: pg_isready; api and worker both depend_on it
+#               with condition: service_healthy, or they race the first migration
 #
-#   api     build: context ./server, dockerfile TimeForYou.Api/Dockerfile
-#           ports 8080:8080
-#           needs ConnectionStrings__TimeForYou, TIMEFORYOU_ENCRYPTION_KEY,
-#           WEBUNTIS_BASE_URL, VAPID_*, FIREBASE_PROJECT_ID
+#   api         build: context ./server, dockerfile TimeForYou.Api/Dockerfile
+#               ports 8080:8080 — the ONLY service reachable from outside
+#               needs ConnectionStrings__TimeForYou, AES_KEY,
+#               WEBUNTIS_BASE_URL, FIREBASE_PROJECT_ID
 #
-#   worker  build: context ./server, dockerfile TimeForYou.Worker/Dockerfile
-#           no ports — it polls outward
-#           same DB and encryption env as api, plus POLL_INTERVAL_SECONDS,
-#           QUIET_HOURS_START/END, CHANGE_WINDOW_DAYS
+#   worker      build: context ./server, dockerfile TimeForYou.Worker/Dockerfile
+#               no ports — it polls outward
+#               same DB and encryption env as api, plus POLL_INTERVAL_SECONDS
+#               runs Hangfire; its dashboard stays LAN-only, never tunnelled
 #
-#   mock    build: ./mock
-#           ports 8000:8000
-#           MOCK_ADMIN_TOKEN guards POST /admin/trigger-change
-#           this is what makes the marker demo possible — see brief §12.4
+#   sidecar     build: ./sidecar — Node, wraps the thenoim/webuntis npm package
+#               no published ports — LAN/compose-network only
+#               SIDECAR_UPSTREAM_URL picks mock vs the real WebUntis tenant
+#               healthcheck: GET /health
+#
+#   mock        build: ./mock
+#               ports 8000:8000
+#               admin endpoints are UNAUTHENTICATED by design — the mock is
+#               never tunnelled, so the LAN is the boundary. No token.
+#               this is what makes the marker demo possible — see brief §12.4
+#
+#   cloudflared cloudflare/cloudflared, team instance only
+#               routes /api/* and /ics/* to api; everything else 404s
+#               the marker never needs this — keep it in a compose overlay
 #
 # THINGS THAT WILL BITE
 #
-#   - WEBUNTIS_BASE_URL must be http://mock:8000 (the service name), not
-#     localhost. Containers resolve each other by service name.
+#   - Two hops, two variables. WEBUNTIS_BASE_URL points api/worker at the
+#     SIDECAR (http://sidecar:3000). SIDECAR_UPSTREAM_URL points the sidecar at
+#     the mock (http://mock:8000) or the real tenant. Service names, never
+#     localhost — containers resolve each other by service name.
 #   - Demo config shortens POLL_INTERVAL_SECONDS to ~30 so the marker sees the
-#     notification inside a minute. Default is 900.
+#     notification inside a minute. Default is 600 (10 minutes).
 #   - The Firebase service account JSON is mounted from OUTSIDE the repo, never
 #     copied into an image. See .env.example and docs/secrets.md.
 #   - Every new env var goes into .env.example in the same PR (CONTRIBUTING §8).
 #   - docker-compose.override.yml is git-ignored — use it for local tweaks
 #     rather than editing this file.
 #
-# The Cloudflare Tunnel is the team instance only. The marker never needs it,
-# so it does not belong in this file — keep it in a separate compose overlay.
+# The Cloudflare Tunnel is the team instance only. Issue #3 counts it among the
+# six containers because it is part of the team topology, but the marker must
+# never need it: put cloudflared behind a compose profile, so a bare
+# `docker compose up` brings up five and `--profile tunnel` adds the sixth.
+# That satisfies both promises without a second file to keep in sync.

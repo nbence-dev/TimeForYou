@@ -1,7 +1,36 @@
 # TimeForYou — Project Brief
 
-**Module:** ITMDA3-B34 · **Team size:** 6 · **Status:** Planning (Deliverable 3)
-**Last updated:** 2026-08-29
+**Module:** ITMDA3-B34 · **Team size:** 6 · **Status:** Building (Phase 1)
+**Last updated:** 2026-09-22
+
+---
+
+## 0a. Changelog — what changed after Deliverable 3
+
+Deliverable 3 was submitted from the 2026-08-29 version of this brief. A second planning session
+on 2026-09-21 (`grill-me-2.md`) reversed several decisions once implementation effort was
+estimated properly. **Sections below have been updated to match; the submitted deliverable
+reflects the older design.** The differences, in full:
+
+| What | Deliverable 3 said | Now | Why |
+| --- | --- | --- | --- |
+| WebUntis client | C# port of the `webuntis` npm package | **Node sidecar** wrapping `thenoim/webuntis`; `TimeForYou.WebUntis` is a thin HTTP facade over it | Port estimated at 3–5 dev-days against a 1-day budget |
+| Credential encryption | Hand-rolled AES-256-GCM with `key_version` rotation | **ASP.NET Core DataProtection**, key from `AES_KEY`, no rotation | Don't hand-roll crypto; rotation is untested ceremony at 6 users |
+| iOS push | Web Push with a self-generated VAPID key pair | **FCM Web** registration tokens | One transport, one SDK, one set of credentials |
+| Containers | Four (api, worker, db, mock) | **Six** (+ sidecar, + cloudflared) | Sidecar is new; tunnel was always there but uncounted |
+| Mock admin | `POST /admin/trigger-change` + admin page, guarded by `MOCK_ADMIN_TOKEN` | Unauthenticated `curl` endpoints; **no token** | The mock is never tunnelled — LAN is the boundary |
+| Quiet hours (FR-25) | Deferred notifications outside 21:00–06:00 | **Out of Phase 1**, with reminder customisation | Suppress-then-replay conflicts with one-grouped-notification-per-cycle and was never designed |
+| Job scheduling | `BackgroundService` timer | **Hangfire** on Postgres | Retry, scheduling and a dashboard for free |
+
+The **build plan** now lives in [issue #3](https://github.com/nbence-dev/TimeForYou/issues/3) and
+its epics. Where this brief and issue #3 disagree, **#3 wins.**
+
+**On scope vs. design.** This brief describes the whole product; issue #3 describes what Phase 1
+builds by 2026-10-23. Requirements, screens and ERD entities that Phase 1 does not implement are
+**deferred, not deleted** — per §0 rule 1, requirement IDs are stable and are never renumbered or
+removed. Phase 1 defers: **FR-25** (quiet hours), reminder-rule customisation and its screens,
+and the app lock. The ERD (§13) remains the full-product design; Phase 1 creates the subset named
+in issue #3.
 
 ---
 
@@ -210,7 +239,7 @@ widget / lock-screen surface, timetable sharing between students.
 | FR-22 | Where a poll detects exactly one change, the notification shall state the affected lesson and the nature of the change (e.g. _"Maths 10:00 — cancelled"_). |
 | FR-23 | Where a poll detects more than one change, the notification shall summarise them (e.g. _"3 changes to your timetable this week"_).                         |
 | FR-24 | The system shall not send a notification for a change that has already been notified, including across a service restart.                                  |
-| FR-25 | The system shall suppress notifications during user-configured quiet hours and deliver them at the end of the quiet period.                                |
+| FR-25 | The system shall suppress notifications during user-configured quiet hours and deliver them at the end of the quiet period. **(Deferred — not in Phase 1.)**                                |
 | FR-26 | The app shall display a **Changes** feed listing recent changes to the user's timetable, most recent first.                                                |
 | FR-27 | The system shall deliver a reminder notification before each lesson, at a lead time set by the applicable reminder rule.                                   |
 
@@ -265,7 +294,7 @@ widget / lock-screen surface, timetable sharing between students.
 | NFR-1  | Performance     | The Today view shall render cached timetable data within **1 second** of app launch, with no network dependency. `TODO-MEASURE: baseline comparison against WebUntis.` |
 | NFR-2  | Availability    | The app shall remain fully usable for viewing timetable, notes, and reminders while the backend is unreachable, displaying the last-synced timestamp.                  |
 | NFR-3  | Usability       | A new user shall reach a populated timetable in **3 taps or fewer** after opening the app, excluding the QR scan itself.                                               |
-| NFR-4  | Security        | WebUntis shared secrets shall be encrypted at rest using AES-256-GCM with a key supplied by environment configuration and never committed to source control.           |
+| NFR-4  | Security        | WebUntis shared secrets shall be encrypted at rest using the ASP.NET Core DataProtection API, with key material supplied by environment configuration and never committed to source control. |
 | NFR-5  | Security        | All client–server communication shall use HTTPS.                                                                                                                       |
 | NFR-6  | Security        | iCal feed tokens shall contain at least 256 bits of cryptographic randomness and shall be revocable by the user.                                                       |
 | NFR-7  | Privacy         | The system shall store only the data required to render and monitor a timetable. Unlinking an account shall delete all associated data (POPIA alignment).              |
@@ -525,7 +554,7 @@ onboarding friction named in §2. It would be strictly more work for negative pr
 | Rubric expectation                     | How TimeForYou satisfies it                                                           |
 | -------------------------------------- | ------------------------------------------------------------------------------------- |
 | Functional authentication mechanism    | QR credential linking = sign-up / login; **Unlink account** = logout                  |
-| Securely handle user credentials       | WebUntis shared secret encrypted at rest with AES-256-GCM (NFR-4)                     |
+| Securely handle user credentials       | WebUntis shared secret encrypted at rest via DataProtection (NFR-4)                   |
 | Store tokens or sessions               | Per-device push subscriptions; capability token for the iCal feed                     |
 | Restrict access to authenticated users | All API routes scoped to the calling identity; optional biometric/PIN app lock (FR-8) |
 | Identity logic for storing user data   | `User → Device / Note / ReminderRule / Lesson` ownership model (§13)                  |
@@ -535,7 +564,9 @@ onboarding friction named in §2. It would be strictly more work for negative pr
 Native iOS push requires an APNs key, which requires a paid Apple Developer Program membership.
 The team is not purchasing one. **Web Push to a Home Screen web app requires no Apple Developer
 Program membership** — Apple's own guidance is explicit on this point — so the iOS build ships
-as an installable PWA using standard Web Push with a VAPID key pair the team generates.
+as an installable PWA receiving Web Push **through FCM**. Firebase issues the registration token
+and manages the VAPID layer internally, so the team generates and stores no key pair of its own:
+one transport, one SDK, one set of server credentials for both platforms.
 
 - **Android:** Expo development build, native FCM push.
 - **iOS:** Expo web export, installed via Share → Add to Home Screen, Web Push via FCM.
@@ -560,7 +591,7 @@ Expo Go (dropped remote push support in SDK 53).
 - **Window:** today through +14 days, configurable. A change to a lesson six weeks out is
   recorded but does not notify.
 - **Notification policy:** at most one push per user per poll. Exactly one change → name it.
-  More than one → summarise. Suppressed during quiet hours and delivered afterwards.
+  More than one → summarise. (Quiet-hours suppression is FR-25, deferred out of Phase 1.)
 - **Idempotency:** each change record carries `notified_at`; only unnotified records within
   the window are eligible, so a restart cannot re-notify.
 - **Lesson identity across polls:** `TODO-VERIFY — do WebUntis lesson IDs remain stable when a
@@ -587,9 +618,20 @@ WebUntis access uses a shared secret from which time-based codes are generated. 
 must poll while the user is offline, so the secret must be **recoverable** — hashing is not an
 option.
 
-**Chosen:** AES-256-GCM at the application layer. Per record: ciphertext, a fresh random 96-bit
-nonce, the authentication tag, and a key version for rotation. The 256-bit key is supplied by
-environment variable (`.NET user-secrets` locally) and is never committed.
+**Chosen:** the **ASP.NET Core DataProtection API**, with key material supplied by the `AES_KEY`
+environment variable (`.NET user-secrets` locally) and never committed. DataProtection handles
+nonces, authentication tags and key derivation itself.
+
+**Why not hand-rolled AES-256-GCM.** The 2026-08-29 version of this brief specified exactly that,
+with a per-record nonce and a `key_version` column for rotation. It was replaced because
+hand-written crypto is the wrong thing to be debugging in week 3 of a five-week build, and a
+platform primitive that is already correct costs nothing to adopt.
+
+**No key rotation.** The `key_version` rotation scheme is dropped with it. Rotating means
+re-encrypting every stored record, which means writing and testing a migration path that six
+users will never exercise. If the key is ever compromised, the recovery is to replace it and have
+the six users re-scan their QR codes — about five minutes of work. An untested rotation procedure
+is worth less than a re-onboarding that demonstrably works.
 
 **Documented limitation:** this defends against a leaked database dump. It does not defend
 against a compromised host, which holds both key and ciphertext. Stating the limitation is
@@ -615,8 +657,9 @@ flowchart TB
 
     subgraph Node["Single Node — Docker Compose on macOS"]
         API["API Service<br/>ASP.NET Core / C#"]
-        WORK["Worker Service<br/>C# BackgroundService"]
-        WU[".NET WebUntis Client<br/>(port of the npm package)"]
+        WORK["Worker Service<br/>C# + Hangfire"]
+        WU["TimeForYou.WebUntis<br/>(C# HttpClient facade)"]
+        SIDE["WebUntis Sidecar<br/>Node + thenoim/webuntis"]
         DB[("PostgreSQL")]
         MOCK["Mock WebUntis<br/>Python / FastAPI"]
     end
@@ -636,8 +679,10 @@ flowchart TB
     WORK --> WU
     API --> WU
 
-    WU -->|WEBUNTIS_BASE_URL| REAL
-    WU -.->|WEBUNTIS_BASE_URL<br/>demo / marker mode| MOCK
+    WU -->|WEBUNTIS_BASE_URL| SIDE
+
+    SIDE -->|SIDECAR_UPSTREAM_URL| REAL
+    SIDE -.->|SIDECAR_UPSTREAM_URL<br/>demo / marker mode| MOCK
 
     WORK -->|change detected| FCM
     FCM -->|native push| AND
@@ -648,11 +693,18 @@ flowchart TB
 
 | Service             | Language                 | Responsibility                                                                                                         |
 | ------------------- | ------------------------ | ---------------------------------------------------------------------------------------------------------------------- |
-| **API**             | C# / ASP.NET Core        | REST endpoints for the app; account linking; timetable reads; notes and reminders CRUD; iCal feed; device registration |
-| **Worker**          | C# / `BackgroundService` | Scheduled polling, change detection, notification dispatch, reminder scheduling                                        |
-| **WebUntis client** | C# library               | Port of the `webuntis` npm package: QR/secret auth, timetable retrieval. Shared by API and Worker                      |
+| **API**             | C# / ASP.NET Core        | REST endpoints for the app; account linking; timetable reads; notes CRUD; iCal feed; device registration              |
+| **Worker**          | C# + Hangfire            | Scheduled polling, change detection, notification dispatch                                                            |
+| **WebUntis client** | C# library               | `HttpClient` facade over the sidecar. Public interface is transport-agnostic. Shared by API and Worker                |
+| **WebUntis sidecar**| Node                     | Wraps the `thenoim/webuntis` npm package behind `POST /login`, `GET /timetable`, `GET /health`. Holds no state         |
 | **Mock WebUntis**   | Python / FastAPI         | Serves fixture timetables on the same interface; mutates them on command                                               |
-| **Database**        | PostgreSQL               | All persistent state                                                                                                   |
+| **Database**        | PostgreSQL               | All persistent state, including Hangfire's own schema                                                                  |
+
+**On the sidecar.** The 2026-08-29 brief had the WebUntis client as a **C# port** of the npm
+package. Reverse-engineering WebUntis's undocumented mobile-SSO flow was estimated at 3–5
+dev-days against a 1-day budget, so the port was cut. The sidecar wraps the package that already
+works, and `TimeForYou.WebUntis` keeps the same public C# interface consumers were going to get
+either way — so the boundary is unchanged and only the implementation behind it moved.
 
 **On the single-language decision.** An earlier design split API (C#) and Worker (Python) across
 a network boundary. That split bought a serialisation contract, a second deployment pipeline,
@@ -679,17 +731,22 @@ that notifications cannot be demonstrated, the mock service makes the **entire p
 offline:
 
 1. Marker runs `docker compose up`.
-2. `WEBUNTIS_BASE_URL` points at the mock container.
-3. Marker scans a demo QR code rendered by the mock's admin page.
+2. `SIDECAR_UPSTREAM_URL` points the sidecar at the mock container.
+3. Marker scans a demo QR code from the mock's seeded fixtures.
 4. A seeded timetable appears in the app.
-5. Marker clicks **Cancel next lesson** on the mock's admin page.
-6. Within one poll cycle, a real push notification arrives.
+5. Marker triggers a change: `curl -X POST http://localhost:8000/mock/cancel-lesson/42`.
+6. Within one poll cycle, a real push notification arrives — or immediately, via
+   `curl -X POST http://localhost:8000/nudge`.
 
 The same mechanism solves a live-showcase problem the team identified: **real timetables only
 change during the first week of term**, so an unassisted demo would have nothing to show. The
-mock exposes `POST /admin/trigger-change` and a small admin page with **Cancel next lesson**,
-**Move room**, and **Add lesson** buttons. Demo configuration shortens the poll interval to
-~30 seconds so the effect is immediate.
+mock exposes `POST /mock/cancel-lesson/{id}`, `/move-lesson/{id}`, `/change-room/{id}` and
+`/nudge`. Demo configuration also shortens the poll interval to ~30 seconds.
+
+These endpoints carry **no authentication**. The 2026-08-29 brief guarded them with
+`MOCK_ADMIN_TOKEN` against hijacking "from the tunnel" — but the mock is never routed through the
+tunnel at all, so the threat did not exist and the token only added a way for the demo to fail on
+stage. The LAN is the boundary.
 
 The mock doubles as the fixture source for automated tests of the diff engine.
 
@@ -699,28 +756,24 @@ The mock doubles as the fixture source for automated tests of the diff engine.
 sequenceDiagram
     participant W as Worker
     participant DB as PostgreSQL
-    participant U as WebUntis / Mock
+    participant U as Sidecar → WebUntis / Mock
     participant F as FCM
     participant D as Device
 
     W->>DB: Load users due for polling
     loop per user
         W->>DB: Read encrypted secret
-        W->>W: Decrypt (AES-256-GCM)
+        W->>W: Decrypt (DataProtection)
         W->>U: Authenticate + fetch timetable (today → +14d)
         U-->>W: Lessons
         W->>DB: Load stored lessons for window
-        W->>W: Diff on subject/start/end/room/status
+        W->>W: Diff on start_ts/end_ts/room/status
         alt changes found
             W->>DB: Upsert lessons, insert LessonChange rows
             W->>DB: Select changes where notified_at is null
-            alt within quiet hours
-                W->>W: Defer to end of quiet period
-            else
-                W->>F: Send one push (specific if 1, summary if >1)
-                F->>D: Deliver
-                W->>DB: Set notified_at
-            end
+            W->>F: Send ONE push (lead change + "(+N more changes)")
+            F->>D: Deliver
+            W->>DB: Set notified_at
         else no changes
             W->>DB: Update last_polled_at
         end
@@ -871,10 +924,11 @@ demonstrable end-to-end.
 | --- | --------------------------------- | ----------------------------------------------------------- |
 | 1   | Onboarding & identity             | Screens 1–4, QR scanning, device registration, app lock     |
 | 2   | Timetable UI & performance        | Screens 5, 6, 8; local cache; offline behaviour             |
-| 3   | Notifications & settings          | Screens 7, 9, 11, 12; FCM native + Web Push; quiet hours    |
-| 4   | WebUntis client (C#)              | Port of the npm package; auth, retrieval, error handling    |
-| 5   | Worker & diff engine              | Polling, change detection, notification dispatch, iCal feed |
+| 3   | Notifications & settings          | Screens 7, 9; FCM native + FCM Web registration             |
+| 4   | WebUntis client                   | Node sidecar + C# HttpClient facade; auth, retrieval, errors|
+| 5   | Worker & diff engine              | Hangfire polling, change detection, notification dispatch   |
 | 6   | Mock WebUntis, Docker, data layer | FastAPI mock + admin triggers, compose, schema, migrations  |
+| 7   | API & iCal feed                   | REST endpoints, device auth, notes CRUD, iCal feed          |
 
 _(Assign names to verticals — one member per row.)_
 
