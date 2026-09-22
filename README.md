@@ -21,6 +21,9 @@ of which build and do nothing. The "Running it" section below describes the cont
 must satisfy. `docker-compose.yml` is not written yet, so it is the specification, not yet a
 working command.
 
+The build plan lives in **[issue #3](https://github.com/nbence-dev/TimeForYou/issues/3)** and its
+eight epics. Where this README and issue #3 disagree, **#3 wins** — it is newer.
+
 ---
 
 ## What it does
@@ -51,16 +54,26 @@ cp .env.example .env          # then follow the CHANGEME comments inside
 docker compose up
 ```
 
-That starts four containers: the API, the Worker, PostgreSQL, and a **mock WebUntis service**
-that stands in for the real institution.
+That starts six containers: the API, the Worker, PostgreSQL, a **WebUntis sidecar**, a **mock
+WebUntis service** that stands in for the real institution, and a Cloudflare Tunnel (team
+instance only — the marker never needs it).
 
 The demo path — the whole point of the mock — is:
 
-1. Open the mock's admin page at `http://localhost:8000/admin`.
-2. Scan the demo QR code it renders, using the app.
-3. A seeded timetable appears.
-4. Click **Cancel next lesson** on the admin page.
-5. Within one poll cycle (~30 seconds in demo config) a real push notification arrives.
+1. Scan the demo QR code from the mock's seeded fixtures, using the app.
+2. A seeded timetable appears.
+3. Trigger a change against the mock from any machine on the same network:
+
+   ```bash
+   curl -X POST http://localhost:8000/mock/cancel-lesson/42
+   curl -X POST http://localhost:8000/nudge     # skip the wait, poll now
+   ```
+
+4. Within one poll cycle a real push notification arrives. `/nudge` bounds that to a few seconds
+   rather than up to ten minutes.
+
+These endpoints are deliberately **unauthenticated**. They are never exposed through the tunnel;
+the LAN is the security boundary.
 
 The entire pipeline — auth, polling, change detection, notification delivery — runs offline on
 one machine. See brief §12.4.
@@ -94,6 +107,9 @@ cd server && dotnet restore && cd ..
 
 # mock — the venv is git-ignored, so everyone makes their own
 cd mock && python3 -m venv .venv && .venv/bin/pip install -r requirements.txt && cd ..
+
+# sidecar — wraps the thenoim/webuntis npm package
+cd sidecar && npm install && cd ..
 ```
 
 6. Confirm the baseline works before you branch. All three must pass on a clean clone:
@@ -137,15 +153,16 @@ app/                      Expo / React Native — Android build + PWA web export
 server/                   one C# solution — TimeForYou.slnx
   TimeForYou.Api/         REST endpoints, iCal subscription feed  (+ Dockerfile)
   TimeForYou.Worker/      polling, change detection, notification dispatch  (+ Dockerfile)
-  TimeForYou.WebUntis/    port of the webuntis npm package
+  TimeForYou.WebUntis/    HttpClient facade over the Node sidecar
   TimeForYou.Data/        schema and migrations
   TimeForYou.Domain/      shared domain types
   TimeForYou.Tests/       diff-engine tests, fed by the mock's fixtures
   Directory.Build.props   pins net10.0 and warnings-as-errors for all six projects
-mock/                     Python / FastAPI — fake WebUntis + admin trigger page
+sidecar/                  Node — wraps the thenoim/webuntis npm package behind REST
+mock/                     Python / FastAPI — fake WebUntis + admin trigger endpoints
   app/ · fixtures/ · Dockerfile
 docs/                     these documents
-docker-compose.yml        API · Worker · mock · Postgres
+docker-compose.yml        API · Worker · sidecar · mock · Postgres · cloudflared
 ```
 
 The `Dockerfile`s and `docker-compose.yml` exist but are **placeholders** — each records what

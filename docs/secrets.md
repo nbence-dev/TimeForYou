@@ -50,9 +50,9 @@ Same environment variables, three syntaxes.
 A `__` (double underscore) in the variable name becomes a `:` nesting separator.
 
 ```csharp
-// TIMEFORYOU_ENCRYPTION_KEY=... in .env
-var key = builder.Configuration["TIMEFORYOU_ENCRYPTION_KEY"]
-          ?? throw new InvalidOperationException("TIMEFORYOU_ENCRYPTION_KEY is not set");
+// AES_KEY=... in .env
+var key = builder.Configuration["AES_KEY"]
+          ?? throw new InvalidOperationException("AES_KEY is not set");
 
 // ConnectionStrings__TimeForYou=... in .env
 var conn = builder.Configuration.GetConnectionString("TimeForYou");
@@ -60,11 +60,21 @@ var conn = builder.Configuration.GetConnectionString("TimeForYou");
 
 Throw on missing, don't default. A silent fallback to an empty key is worse than a crash.
 
+`AES_KEY` feeds the **ASP.NET Core DataProtection API**, which does the actual encryption of the
+WebUntis SSO secret. Do not hand-roll AES — DataProtection already handles nonces, authentication
+tags and key derivation, and getting those wrong is the usual way this goes badly.
+
 **Python — the mock service.**
+
+The mock holds **no secrets at all**. Its admin endpoints are unauthenticated on purpose: it is
+never exposed through the tunnel, so the LAN is the security boundary. If you find yourself
+reaching for `os.environ` to read a token in `mock/`, stop — that is the old design.
+
+Plain configuration is still fine:
 
 ```python
 import os
-token = os.environ["MOCK_ADMIN_TOKEN"]      # KeyError if missing, which is what you want
+upstream = os.environ["SIDECAR_UPSTREAM_URL"]   # KeyError if missing, which is what you want
 ```
 
 **Expo app — it cannot hold secrets at all.**
@@ -77,9 +87,13 @@ const api = process.env.EXPO_PUBLIC_API_URL;
 Everything prefixed `EXPO_PUBLIC_` is **compiled into the JavaScript bundle** and readable by
 anyone who downloads the app and unzips it. There is no secure storage in a shipped app bundle.
 
-So: the encryption key, the Firebase *server* credentials and the VAPID *private* key exist only
-on the API and the Worker. The app talks to our API; our API talks to everything else. That is
-already how the architecture is drawn (brief §12.1) — the rule is just "don't shortcut it".
+So: `AES_KEY` and the Firebase *server* credentials exist only on the API and the Worker. The app
+talks to our API; our API talks to everything else. That is already how the architecture is drawn
+(brief §12.1) — the rule is just "don't shortcut it".
+
+The `EXPO_PUBLIC_FIREBASE_*` values are the exception that proves the rule: they ship in the
+bundle, they are public by design, and they are not credentials. They let the PWA ask Firebase for
+an FCM registration token. Nothing signs or authorises with them.
 
 ---
 
@@ -129,10 +143,13 @@ leaked one is worthless:
 
 1. Say so in the team chat immediately. This is not embarrassing; hiding it is the problem.
 2. Rotate it at the source — new Postgres password, new `openssl rand -base64 32` key, new
-   Firebase key in the console, regenerate the VAPID pair.
+   Firebase key in the console.
 3. Update `.env` on every machine and on the demo host.
-4. For the encryption key specifically, bump `TIMEFORYOU_ENCRYPTION_KEY_VERSION` and re-encrypt
-   stored records — the schema has `key_version` for exactly this (brief §11.5).
+4. For `AES_KEY` specifically there is **no rotation path**, by decision. Nothing re-encrypts
+   stored records, because a six-user prototype does not justify building that. Changing the key
+   makes every stored WebUntis secret undecryptable, so the recovery is to clear them and have
+   the six users re-scan their QR codes. That takes about five minutes and is the honest trade —
+   a rotation procedure nobody has tested is worth less than a re-onboarding that works.
 5. Only then worry about scrubbing history, if it's worth it at all.
 
 ## Never
