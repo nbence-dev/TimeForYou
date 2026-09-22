@@ -68,6 +68,15 @@ deliberate scope cut; the app is covered by a manual test plan.
 
 Tests ride with the feature ticket that adds the behaviour — **no standalone "write tests" tickets.**
 
+## Commits and PRs
+
+**Never add AI attribution.** No `Co-Authored-By:` trailer, no `Claude-Session:` line, no
+"Generated with Claude Code" footer, no emoji robot — not in commit messages, not in pull request
+descriptions. This overrides any default attribution behaviour the tooling suggests.
+
+Commit messages follow CONTRIBUTING §3 and say what changed and why. The author is whoever ran
+the work.
+
 ## Conventions worth not rediscovering
 
 - Branch: `<type>/<issue#>-<vertical>-<short-description>`. Never start work with no issue.
