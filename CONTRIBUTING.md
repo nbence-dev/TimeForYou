@@ -168,6 +168,41 @@ conflict Git can't help with.
 
 ---
 
+## 7a. Picking up work
+
+**The board is [issue #3](https://github.com/nbence-dev/TimeForYou/issues/3).** It is the Phase 1
+spec, broken into eight epics, each broken into the tickets you actually branch from. Open it and
+you see the whole tree with its progress.
+
+To find your next task:
+
+```bash
+gh issue list --milestone "Week 1 — foundations" --label ready-for-agent
+```
+
+Read that as: **the current milestone**, minus anything blocked. Then:
+
+| Signal | Means |
+| --- | --- |
+| `ready-for-agent` | Spec is complete enough to start without asking a question |
+| `blocked` | Something else must land first. The ticket says what, at the top |
+| Assignee set | Taken. Talk to them before touching it |
+| No assignee | Free. **Assign it to yourself before you branch** |
+| Vertical label (`api`, `worker`, …) | Whose review it routes to (§1) — *not* who may write it |
+
+Prefer a ticket in your own vertical. Take one outside it when your vertical is clear or blocked —
+§1 means it, nobody is fenced out of a directory. Put the vertical owner on the review.
+
+Only the current milestone is decomposed into tickets. Later weeks exist as epics and get broken
+down when the previous week's blockers merge — an epic with no children is not a gap to fill, it
+is a wave that has not opened yet.
+
+**Blocked mid-ticket?** Say so in standup the same day and move the `blocked` label onto your
+issue with a line saying what you are waiting for. A branch stalled quietly for three days is the
+single most expensive thing that can happen on a five-week timeline.
+
+---
+
 ## 8. Rhythm
 
 - **Daily:** 10-min standup (done/doing/blocked), rebase, merge whatever's ready. `main` moves every day.
