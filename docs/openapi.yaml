@@ -1,0 +1,486 @@
+openapi: 3.1.0
+
+info:
+  title: TimeForYou API
+  version: "1.0.0"
+  description: |
+    Phase 1 contract for `TimeForYou.Api`. Hand-authored design document — see
+    [issue #12](https://github.com/nbence-dev/TimeForYou/issues/12) and the auth/backend/frontend
+    sections of [issue #3](https://github.com/nbence-dev/TimeForYou/issues/3) for the decisions
+    this reflects.
+
+    Only `/qr-scan` and `GET /ics/{token}.ics` skip bearer auth — the first is how a device
+    obtains a token, the second is an opaque-URL feed meant to be pasted into a calendar app.
+    Every other endpoint requires `Authorization: Bearer <token>`.
+
+    Field names mirror the Postgres tables in #3 (`users`, `devices`, `lesson_snapshots`,
+    `notes`, `ics_tokens`, `change_log`) — no renaming between the database and the wire format.
+
+servers:
+  - url: /
+    description: >-
+      Paths are relative to wherever the API is reached — directly in dev, or via the Cloudflare
+      Tunnel's `/api/*` route in the team deployment. This document does not assume a base path.
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: auth
+    description: QR-scan onboarding and device-scoped tokens.
+  - name: timetable
+    description: Lesson read models rendered by the app.
+  - name: changes
+    description: The change history behind a notification tap.
+  - name: notes
+    description: Student-authored text attached to a lesson.
+  - name: devices
+    description: FCM registration per device.
+  - name: calendar
+    description: The unauthenticated iCalendar subscription feed.
+
+paths:
+  /qr-scan:
+    post:
+      operationId: scanQrCode
+      tags: [auth]
+      summary: Exchange a scanned WebUntis QR payload for a device-scoped bearer token
+      description: |
+        Stores `{server, school, user, key}` encrypted against a `users` row, creating one if no
+        user with this `school` + `user` exists, and issues a bearer token scoped to the
+        requesting device. Scanning the same QR from a second device returns a **new token for
+        the same `user_id`** rather than creating a second user — that is how notes and settings
+        end up shared across a student's devices.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QrScanRequest"
+      responses:
+        "200":
+          description: Token issued. The user may already have existed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QrScanResponse"
+        "400":
+          description: Malformed or incomplete QR payload.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /timetable:
+    get:
+      operationId: getTimetable
+      tags: [timetable]
+      summary: List the caller's lessons for this week and next
+      description: |
+        Returns every `lesson_snapshots` row for the caller's `user_id` whose window falls within
+        this week or next (the fixed, non-configurable lookahead — see `.env.example`). The app
+        renders Today and Week views by grouping this list client-side; there is no separate
+        per-day endpoint.
+      responses:
+        "200":
+          description: The caller's current lesson snapshots, unordered.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Lesson"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /changes:
+    get:
+      operationId: getChanges
+      tags: [changes]
+      summary: List recent detected changes to the caller's timetable
+      description: |
+        Backs the Changes screen opened by tapping a notification. Reads `change_log`, which
+        retains 30 days of history per user; nothing older is returned. Most recent first.
+      parameters:
+        - name: since
+          in: query
+          required: false
+          description: >-
+            ISO-8601 timestamp. Only changes detected at or after this instant are returned.
+            Defaults to 30 days ago (the full retention window) when omitted.
+          schema:
+            type: string
+            format: date-time
+      responses:
+        "200":
+          description: Change records, most recently detected first.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ChangeLogEntry"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /lessons/{lessonId}/notes:
+    parameters:
+      - $ref: "#/components/parameters/LessonId"
+    get:
+      operationId: listNotesForLesson
+      tags: [notes]
+      summary: Read back every note attached to a lesson
+      responses:
+        "200":
+          description: Notes on this lesson, for any of the caller's devices.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Note"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: No lesson with this id belongs to the caller.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    post:
+      operationId: createNote
+      tags: [notes]
+      summary: Attach a new note to a lesson
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NoteWriteRequest"
+      responses:
+        "201":
+          description: Note created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Note"
+        "400":
+          description: Note body is empty or exceeds the length limit.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: No lesson with this id belongs to the caller.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /notes/{noteId}:
+    parameters:
+      - name: noteId
+        in: path
+        required: true
+        description: A `notes.id`.
+        schema:
+          type: string
+          format: uuid
+    patch:
+      operationId: updateNote
+      tags: [notes]
+      summary: Edit an existing note
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NoteWriteRequest"
+      responses:
+        "200":
+          description: Note updated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Note"
+        "400":
+          description: Note body is empty or exceeds the length limit.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: No note with this id belongs to the caller.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    delete:
+      operationId: deleteNote
+      tags: [notes]
+      summary: Delete a note
+      responses:
+        "204":
+          description: Note deleted.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: No note with this id belongs to the caller.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /devices:
+    post:
+      operationId: registerDevice
+      tags: [devices]
+      summary: Register or refresh this device's push token
+      description: |
+        Stores an FCM registration token against a `devices` row for the caller's `user_id`,
+        identified by the bearer token used to call this endpoint. Calling this again for the
+        same device (same token from a prior call, refreshed by the client) updates `last_seen_at`
+        and the stored `push_token` rather than creating a duplicate row.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeviceRegisterRequest"
+      responses:
+        "200":
+          description: Device registered or refreshed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Device"
+        "400":
+          description: Unrecognised platform or missing push token.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /ics/{token}.ics:
+    get:
+      operationId: getIcsFeed
+      tags: [calendar]
+      summary: The caller's timetable as an iCalendar feed
+      description: |
+        `token` is the opaque 64-character value from an `ics_tokens` row — not a bearer token,
+        and not tied to any device. Anyone with the URL can read the feed; this is the same trust
+        model as a Google Calendar secret address. Only future lessons are included.
+      security: []
+      parameters:
+        - name: token
+          in: path
+          required: true
+          description: An opaque `ics_tokens.token` value, 64 characters long.
+          schema:
+            type: string
+            minLength: 64
+            maxLength: 64
+      responses:
+        "200":
+          description: A valid VCALENDAR document.
+          content:
+            text/calendar:
+              schema:
+                type: string
+        "404":
+          description: No `ics_tokens` row matches this token.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: >-
+        A device-scoped opaque token issued by `POST /qr-scan`. Not a JWT — carries no claims of
+        its own; the API looks it up against the issuing device's row.
+
+  parameters:
+    LessonId:
+      name: lessonId
+      in: path
+      required: true
+      description: A `lesson_snapshots.id`.
+      schema:
+        type: string
+        format: uuid
+
+  responses:
+    Unauthorized:
+      description: The bearer token is absent, invalid, or expired.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+
+  schemas:
+    Error:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+          description: Human-readable explanation. Not for programmatic branching.
+
+    QrScanRequest:
+      type: object
+      description: >-
+        The whole tuple is stored encrypted at rest (DataProtection, `AES_KEY`) — none of these
+        four fields are persisted in plaintext.
+      required: [server, school, user, key]
+      properties:
+        server:
+          type: string
+          description: WebUntis server hostname from the QR payload.
+        school:
+          type: string
+          description: WebUntis school identifier.
+        user:
+          type: string
+          description: WebUntis username.
+        key:
+          type: string
+          description: Shared secret from the QR payload.
+
+    QrScanResponse:
+      type: object
+      required: [token, user_id]
+      properties:
+        token:
+          type: string
+          description: >-
+            Bearer token for this device. Send it as `Authorization: Bearer <token>`.
+        user_id:
+          type: string
+          format: uuid
+          description: >-
+            The `users.id` this device is now linked to. Identical across every device that has
+            scanned the same underlying WebUntis identity.
+
+    Lesson:
+      type: object
+      description: One `lesson_snapshots` row.
+      required: [id, untis_lesson_id, subject, room, start_ts, end_ts, status]
+      properties:
+        id:
+          type: string
+          format: uuid
+        untis_lesson_id:
+          type: string
+          description: The upstream WebUntis lesson identifier this snapshot was matched on.
+        subject:
+          type: string
+        lecturer:
+          type: [string, "null"]
+          description: >-
+            Display-only. Teacher-name changes are not material and never appear in `change_log`.
+        room:
+          type: [string, "null"]
+        start_ts:
+          type: string
+          format: date-time
+        end_ts:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [scheduled, cancelled, irregular]
+
+    ChangeLogEntry:
+      type: object
+      description: One `change_log` row.
+      required: [id, lesson_id, change_type, detected_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        lesson_id:
+          type: string
+          format: uuid
+          description: The `lesson_snapshots.id` this change applies to.
+        change_type:
+          type: string
+          enum: [cancelled, room, time, added, removed]
+          description: >-
+            Matches the lead-change ordering used to pick the grouped notification's headline:
+            cancellations first, then room, then time.
+        old_value:
+          type: [string, "null"]
+        new_value:
+          type: [string, "null"]
+        detected_at:
+          type: string
+          format: date-time
+
+    Note:
+      type: object
+      description: One `notes` row.
+      required: [id, lesson_id, body, created_at, updated_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        lesson_id:
+          type: string
+          format: uuid
+        body:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    NoteWriteRequest:
+      type: object
+      required: [body]
+      properties:
+        body:
+          type: string
+          minLength: 1
+          maxLength: 500
+          description: Non-empty, max 500 characters (brief FR-33).
+
+    Device:
+      type: object
+      description: One `devices` row.
+      required: [id, platform, push_token, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        platform:
+          type: string
+          enum: [android_fcm, web_push]
+        push_token:
+          type: string
+          description: The FCM registration token for this device.
+        created_at:
+          type: string
+          format: date-time
+
+    DeviceRegisterRequest:
+      type: object
+      required: [platform, push_token]
+      properties:
+        platform:
+          type: string
+          enum: [android_fcm, web_push]
+        push_token:
+          type: string
