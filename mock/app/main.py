@@ -89,7 +89,7 @@ def get_timetable(
     end: date | None = Query(default=None),
 ) -> list[LessonOut]:
     student = _authenticate(authorization)
-    lessons = _materialize(student, _week_monday(start or date.today()))
+    lessons = _materialize(student, _week_monday(start or datetime.now(SAST).date()))
     if start is not None:
         lessons = [lesson for lesson in lessons if lesson.start_ts.date() >= start]
     if end is not None:

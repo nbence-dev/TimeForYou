@@ -1,6 +1,3 @@
 fastapi
 uvicorn[standard]
 qrcode[pil]
-pytest
-httpx
-ruff
