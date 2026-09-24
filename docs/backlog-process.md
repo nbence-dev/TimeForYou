@@ -155,7 +155,7 @@ From #3's timeline. Themes, not tickets — the tickets get written when the wav
 | 1 | Sep 21–27 | OpenAPI contract · schema · compose up healthy · sidecar · mock · CI · Firebase |
 | 2 | Sep 28–Oct 4 | **Seam A harness first.** API endpoints · `IWebUntisClient` facade · Hangfire poll job · diff engine · mock admin + `/nudge` · notes CRUD · ICS feed |
 | 3 | Oct 5–11 | Expo screens · FCM Web + Android registration · first real end-to-end notification |
-| 4 | Oct 12–18 | Cloudflare Tunnel · real WebUntis via sidecar · cross-device sync · ICS in Apple/Google Calendar · demo script |
+| 4 | Oct 12–18 | Cloudflare Tunnel · cross-device sync · ICS in Apple/Google Calendar · demo script |
 | 5 | Oct 19–23 | **CD freeze Oct 21** · bug bash · rehearsals · MacBook prep · **showcase Oct 23** |
 
 **Cut order if the team slips** (`grill-me-2.md` §6): demo-controller UI → Hangfire dashboard

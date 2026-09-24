@@ -54,9 +54,9 @@ cp .env.example .env          # then follow the CHANGEME comments inside
 docker compose up
 ```
 
-That starts six containers: the API, the Worker, PostgreSQL, a **WebUntis sidecar**, a **mock
-WebUntis service** that stands in for the real institution, and a Cloudflare Tunnel (team
-instance only — the marker never needs it).
+That starts five containers: the API, the Worker, PostgreSQL, a **mock WebUntis service** — the
+system's only backend, since there is no reachable real WebUntis tenant to fall back to — and a
+Cloudflare Tunnel (team instance only — the marker never needs it).
 
 The demo path — the whole point of the mock — is:
 
@@ -107,9 +107,6 @@ cd server && dotnet restore && cd ..
 
 # mock — the venv is git-ignored, so everyone makes their own
 cd mock && python3 -m venv .venv && .venv/bin/pip install -r requirements.txt && cd ..
-
-# sidecar — wraps the thenoim/webuntis npm package
-cd sidecar && npm install && cd ..
 ```
 
 6. Confirm the baseline works before you branch. All three must pass on a clean clone:
@@ -156,16 +153,15 @@ app/                      Expo / React Native — Android build + PWA web export
 server/                   one C# solution — TimeForYou.slnx
   TimeForYou.Api/         REST endpoints, iCal subscription feed  (+ Dockerfile)
   TimeForYou.Worker/      polling, change detection, notification dispatch  (+ Dockerfile)
-  TimeForYou.WebUntis/    HttpClient facade over the Node sidecar
+  TimeForYou.WebUntis/    HttpClient facade over mock — mock is the only backend
   TimeForYou.Data/        schema and migrations
   TimeForYou.Domain/      shared domain types
   TimeForYou.Tests/       diff-engine tests, fed by the mock's fixtures
   Directory.Build.props   pins net10.0 and warnings-as-errors for all six projects
-sidecar/                  Node — wraps the thenoim/webuntis npm package behind REST
 mock/                     Python / FastAPI — fake WebUntis + admin trigger endpoints
   app/ · fixtures/ · Dockerfile
 docs/                     these documents
-docker-compose.yml        API · Worker · sidecar · mock · Postgres · cloudflared
+docker-compose.yml        API · Worker · mock · Postgres · cloudflared
 ```
 
 The `Dockerfile`s and `docker-compose.yml` exist but are **placeholders** — each records what

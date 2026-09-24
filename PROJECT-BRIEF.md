@@ -1,7 +1,7 @@
 # TimeForYou — Project Brief
 
 **Module:** ITMDA3-B34 · **Team size:** 6 · **Status:** Building (Phase 1)
-**Last updated:** 2026-09-22
+**Last updated:** 2026-09-24
 
 ---
 
@@ -31,6 +31,23 @@ builds by 2026-10-23. Requirements, screens and ERD entities that Phase 1 does n
 removed. Phase 1 defers: **FR-25** (quiet hours), reminder-rule customisation and its screens,
 and the app lock. The ERD (§13) remains the full-product design; Phase 1 creates the subset named
 in issue #3.
+
+### 0a.1 Second reversal — WebUntis access dropped entirely (2026-09-23)
+
+Confirmed during Wave 1: the university has switched to its own internal timetable system with no
+API and no scrapeable surface, and the team has no access to a real WebUntis tenant at all, not
+even for testing. Nothing had been built against WebUntis yet, so this is a redirect, not a
+refactor. Dated record: the (now-deleted) handoff note this session amended from.
+
+| What | Grill-me-2 said (2026-09-21) | Now | Why |
+| --- | --- | --- | --- |
+| WebUntis access | **Node sidecar** wrapping `thenoim/webuntis`, flipped between the real tenant and the mock via `SIDECAR_UPSTREAM_URL` | **No sidecar.** `mock` is the system's only backend, permanently — not a demo stand-in | There is no real tenant left to flip to; a sidecar that only ever speaks to a mock proves nothing |
+| Containers | Six (api, worker, sidecar, mock, db, cloudflared) | **Five** (sidecar removed) | See above |
+| `TimeForYou.WebUntis` | `HttpClient` facade over the sidecar | `HttpClient` facade over `mock` directly | Facade's public interface (§11.5, NFR-11) is unchanged — only what's behind it moved, again |
+| Onboarding / QR flow | Scan a real WebUntis SSO QR | Scan stays — `mock` grows a QR-generation endpoint returning a fake `{server, school, user, key}` payload | User explicitly wants to stay close to the original "scan to link" plan rather than pivot to login/registration |
+
+Epic #5 and issues #16, #17, #15 were rescoped or closed against this table on 2026-09-24. See
+issue #3 for the current authoritative scope.
 
 ---
 
@@ -594,10 +611,10 @@ Expo Go (dropped remote push support in SDK 53).
   More than one → summarise. (Quiet-hours suppression is FR-25, deferred out of Phase 1.)
 - **Idempotency:** each change record carries `notified_at`; only unnotified records within
   the window are eligible, so a restart cannot re-notify.
-- **Lesson identity across polls:** `TODO-VERIFY — do WebUntis lesson IDs remain stable when a
-lesson is edited?` If yes, the WebUntis ID is the natural key. If not, identity becomes a
-  composite of (user, date, period, subject) and this must be reflected in the ERD. **This
-  question directly determines the data design and must be answered before the ERD is final.**
+- **Lesson identity across polls:** ~~`TODO-VERIFY — do WebUntis lesson IDs remain stable when a
+lesson is edited?`~~ **Resolved (§0a.1):** the mock is the only backend, so the team controls
+  lesson-ID assignment rather than inheriting WebUntis's. `source_lesson_id` is stable by
+  construction — the mock never reassigns an ID to a different lesson — so it is the natural key.
 
 ### 11.4 Calendar: subscription feed, not export
 
@@ -659,13 +676,11 @@ flowchart TB
         API["API Service<br/>ASP.NET Core / C#"]
         WORK["Worker Service<br/>C# + Hangfire"]
         WU["TimeForYou.WebUntis<br/>(C# HttpClient facade)"]
-        SIDE["WebUntis Sidecar<br/>Node + thenoim/webuntis"]
         DB[("PostgreSQL")]
-        MOCK["Mock WebUntis<br/>Python / FastAPI"]
+        MOCK["Mock WebUntis<br/>Python / FastAPI<br/>(the only backend)"]
     end
 
     subgraph External["External"]
-        REAL["WebUntis<br/>(Eduvos tenant)"]
         FCM["Firebase Cloud Messaging<br/>native + Web Push"]
     end
 
@@ -679,10 +694,7 @@ flowchart TB
     WORK --> WU
     API --> WU
 
-    WU -->|WEBUNTIS_BASE_URL| SIDE
-
-    SIDE -->|SIDECAR_UPSTREAM_URL| REAL
-    SIDE -.->|SIDECAR_UPSTREAM_URL<br/>demo / marker mode| MOCK
+    WU -->|WEBUNTIS_BASE_URL| MOCK
 
     WORK -->|change detected| FCM
     FCM -->|native push| AND
@@ -695,16 +707,18 @@ flowchart TB
 | ------------------- | ------------------------ | ---------------------------------------------------------------------------------------------------------------------- |
 | **API**             | C# / ASP.NET Core        | REST endpoints for the app; account linking; timetable reads; notes CRUD; iCal feed; device registration              |
 | **Worker**          | C# + Hangfire            | Scheduled polling, change detection, notification dispatch                                                            |
-| **WebUntis client** | C# library               | `HttpClient` facade over the sidecar. Public interface is transport-agnostic. Shared by API and Worker                |
-| **WebUntis sidecar**| Node                     | Wraps the `thenoim/webuntis` npm package behind `POST /login`, `GET /timetable`, `GET /health`. Holds no state         |
-| **Mock WebUntis**   | Python / FastAPI         | Serves fixture timetables on the same interface; mutates them on command                                               |
+| **WebUntis client** | C# library               | `HttpClient` facade over `mock`. Public interface is transport-agnostic. Shared by API and Worker                     |
+| **Mock WebUntis**   | Python / FastAPI         | The system's only backend — serves fixture timetables over plain REST; mutates them on command                        |
 | **Database**        | PostgreSQL               | All persistent state, including Hangfire's own schema                                                                  |
 
-**On the sidecar.** The 2026-08-29 brief had the WebUntis client as a **C# port** of the npm
-package. Reverse-engineering WebUntis's undocumented mobile-SSO flow was estimated at 3–5
-dev-days against a 1-day budget, so the port was cut. The sidecar wraps the package that already
-works, and `TimeForYou.WebUntis` keeps the same public C# interface consumers were going to get
-either way — so the boundary is unchanged and only the implementation behind it moved.
+**On the sidecar (dead plan).** Two designs were tried and cut in sequence. The 2026-08-29 brief
+had the WebUntis client as a **C# port** of the npm package — reverse-engineering WebUntis's
+undocumented mobile-SSO flow was estimated at 3–5 dev-days against a 1-day budget, so the port was
+cut in favour of a **Node sidecar** wrapping the package instead (grill-me-2, 2026-09-21). That
+plan lasted two days: the university turned out to have switched to an internal system with no
+reachable WebUntis tenant at all, so a sidecar whose only real target was the mock proved nothing
+(§0a.1). `TimeForYou.WebUntis` keeps the same public C# interface through both reversals — only
+what's behind it moved, twice.
 
 **On the single-language decision.** An earlier design split API (C#) and Worker (Python) across
 a network boundary. That split bought a serialisation contract, a second deployment pipeline,
@@ -724,15 +738,16 @@ service** — a genuinely independent service that the marker demo depends on.
 - Configuration by environment variable, notably `WEBUNTIS_BASE_URL` (§12.4) and the encryption
   key (§11.5).
 
-### 12.4 Mock WebUntis — the marker & demo path
+### 12.4 Mock WebUntis — the only backend, and the marker & demo path
 
-The marker has no Eduvos credentials and no access to the team's tunnel. Rather than conceding
-that notifications cannot be demonstrated, the mock service makes the **entire pipeline** run
-offline:
+There is no real Eduvos WebUntis tenant reachable by anyone on the team, marker included — so the
+mock service isn't standing in for one demo session, it's the **entire pipeline**, permanently:
 
 1. Marker runs `docker compose up`.
-2. `SIDECAR_UPSTREAM_URL` points the sidecar at the mock container.
-3. Marker scans a demo QR code from the mock's seeded fixtures.
+2. `WEBUNTIS_BASE_URL` points `api`/`worker` straight at the mock container — no sidecar, no
+   upstream to flip.
+3. Marker scans a demo QR code from a fake `{server, school, user, key}` payload the mock
+   generates, backed by its seeded fixtures.
 4. A seeded timetable appears in the app.
 5. Marker triggers a change: `curl -X POST http://localhost:8000/mock/cancel-lesson/42`.
 6. Within one poll cycle, a real push notification arrives — or immediately, via
@@ -785,8 +800,8 @@ sequenceDiagram
 ## 13. Data design — first cut
 
 > **Owner: Nicholas.** This is a starting point for the ERD deliverable, not the finished
-> article. The open question in §11.3 about WebUntis lesson ID stability must be resolved
-> before the primary key strategy is fixed.
+> article. The open question in §11.3 about WebUntis lesson ID stability is resolved — the mock
+> assigns IDs and never reassigns them, so `source_lesson_id` is a safe natural key.
 
 ### 13.1 Entities
 
@@ -910,8 +925,9 @@ erDiagram
   the lesson change history (FR-12).
 - **User preferences are embedded in `USER`** rather than split into a 1:1 settings table.
   Splitting is an option if the ERD needs more shape, but it is a normalisation smell.
-- **Open question:** if WebUntis lesson IDs are not stable across edits, `source_lesson_id`
-  cannot be the matching key and a composite natural key is required. **Resolve before final.**
+- **Resolved:** lesson-ID stability was an open question while a real WebUntis tenant was in the
+  picture. It no longer is — the mock assigns `source_lesson_id` and never reassigns it, so it is
+  a safe natural key (§0a.1, §11.3).
 
 ---
 
@@ -925,7 +941,7 @@ demonstrable end-to-end.
 | 1   | Onboarding & identity             | Screens 1–4, QR scanning, device registration, app lock     |
 | 2   | Timetable UI & performance        | Screens 5, 6, 8; local cache; offline behaviour             |
 | 3   | Notifications & settings          | Screens 7, 9; FCM native + FCM Web registration             |
-| 4   | WebUntis client                   | Node sidecar + C# HttpClient facade; auth, retrieval, errors|
+| 4   | WebUntis client                   | C# HttpClient facade over the mock; auth, retrieval, errors |
 | 5   | Worker & diff engine              | Hangfire polling, change detection, notification dispatch   |
 | 6   | Mock WebUntis, Docker, data layer | FastAPI mock + admin triggers, compose, schema, migrations  |
 | 7   | API & iCal feed                   | REST endpoints, device auth, notes CRUD, iCal feed          |
@@ -943,7 +959,7 @@ _(Assign names to verticals — one member per row.)_
 | 3   | `TODO-MEASURE` Screenshots of current mobile experience                |          | §2.2, showcase                         |
 | 4   | Student survey on missed/changed classes                               |          | §2.2, PRD evidence                     |
 | 5   | Email Eduvos IT re: iCal export; keep the reply                        |          | §2.1                                   |
-| 6   | `TODO-VERIFY` Are WebUntis lesson IDs stable across an edit?           | Nicholas | §11.3, §13 ERD                         |
+| 6   | ~~`TODO-VERIFY` Are WebUntis lesson IDs stable across an edit?~~ Resolved — mock assigns them | Nicholas | §11.3, §13 ERD (closed)                |
 | 7   | **Spike:** QR camera scanning inside the iOS PWA                       |          | §11.2 — blocks iOS onboarding entirely |
 | 8   | **Spike:** Expo web export renders acceptably via react-native-web     |          | §11.2                                  |
 | 9   | **Spike:** Web Push service worker + FCM JS SDK on iOS Home Screen app |          | §11.2                                  |
