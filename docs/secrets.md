@@ -70,11 +70,12 @@ The mock holds **no secrets at all**. Its admin endpoints are unauthenticated on
 never exposed through the tunnel, so the LAN is the security boundary. If you find yourself
 reaching for `os.environ` to read a token in `mock/`, stop — that is the old design.
 
-Plain configuration is still fine:
+Plain configuration is still fine — the mock currently has none beyond what `uvicorn` takes on
+the command line, but if that changes, read it the same way everything else does:
 
 ```python
 import os
-upstream = os.environ["SIDECAR_UPSTREAM_URL"]   # KeyError if missing, which is what you want
+port = os.environ["MOCK_PORT"]   # KeyError if missing, which is what you want
 ```
 
 **Expo app — it cannot hold secrets at all.**
