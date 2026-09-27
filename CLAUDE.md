@@ -12,7 +12,7 @@ prop. Advice optimised for production robustness is usually wrong here.
 
 | Document | What it settles |
 | --- | --- |
-| [GitHub issue #3](https://github.com/nbence-dev/TimeForYou/issues/3) | **The Phase 1 spec.** Problem, solution, 29 user stories, implementation and testing decisions, out-of-scope |
+| [GitHub issue #3](https://github.com/nbence-dev/TimeForYou/issues/3) | **The Phase 1 spec.** Problem, solution, 28 user stories, implementation and testing decisions, out-of-scope |
 | [`CONTRIBUTING.md`](./CONTRIBUTING.md) | How the team works — verticals, branches, PRs, and §7a: how to find a task |
 | [`docs/backlog-process.md`](./docs/backlog-process.md) | How tickets get created. **Read before creating any issue** |
 | [`PROJECT-BRIEF.md`](./PROJECT-BRIEF.md) | The full product design. §0a lists where it diverges from #3 |
@@ -44,22 +44,24 @@ gh issue list --milestone "$(gh api /repos/nbence-dev/TimeForYou/milestones --jq
 
 ## Architecture in one paragraph
 
-Six containers on one MacBook: `api`, `worker`, `sidecar`, `mock`, `postgres`, `cloudflared`. The
-backend **never** talks to WebUntis directly — it goes through a Node sidecar wrapping the
-`thenoim/webuntis` npm package (`WEBUNTIS_BASE_URL` points at the sidecar; `SIDECAR_UPSTREAM_URL`
-flips the sidecar between the real tenant and the mock). The worker runs Hangfire, polls every 10
-minutes, diffs on `(start_ts, end_ts, room, status)` only, and sends **one grouped FCM
+Five containers on one MacBook: `api`, `worker`, `mock`, `postgres`, `cloudflared`. The university
+switched to an internal timetable system with no reachable API, and the team has no access to a
+real WebUntis tenant at all — so `mock` is not a demo stand-in, it is the system's only backend,
+permanently. `IWebUntisClient` in `TimeForYou.WebUntis` talks to it directly over plain REST via
+`WEBUNTIS_BASE_URL`. There is no Node sidecar and no `thenoim/webuntis` wrapper — that plan is
+dead (see issue #3 §*Implementation Decisions → Architecture*). The worker runs Hangfire, polls
+every 10 minutes, diffs on `(start_ts, end_ts, room, status)` only, and sends **one grouped FCM
 notification per poll cycle**. Only `api` is public, via Cloudflare Tunnel, on `/api/*` and
 `/ics/*`.
 
-No Redis, no Supabase, no standalone Auth or Notification service, no C# port of the npm package.
-All four appeared in earlier designs and were cut.
+No Redis, no Supabase, no standalone Auth or Notification service, no C# port of the npm package,
+no Node sidecar. All five appeared in earlier designs and were cut.
 
 ## Testing
 
 Two seams, both in `TimeForYou.Tests`, both fixed by #3:
 
-- **Seam A** — HTTP-boundary integration: real Postgres, mock, sidecar and worker, with a stubbed
+- **Seam A** — HTTP-boundary integration: real Postgres, mock and worker, with a stubbed
   `IPushSender` capturing payloads. This is the high seam and does most of the work.
 - **Seam B** — pure domain unit tests over the diff algorithm. No I/O.
 
