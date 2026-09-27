@@ -1,0 +1,23 @@
+{
+  "server": "mock.timeforyou.local",
+  "school": "eduvos-demo",
+  "user": "demo.student",
+  "key": "MOCK-QR-SECRET-0001",
+  "display_name": "Demo Student",
+  "subjects": [
+    { "id": 1, "code": "ITMDA3", "name": "IT Major Design & Analysis 3" },
+    { "id": 2, "code": "PROG300", "name": "Programming 300" },
+    { "id": 3, "code": "NETW300", "name": "Networks 300" },
+    { "id": 4, "code": "DBAS300", "name": "Database Application Systems 300" }
+  ],
+  "lessons": [
+    { "id": 1001, "subject_id": 1, "weekday": 0, "start_time": "08:00", "end_time": "09:30", "room": "B12", "status": "scheduled" },
+    { "id": 1002, "subject_id": 2, "weekday": 0, "start_time": "10:00", "end_time": "11:30", "room": "A04", "status": "scheduled" },
+    { "id": 1003, "subject_id": 3, "weekday": 1, "start_time": "08:00", "end_time": "09:30", "room": "B12", "status": "scheduled" },
+    { "id": 1004, "subject_id": 4, "weekday": 1, "start_time": "13:00", "end_time": "14:30", "room": "Lab 2", "status": "scheduled" },
+    { "id": 1005, "subject_id": 1, "weekday": 2, "start_time": "08:00", "end_time": "09:30", "room": "B12", "status": "scheduled" },
+    { "id": 1006, "subject_id": 2, "weekday": 3, "start_time": "10:00", "end_time": "11:30", "room": "A04", "status": "scheduled" },
+    { "id": 1007, "subject_id": 3, "weekday": 4, "start_time": "08:00", "end_time": "09:30", "room": "B12", "status": "scheduled" },
+    { "id": 1008, "subject_id": 4, "weekday": 4, "start_time": "13:00", "end_time": "14:30", "room": "Lab 2", "status": "scheduled" }
+  ]
+}

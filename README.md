@@ -106,7 +106,9 @@ cd app && npm install && cd ..
 cd server && dotnet restore && cd ..
 
 # mock — the venv is git-ignored, so everyone makes their own
-cd mock && python3 -m venv .venv && .venv/bin/pip install -r requirements.txt && cd ..
+# requirements-dev.txt pulls in requirements.txt too, so this is the only install you need
+cd mock && python3 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt && cd ..
+
 ```
 
 6. Confirm the baseline works before you branch. All three must pass on a clean clone:
