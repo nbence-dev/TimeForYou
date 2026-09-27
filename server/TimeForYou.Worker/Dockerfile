@@ -27,7 +27,7 @@ RUN dotnet publish TimeForYou.Worker/TimeForYou.Worker.csproj -c Release -o /app
 FROM mcr.microsoft.com/dotnet/runtime:10.0 AS runtime
 WORKDIR /app
 
-RUN adduser --disabled-password --gecos "" appuser
+RUN useradd --no-create-home --shell /usr/sbin/nologin appuser
 COPY --from=build /app .
 USER appuser
 
