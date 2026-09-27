@@ -18,8 +18,8 @@ steps, and step 6 tells you whether your machine is set up correctly before you 
 holds the project documents, the team's working agreement, repo configuration, and — as of
 2026-08-31 — the scaffolded project tree: an Expo app, six C# projects, and a FastAPI mock, all
 of which build and do nothing. The "Running it" section below describes the contract the build
-must satisfy. `docker-compose.yml` is not written yet, so it is the specification, not yet a
-working command.
+must satisfy. `docker-compose.yml` now defines all five services and `docker compose up` brings
+them up — `api` and `worker` are still the empty scaffold, so there are no features to see yet.
 
 The build plan lives in **[issue #3](https://github.com/nbence-dev/TimeForYou/issues/3)** and its
 eight epics. Where this README and issue #3 disagree, **#3 wins** — it is newer.
@@ -54,9 +54,10 @@ cp .env.example .env          # then follow the CHANGEME comments inside
 docker compose up
 ```
 
-That starts five containers: the API, the Worker, PostgreSQL, a **mock WebUntis service** — the
-system's only backend, since there is no reachable real WebUntis tenant to fall back to — and a
-Cloudflare Tunnel (team instance only — the marker never needs it).
+That starts four containers: the API, the Worker, PostgreSQL, and a **mock WebUntis service** —
+the system's only backend, since there is no reachable real WebUntis tenant to fall back to. A
+fifth, the Cloudflare Tunnel, is team instance only and stays out of a bare `up` — the marker
+never needs it. The team brings it up with `docker compose --profile tunnel up`.
 
 The demo path — the whole point of the mock — is:
 
@@ -166,9 +167,9 @@ docs/                     these documents
 docker-compose.yml        API · Worker · mock · Postgres · cloudflared
 ```
 
-The `Dockerfile`s and `docker-compose.yml` exist but are **placeholders** — each records what
-belongs in it and nothing more, so the paths are fixed before anything references them.
-`docker compose up` does not work yet.
+`docker compose up` brings up `db`, `api`, `worker`, and `mock`. `cloudflared` sits behind the
+`tunnel` compose profile — the marker's `.env` has no real Cloudflare token, so it stays out of a
+bare `up`; the team adds it with `docker compose --profile tunnel up` on the machine that has one.
 
 **Two rules hold this together.** `src/app/` is routes and nothing else — Expo Router turns any
 default-exporting file in there into a URL. And `features/*` import from `shared/*`, never from

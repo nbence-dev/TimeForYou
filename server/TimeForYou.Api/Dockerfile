@@ -1,15 +1,35 @@
 # TimeForYou — API (ASP.NET Core). Owned by V6 (platform).
 #
-# NOT WRITTEN YET. Placeholder so the path is fixed before anyone references it.
-#
 # Build context must be `server/`, not this directory — the publish needs the
 # solution and the sibling projects it references (Domain, Data, WebUntis):
 #
 #   docker build -f TimeForYou.Api/Dockerfile server/
 #
-# What belongs here:
-#   - multi-stage: mcr.microsoft.com/dotnet/sdk:10.0 to build, aspnet:10.0 to run
-#   - restore before copying the full source, so layer caching survives edits
-#   - non-root user
-#   - EXPOSE 8080, and ASPNETCORE_URLS pointing at it
-#   - the TFM comes from server/Directory.Build.props — don't restate it here
+# The TFM comes from server/Directory.Build.props — not restated here.
+
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+WORKDIR /src
+
+COPY Directory.Build.props .
+COPY TimeForYou.Api/TimeForYou.Api.csproj TimeForYou.Api/
+COPY TimeForYou.Domain/TimeForYou.Domain.csproj TimeForYou.Domain/
+COPY TimeForYou.Data/TimeForYou.Data.csproj TimeForYou.Data/
+COPY TimeForYou.WebUntis/TimeForYou.WebUntis.csproj TimeForYou.WebUntis/
+RUN dotnet restore TimeForYou.Api/TimeForYou.Api.csproj
+
+COPY TimeForYou.Api/ TimeForYou.Api/
+COPY TimeForYou.Domain/ TimeForYou.Domain/
+COPY TimeForYou.Data/ TimeForYou.Data/
+COPY TimeForYou.WebUntis/ TimeForYou.WebUntis/
+RUN dotnet publish TimeForYou.Api/TimeForYou.Api.csproj -c Release -o /app --no-restore
+
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
+WORKDIR /app
+
+RUN adduser --disabled-password --gecos "" appuser
+COPY --from=build /app .
+USER appuser
+
+EXPOSE 8080
+ENV ASPNETCORE_URLS=http://+:8080
+ENTRYPOINT ["dotnet", "TimeForYou.Api.dll"]
