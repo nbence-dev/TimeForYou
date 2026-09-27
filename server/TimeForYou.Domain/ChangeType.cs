@@ -35,3 +35,4 @@ public static class ChangeTypeExtensions
         _ => throw new ArgumentOutOfRangeException(nameof(value), value, null),
     };
 }
+

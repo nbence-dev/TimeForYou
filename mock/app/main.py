@@ -124,3 +124,4 @@ def qr_code() -> StreamingResponse:
     image.save(buffer, format="PNG")
     buffer.seek(0)
     return StreamingResponse(buffer, media_type="image/png")
+
