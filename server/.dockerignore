@@ -1,0 +1,6 @@
+# Keeps host-generated build output out of the Docker build context. Without
+# this, COPY steps in the Dockerfiles pick up a Mac-built obj/project.assets.json
+# and overwrite the container's own restore, breaking `dotnet publish --no-restore`
+# with a false "package not found" error.
+**/bin/
+**/obj/

@@ -1,61 +1,95 @@
 # TimeForYou — the whole stack on one machine. Owned by V6 (platform).
 # CONTRIBUTING.md §4: request changes here, don't edit it in passing.
 #
-# ─────────────────────────────────────────────────────────────────────────────
-# NOT WRITTEN YET. This file is a placeholder: it reserves the path and records
-# the shape agreed in brief §12.3, but it defines no services, so
-# `docker compose up` does NOT work yet. README.md says as much.
-# ─────────────────────────────────────────────────────────────────────────────
+# One promise: a marker with Docker Desktop and nothing else clones the repo,
+# copies .env.example to .env, runs `docker compose up`, and gets the entire
+# pipeline — auth, polling, change detection, notification delivery — on one
+# machine with no Eduvos credentials (brief §12.4).
 #
-# It has to satisfy one promise: a marker with Docker Desktop and nothing else
-# clones the repo, copies .env.example to .env, runs `docker compose up`, and
-# gets the entire pipeline — auth, polling, change detection, notification
-# delivery — on one machine with no Eduvos credentials (brief §12.4).
-#
-# FIVE SERVICES
-#
-#   db          postgres:17-alpine, official image, no Dockerfile
-#               POSTGRES_DB / POSTGRES_USER / POSTGRES_PASSWORD from .env
-#               named volume for the data — NOT a bind mount into the repo
-#               healthcheck: pg_isready; api and worker both depend_on it
-#               with condition: service_healthy, or they race the first migration
-#
-#   api         build: context ./server, dockerfile TimeForYou.Api/Dockerfile
-#               ports 8080:8080 — the ONLY service reachable from outside
-#               needs ConnectionStrings__TimeForYou, AES_KEY,
-#               WEBUNTIS_BASE_URL, FIREBASE_PROJECT_ID
-#
-#   worker      build: context ./server, dockerfile TimeForYou.Worker/Dockerfile
-#               no ports — it polls outward
-#               same DB and encryption env as api, plus POLL_INTERVAL_SECONDS
-#               runs Hangfire; its dashboard stays LAN-only, never tunnelled
-#
-#   mock        build: ./mock
-#               ports 8000:8000
-#               admin endpoints are UNAUTHENTICATED by design — the mock is
-#               never tunnelled, so the LAN is the boundary. No token.
-#               this is what makes the marker demo possible — see brief §12.4
-#
-#   cloudflared cloudflare/cloudflared, team instance only
-#               routes /api/* and /ics/* to api; everything else 404s
-#               the marker never needs this — keep it in a compose overlay
-#
-# THINGS THAT WILL BITE
-#
-#   - One hop, one variable. WEBUNTIS_BASE_URL points api/worker straight at
-#     MOCK (http://mock:8000) — there is no real WebUntis tenant to flip to.
-#     Service names, never localhost — containers resolve each other by
-#     service name.
-#   - Demo config shortens POLL_INTERVAL_SECONDS to ~30 so the marker sees the
-#     notification inside a minute. Default is 600 (10 minutes).
-#   - The Firebase service account JSON is mounted from OUTSIDE the repo, never
-#     copied into an image. See .env.example and docs/secrets.md.
-#   - Every new env var goes into .env.example in the same PR (CONTRIBUTING §8).
-#   - docker-compose.override.yml is git-ignored — use it for local tweaks
-#     rather than editing this file.
-#
-# The Cloudflare Tunnel is the team instance only. Issue #3 counts it among the
-# five containers because it is part of the team topology, but the marker must
-# never need it: put cloudflared behind a compose profile, so a bare
-# `docker compose up` brings up four and `--profile tunnel` adds the fifth.
-# That satisfies both promises without a second file to keep in sync.
+# `cloudflared` is behind the `tunnel` profile on purpose: the marker's .env
+# has no real CLOUDFLARE_TUNNEL_TOKEN (team instance only, brief §12.4), and a
+# bare `docker compose up` must not fail or hang waiting on it. The team runs
+# `docker compose --profile tunnel up` to add it on the machine that actually
+# has the token.
+
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: ./server
+      dockerfile: TimeForYou.Api/Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      ConnectionStrings__TimeForYou: ${ConnectionStrings__TimeForYou}
+      AES_KEY: ${AES_KEY}
+      WEBUNTIS_BASE_URL: ${WEBUNTIS_BASE_URL}
+      WEBUNTIS_SCHOOL: ${WEBUNTIS_SCHOOL}
+      FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID}
+      GOOGLE_APPLICATION_CREDENTIALS: ${GOOGLE_APPLICATION_CREDENTIALS}
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT}
+    volumes:
+      - ${FIREBASE_SERVICE_ACCOUNT_PATH}:${GOOGLE_APPLICATION_CREDENTIALS}:ro
+    depends_on:
+      db:
+        condition: service_healthy
+      mock:
+        condition: service_healthy
+
+  worker:
+    build:
+      context: ./server
+      dockerfile: TimeForYou.Worker/Dockerfile
+    environment:
+      ConnectionStrings__TimeForYou: ${ConnectionStrings__TimeForYou}
+      AES_KEY: ${AES_KEY}
+      WEBUNTIS_BASE_URL: ${WEBUNTIS_BASE_URL}
+      WEBUNTIS_SCHOOL: ${WEBUNTIS_SCHOOL}
+      FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID}
+      GOOGLE_APPLICATION_CREDENTIALS: ${GOOGLE_APPLICATION_CREDENTIALS}
+      POLL_INTERVAL_SECONDS: ${POLL_INTERVAL_SECONDS}
+    volumes:
+      - ${FIREBASE_SERVICE_ACCOUNT_PATH}:${GOOGLE_APPLICATION_CREDENTIALS}:ro
+    depends_on:
+      db:
+        condition: service_healthy
+      mock:
+        condition: service_healthy
+
+  mock:
+    build:
+      context: ./mock
+    ports:
+      - "8000:8000"
+    # Admin endpoints are unauthenticated on purpose — the mock is never
+    # tunnelled, so the LAN is the boundary. Do not add a token.
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; socket.create_connection(('localhost', 8000), 2)"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    profiles: ["tunnel"]
+    command: tunnel run
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN}
+    depends_on:
+      - api
+
+volumes:
+  db-data:

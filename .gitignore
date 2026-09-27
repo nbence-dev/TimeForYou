@@ -79,3 +79,5 @@ logs/
 .AppleDouble
 Thumbs.db
 ehthumbs.db
+
+.claude
