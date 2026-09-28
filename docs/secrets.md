@@ -98,6 +98,35 @@ an FCM registration token. Nothing signs or authorises with them.
 
 ---
 
+## Firebase service-account JSON (issue #19)
+
+Firebase project: **`timeforyou`**. Cloud Messaging is enabled for both transports FCM needs —
+FCM Web (iOS PWA) and native FCM (Android Expo build). There are no VAPID keys; see #13.
+
+**Where it lives:** the team password manager. *(TODO — no password manager has been chosen yet.
+Do not commit the JSON, paste it into chat, or drop it in a Drive folder in the meantime; whoever
+holds the download keeps it on their own machine only, outside the repo, until this is filled
+in.)*
+
+**How to retrieve it:** *(TODO — fill in once the password manager above is chosen: the
+org/vault/collection name and who has access.)*
+
+**Where to mount it:**
+
+1. Save the downloaded JSON anywhere outside the repo, e.g. `~/secrets/timeforyou-firebase.json`.
+2. In your `.env`, set:
+   ```bash
+   FIREBASE_PROJECT_ID=timeforyou
+   FIREBASE_SERVICE_ACCOUNT_PATH=/absolute/path/to/timeforyou-firebase.json
+   ```
+   `GOOGLE_APPLICATION_CREDENTIALS` stays as the container-side path already in `.env.example`
+   (`/run/secrets/firebase-service-account.json`) — don't change it per-person. `docker-compose.yml`
+   bind-mounts `FIREBASE_SERVICE_ACCOUNT_PATH` (host) to `GOOGLE_APPLICATION_CREDENTIALS`
+   (container) read-only for both `api` and `worker`.
+3. `docker compose up` — the JSON never enters the image or the repo, only the running container.
+
+---
+
 ## `dotnet user-secrets` — for your machine only
 
 Optional, and only useful for C#. It stores values in your home folder
