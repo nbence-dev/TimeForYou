@@ -48,7 +48,7 @@ public sealed class SchemaMigrationTests : IAsyncLifetime
         setupContext.Users.Add(user);
         setupContext.LessonSnapshots.Add(new LessonSnapshot
         {
-            UserId = user.Id,
+            User = user,
             UntisLessonId = "untis-lesson-1",
             Subject = "Maths",
             Room = "B4",
