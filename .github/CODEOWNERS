@@ -1,0 +1,4 @@
+# Auto-requests review from these people on every PR.
+# "Require review from Code Owners" is on for main, alongside the existing
+# 1-approval minimum — so an approval from either person here satisfies it.
+* @nbence-dev @DogCE1
