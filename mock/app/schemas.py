@@ -15,7 +15,7 @@ class LoginResponse(BaseModel):
 
 
 class LessonOut(BaseModel):
-    untis_lesson_id: int
+    untis_lesson_id: str
     subject_code: str
     subject_name: str
     room: str
@@ -35,3 +35,12 @@ class QrPayload(BaseModel):
     school: str
     user: str
     key: str
+
+
+class MoveLessonRequest(BaseModel):
+    start_ts: datetime
+    end_ts: datetime
+
+
+class ChangeRoomRequest(BaseModel):
+    room: str
