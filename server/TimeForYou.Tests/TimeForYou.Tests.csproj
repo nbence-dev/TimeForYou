@@ -23,6 +23,7 @@
     <ProjectReference Include="..\TimeForYou.Domain\TimeForYou.Domain.csproj" />
     <ProjectReference Include="..\TimeForYou.Data\TimeForYou.Data.csproj" />
     <ProjectReference Include="..\TimeForYou.Worker\TimeForYou.Worker.csproj" />
+    <ProjectReference Include="..\TimeForYou.WebUntis\TimeForYou.WebUntis.csproj" />
   </ItemGroup>
 
 </Project>
