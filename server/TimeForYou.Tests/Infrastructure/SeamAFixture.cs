@@ -73,6 +73,11 @@ public sealed class SeamAFixture : IAsyncLifetime
         return new TimeForYouDbContext(options);
     }
 
+    /// <summary>Fixed test-only key (32 zero bytes, base64) — not a secret, never used outside
+    /// this harness. Every test run derives the same DataProtection key from it (#31), which is
+    /// the point: no key ring to share or reset between tests.</summary>
+    private const string TestAesKey = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+
     /// <summary>Boots TimeForYou.Api in-process, pointed at this fixture's Postgres and mock.</summary>
     public WebApplicationFactory<Program> CreateApiFactory() =>
         new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
@@ -81,6 +86,7 @@ public sealed class SeamAFixture : IAsyncLifetime
                 {
                     ["ConnectionStrings:TimeForYou"] = _postgres.GetConnectionString(),
                     ["WEBUNTIS_BASE_URL"] = MockBaseUrl,
+                    ["AES_KEY"] = TestAesKey,
                 })));
 
     /// <summary>

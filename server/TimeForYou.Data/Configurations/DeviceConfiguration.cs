@@ -21,12 +21,12 @@ public class DeviceConfiguration : IEntityTypeConfiguration<Device>
 
         builder.Property(d => d.Platform)
             .HasColumnName("platform")
-            .HasConversion(p => p.ToWireValue(), v => DevicePlatformExtensions.ParseWireValue(v))
-            .IsRequired();
+            .HasConversion(
+                p => p.HasValue ? p.Value.ToWireValue() : null,
+                v => v == null ? (DevicePlatform?)null : DevicePlatformExtensions.ParseWireValue(v));
 
         builder.Property(d => d.PushToken)
-            .HasColumnName("push_token")
-            .IsRequired();
+            .HasColumnName("push_token");
 
         builder.Property(d => d.BearerTokenHash)
             .HasColumnName("bearer_token_hash")

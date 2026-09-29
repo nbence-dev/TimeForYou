@@ -11,11 +11,14 @@ public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddWebUntisClient(this IServiceCollection services, IConfiguration configuration)
     {
-        var baseUrl = configuration["WEBUNTIS_BASE_URL"]
-            ?? throw new InvalidOperationException("WEBUNTIS_BASE_URL is not configured.");
-
+        // Read lazily (per typed-client creation), not here: `configuration` is usually the
+        // WebApplicationBuilder's ConfigurationManager, which can still gain sources — e.g. a
+        // WebApplicationFactory-based test's overrides — between this call and `builder.Build()`
+        // (issue #31).
         services.AddHttpClient<IWebUntisClient, WebUntisClient>(client =>
         {
+            var baseUrl = configuration["WEBUNTIS_BASE_URL"]
+                ?? throw new InvalidOperationException("WEBUNTIS_BASE_URL is not configured.");
             client.BaseAddress = new Uri(baseUrl);
         });
 

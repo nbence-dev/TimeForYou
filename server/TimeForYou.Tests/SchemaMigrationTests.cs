@@ -29,7 +29,7 @@ public sealed class SchemaMigrationTests(SeamAFixture fixture) : IAsyncLifetime
     {
         await using var setupContext = fixture.CreateDbContext();
 
-        var user = new User { School = "eduvos", CredentialsProtected = "ciphertext" };
+        var user = new User { School = "eduvos", CredentialsProtected = "ciphertext", UntisUserHash = "hash" };
         setupContext.Users.Add(user);
         setupContext.LessonSnapshots.Add(new LessonSnapshot
         {

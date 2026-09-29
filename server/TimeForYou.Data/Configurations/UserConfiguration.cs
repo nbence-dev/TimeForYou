@@ -23,6 +23,12 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
             .HasColumnName("credentials_protected")
             .IsRequired();
 
+        builder.Property(u => u.UntisUserHash)
+            .HasColumnName("untis_user_hash")
+            .HasMaxLength(64)
+            .IsRequired();
+        builder.HasIndex(u => u.UntisUserHash).IsUnique();
+
         builder.Property(u => u.CreatedAt)
             .HasColumnName("created_at")
             .HasDefaultValueSql("now()");
