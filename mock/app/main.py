@@ -2,13 +2,15 @@
 
 Plain REST, not WebUntis's own protocol: there is no real WebUntis tenant reachable and no Node
 sidecar translating for one, so `IWebUntisClient` (server/TimeForYou.WebUntis) will call this
-service directly. Read surface only — auth, timetable, subjects, and QR-code generation for the
-onboarding demo. The unauthenticated admin mutation endpoints (`/mock/cancel-lesson/{id}` etc.)
-are a separate, later ticket.
+service directly. Serves the read surface — auth, timetable, subjects, and QR-code generation for
+the onboarding demo — plus the unauthenticated admin mutation endpoints (`/mock/cancel-lesson/{id}`,
+`/mock/move-lesson/{id}`, `/mock/change-room/{id}`, `/mock/reset`) that drive change detection in
+tests and on stage. LAN is the boundary for those; do not add a token.
 """
 
 import io
 import json
+import re
 import uuid
 from datetime import date, datetime, time, timedelta, timezone
 
@@ -17,7 +19,15 @@ from fastapi import FastAPI, Header, HTTPException, Query
 from fastapi.responses import StreamingResponse
 
 from app.fixtures import load_students, student_key
-from app.schemas import LessonOut, LoginRequest, LoginResponse, QrPayload, SubjectOut
+from app.schemas import (
+    ChangeRoomRequest,
+    LessonOut,
+    LoginRequest,
+    LoginResponse,
+    MoveLessonRequest,
+    QrPayload,
+    SubjectOut,
+)
 
 # Eduvos is a South African institution; SAST has no DST, so a fixed UTC+2 offset is always correct.
 SAST = timezone(timedelta(hours=2))
@@ -26,6 +36,12 @@ app = FastAPI(title="TimeForYou Mock WebUntis")
 
 _students = load_students()
 _sessions: dict[str, str] = {}  # session_id -> student key
+
+# Occurrence id -> field overrides. This is the mutable state layer: fixtures on disk are the
+# template and are never written to, so `/mock/reset` is just clearing this dict.
+_overrides: dict[str, dict] = {}
+
+_OCCURRENCE_ID_RE = re.compile(r"(\d+)-(\d{4}-\d{2}-\d{2})")
 
 
 def _demo_student() -> dict:
@@ -57,29 +73,67 @@ def _week_monday(d: date) -> date:
     return d - timedelta(days=d.weekday())
 
 
-def _materialize(student: dict, anchor_monday: date) -> list[LessonOut]:
-    """Projects the fixture's weekly template onto real calendar dates for the given week.
+def _occurrence_id(template_id: int, occurrence_date: date) -> str:
+    return f"{template_id}-{occurrence_date.isoformat()}"
 
-    Lessons stay demoable regardless of when the mock is run — the seeded week is always
-    "this week" rather than a fixed date that goes stale before the showcase.
+
+def _lesson_out(student: dict, lesson: dict, occurrence_date: date) -> LessonOut:
+    """Builds one occurrence of a template lesson on a given date, with any admin override applied."""
+    subject = next(s for s in student["subjects"] if s["id"] == lesson["subject_id"])
+    occurrence_id = _occurrence_id(lesson["id"], occurrence_date)
+    override = _overrides.get(occurrence_id, {})
+    default_start = datetime.combine(occurrence_date, time.fromisoformat(lesson["start_time"]), tzinfo=SAST)
+    default_end = datetime.combine(occurrence_date, time.fromisoformat(lesson["end_time"]), tzinfo=SAST)
+    return LessonOut(
+        untis_lesson_id=occurrence_id,
+        subject_code=subject["code"],
+        subject_name=subject["name"],
+        room=override.get("room", lesson["room"]),
+        status=override.get("status", lesson["status"]),
+        start_ts=override.get("start_ts", default_start),
+        end_ts=override.get("end_ts", default_end),
+    )
+
+
+def _materialize(student: dict, start: date, end: date) -> list[LessonOut]:
+    """Projects the fixture's weekly template onto every real calendar occurrence in [start, end].
+
+    Lessons stay demoable regardless of when the mock is run — "this week" is always the current
+    week rather than a fixed date that goes stale before the showcase.
     """
-    subjects_by_id = {s["id"]: s for s in student["subjects"]}
     lessons = []
-    for lesson in student["lessons"]:
-        lesson_date = anchor_monday + timedelta(days=lesson["weekday"])
-        subject = subjects_by_id[lesson["subject_id"]]
-        lessons.append(
-            LessonOut(
-                untis_lesson_id=lesson["id"],
-                subject_code=subject["code"],
-                subject_name=subject["name"],
-                room=lesson["room"],
-                status=lesson["status"],
-                start_ts=datetime.combine(lesson_date, time.fromisoformat(lesson["start_time"]), tzinfo=SAST),
-                end_ts=datetime.combine(lesson_date, time.fromisoformat(lesson["end_time"]), tzinfo=SAST),
-            )
-        )
+    day = start
+    while day <= end:
+        for lesson in student["lessons"]:
+            if lesson["weekday"] == day.weekday():
+                lesson_out = _lesson_out(student, lesson, day)
+                # An override can move a lesson's displayed start_ts off its template day, so
+                # filter on the value actually returned, not the calendar day being scanned.
+                if start <= lesson_out.start_ts.date() <= end:
+                    lessons.append(lesson_out)
+        day += timedelta(days=1)
     return lessons
+
+
+def _find_occurrence(occurrence_id: str) -> tuple[dict, dict, date] | None:
+    """Resolves an occurrence id back to its (student, template lesson, occurrence date)."""
+    match = _OCCURRENCE_ID_RE.fullmatch(occurrence_id)
+    if match is None:
+        return None
+    template_id = int(match.group(1))
+    occurrence_date = date.fromisoformat(match.group(2))
+    for student in _students.values():
+        for lesson in student["lessons"]:
+            if lesson["id"] == template_id and lesson["weekday"] == occurrence_date.weekday():
+                return student, lesson, occurrence_date
+    return None
+
+
+def _require_occurrence(occurrence_id: str) -> tuple[dict, dict, date]:
+    found = _find_occurrence(occurrence_id)
+    if found is None:
+        raise HTTPException(status_code=404, detail="unknown lesson occurrence")
+    return found
 
 
 @app.get("/timetable", response_model=list[LessonOut])
@@ -89,12 +143,9 @@ def get_timetable(
     end: date | None = Query(default=None),
 ) -> list[LessonOut]:
     student = _authenticate(authorization)
-    lessons = _materialize(student, _week_monday(start or datetime.now(SAST).date()))
-    if start is not None:
-        lessons = [lesson for lesson in lessons if lesson.start_ts.date() >= start]
-    if end is not None:
-        lessons = [lesson for lesson in lessons if lesson.start_ts.date() <= end]
-    return lessons
+    range_start = start or _week_monday(datetime.now(SAST).date())
+    range_end = end or (range_start + timedelta(days=6))
+    return _materialize(student, range_start, range_end)
 
 
 @app.get("/subjects", response_model=list[SubjectOut])
@@ -124,3 +175,31 @@ def qr_code() -> StreamingResponse:
     image.save(buffer, format="PNG")
     buffer.seek(0)
     return StreamingResponse(buffer, media_type="image/png")
+
+
+@app.post("/mock/cancel-lesson/{lesson_id}", response_model=LessonOut)
+def cancel_lesson(lesson_id: str) -> LessonOut:
+    student, lesson, occurrence_date = _require_occurrence(lesson_id)
+    _overrides.setdefault(lesson_id, {})["status"] = "cancelled"
+    return _lesson_out(student, lesson, occurrence_date)
+
+
+@app.post("/mock/move-lesson/{lesson_id}", response_model=LessonOut)
+def move_lesson(lesson_id: str, body: MoveLessonRequest) -> LessonOut:
+    student, lesson, occurrence_date = _require_occurrence(lesson_id)
+    override = _overrides.setdefault(lesson_id, {})
+    override["start_ts"] = body.start_ts
+    override["end_ts"] = body.end_ts
+    return _lesson_out(student, lesson, occurrence_date)
+
+
+@app.post("/mock/change-room/{lesson_id}", response_model=LessonOut)
+def change_room(lesson_id: str, body: ChangeRoomRequest) -> LessonOut:
+    student, lesson, occurrence_date = _require_occurrence(lesson_id)
+    _overrides.setdefault(lesson_id, {})["room"] = body.room
+    return _lesson_out(student, lesson, occurrence_date)
+
+
+@app.post("/mock/reset", status_code=204)
+def reset() -> None:
+    _overrides.clear()
