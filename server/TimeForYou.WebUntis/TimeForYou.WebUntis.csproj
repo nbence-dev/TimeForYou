@@ -4,6 +4,11 @@
     <ProjectReference Include="..\TimeForYou.Domain\TimeForYou.Domain.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="10.0.12" />
+    <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.12" />
+  </ItemGroup>
+
   <PropertyGroup>
   </PropertyGroup>
 
