@@ -92,12 +92,10 @@ namespace TimeForYou.Data.Migrations
                         .HasDefaultValueSql("now()");
 
                     b.Property<string>("Platform")
-                        .IsRequired()
                         .HasColumnType("text")
                         .HasColumnName("platform");
 
                     b.Property<string>("PushToken")
-                        .IsRequired()
                         .HasColumnType("text")
                         .HasColumnName("push_token");
 
@@ -276,7 +274,16 @@ namespace TimeForYou.Data.Migrations
                         .HasColumnType("text")
                         .HasColumnName("school");
 
+                    b.Property<string>("UntisUserHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("untis_user_hash");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("UntisUserHash")
+                        .IsUnique();
 
                     b.ToTable("users", (string)null);
                 });

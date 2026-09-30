@@ -12,6 +12,13 @@ public class User
     /// </summary>
     public required string CredentialsProtected { get; set; }
 
+    /// <summary>
+    /// SHA-256 of the normalised `(school, user)` pair. <see cref="CredentialsProtected"/> is
+    /// non-deterministic ciphertext and can't be searched, so a second device scanning the same
+    /// QR code needs this to find the existing user instead of creating a duplicate (issue #31).
+    /// </summary>
+    public required string UntisUserHash { get; set; }
+
     public DateTimeOffset CreatedAt { get; set; }
 
     public List<Device> Devices { get; set; } = [];

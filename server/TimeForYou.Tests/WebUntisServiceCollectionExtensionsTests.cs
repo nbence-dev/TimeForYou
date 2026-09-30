@@ -24,9 +24,13 @@ public sealed class WebUntisServiceCollectionExtensionsTests
     [Fact]
     public void Throws_when_WEBUNTIS_BASE_URL_is_not_configured()
     {
+        // The check only fires once the typed client is actually created (issue #31) — not at
+        // registration time, so a WebApplicationFactory-based test can still add WEBUNTIS_BASE_URL
+        // after this call runs and before anything resolves IWebUntisClient.
         var configuration = new ConfigurationBuilder().Build();
-        var services = new ServiceCollection();
+        var services = new ServiceCollection().AddWebUntisClient(configuration);
+        using var provider = services.BuildServiceProvider();
 
-        Assert.Throws<InvalidOperationException>(() => services.AddWebUntisClient(configuration));
+        Assert.Throws<InvalidOperationException>(() => provider.GetRequiredService<IWebUntisClient>());
     }
 }

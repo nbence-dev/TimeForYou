@@ -1,4 +1,6 @@
+using TimeForYou.Api.Features.Auth;
 using TimeForYou.Data;
+using TimeForYou.WebUntis;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -7,6 +9,8 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddOpenApi();
 
 builder.Services.AddDataModule(builder.Configuration);
+builder.Services.AddWebUntisClient(builder.Configuration);
+builder.Services.AddAuthModule(builder.Configuration);
 
 var app = builder.Build();
 
@@ -18,8 +22,13 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+app.UseAuthentication();
+app.UseAuthorization();
+
 app.MapGet("/health", () => Results.Ok())
     .WithName("GetHealth");
+
+app.MapAuthEndpoints();
 
 app.Run();
 
