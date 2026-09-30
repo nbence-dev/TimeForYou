@@ -167,4 +167,122 @@ public class TimetableDiffTests
         Assert.Equal(5, changes.Count);
         Assert.Equal("Maths moved to room B12 (+4 more changes)", TimetableDiff.BuildNotificationText(changes));
     }
+
+    [Fact]
+    public void Lead_tie_on_change_type_goes_to_earliest_start()
+    {
+        var early = MakeLesson("9", start: Nine);
+        var late = MakeLesson("1", start: Nine.AddHours(2));
+
+        var changes = TimetableDiff.Compute(
+            [late, early],
+            [late with { Room = "B12" }, early with { Room = "B12" }]);
+
+        Assert.Equal("9", TimetableDiff.SelectLead(changes)!.UntisLessonId);
+    }
+
+    [Fact]
+    public void Lead_tie_on_type_and_start_goes_to_lowest_lesson_id()
+    {
+        var b = MakeLesson("b");
+        var a = MakeLesson("a");
+
+        var changes = TimetableDiff.Compute(
+            [b, a],
+            [b with { Room = "B12" }, a with { Room = "B12" }]);
+
+        Assert.Equal("a", TimetableDiff.SelectLead(changes)!.UntisLessonId);
+    }
+
+    [Fact]
+    public void Uncancel_is_logged_as_cancelled_type_with_scheduled_new_value()
+    {
+        var before = MakeLesson("1", status: LessonStatus.Cancelled);
+        var now = before with { Status = LessonStatus.Scheduled };
+
+        var change = Assert.Single(TimetableDiff.Compute([before], [now]));
+
+        Assert.Equal(ChangeType.Cancelled, change.ChangeType);
+        Assert.Equal("cancelled", change.OldValue);
+        Assert.Equal("scheduled", change.NewValue);
+        Assert.Equal("Maths status changed to scheduled", TimetableDiff.BuildNotificationText([change]));
+    }
+
+    [Fact]
+    public void Scheduled_to_irregular_is_logged_as_cancelled_type()
+    {
+        var before = MakeLesson("1");
+        var now = before with { Status = LessonStatus.Irregular };
+
+        var change = Assert.Single(TimetableDiff.Compute([before], [now]));
+
+        Assert.Equal(ChangeType.Cancelled, change.ChangeType);
+        Assert.Equal("irregular", change.NewValue);
+        Assert.Equal("Maths status changed to irregular", TimetableDiff.BuildNotificationText([change]));
+    }
+
+    [Fact]
+    public void Notification_text_for_empty_list_is_null()
+    {
+        Assert.Null(TimetableDiff.BuildNotificationText([]));
+    }
+
+    [Fact]
+    public void Notification_text_for_cancellation()
+    {
+        var before = MakeLesson("1");
+        var changes = TimetableDiff.Compute([before], [before with { Status = LessonStatus.Cancelled }]);
+
+        Assert.Equal("Maths has been cancelled", TimetableDiff.BuildNotificationText(changes));
+    }
+
+    [Fact]
+    public void Notification_text_for_room_cleared()
+    {
+        var before = MakeLesson("1");
+        var changes = TimetableDiff.Compute([before], [before with { Room = null }]);
+
+        Assert.Equal("Maths no longer has a room assigned", TimetableDiff.BuildNotificationText(changes));
+    }
+
+    [Fact]
+    public void Notification_text_for_time_change()
+    {
+        var before = MakeLesson("1");
+        var changes = TimetableDiff.Compute([before], [before with { StartTs = Nine.AddMinutes(30) }]);
+
+        Assert.Equal("Maths has been rescheduled", TimetableDiff.BuildNotificationText(changes));
+    }
+
+    [Fact]
+    public void Notification_text_for_added_lesson()
+    {
+        var changes = TimetableDiff.Compute([], [MakeLesson("1")]);
+
+        Assert.Equal("New lesson: Maths", TimetableDiff.BuildNotificationText(changes));
+    }
+
+    [Fact]
+    public void Notification_text_for_removed_lesson()
+    {
+        var changes = TimetableDiff.Compute([MakeLesson("1")], []);
+
+        Assert.Equal("Maths was removed from your timetable", TimetableDiff.BuildNotificationText(changes));
+    }
+
+    [Fact]
+    public void Notification_text_mixes_lead_selection_with_count()
+    {
+        var maths = MakeLesson("1", subject: "Maths", start: Nine);
+        var physics = MakeLesson("2", subject: "Physics", start: Nine.AddHours(2));
+        var art = MakeLesson("3", subject: "Art", start: Nine.AddHours(4));
+
+        var changes = TimetableDiff.Compute(
+            [maths, physics, art],
+            [maths with { Room = "B12" },
+             physics with { Status = LessonStatus.Cancelled },
+             art with { StartTs = art.StartTs.AddMinutes(15) }]);
+
+        Assert.Equal("Physics has been cancelled (+2 more changes)", TimetableDiff.BuildNotificationText(changes));
+    }
 }
