@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
 using TimeForYou.Tests.Infrastructure;
 
@@ -16,7 +17,7 @@ public sealed class QrScanAuthTests(SeamAFixture fixture) : IAsyncLifetime
 
     private sealed record QrPayload(string Server, string School, string User, string Key);
 
-    private sealed record QrScanResponseWire(string Token, Guid UserId);
+    private sealed record QrScanResponseWire(string Token, [property: JsonPropertyName("user_id")] Guid UserId);
 
     private async Task<QrPayload> FetchDemoQrPayloadAsync()
     {
@@ -132,13 +133,13 @@ public sealed class QrScanAuthTests(SeamAFixture fixture) : IAsyncLifetime
         using var factory = fixture.CreateApiFactory();
         using var client = factory.CreateClient();
 
-        var unauthenticated = await client.GetAsync("/auth/session");
+        var unauthenticated = await client.GetAsync("/timetable");
         Assert.Equal(HttpStatusCode.Unauthorized, unauthenticated.StatusCode);
 
         var scan = await (await client.PostAsJsonAsync("/qr-scan", payload)).Content.ReadFromJsonAsync<QrScanResponseWire>();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", scan!.Token);
 
-        var authenticated = await client.GetAsync("/auth/session");
+        var authenticated = await client.GetAsync("/timetable");
         Assert.Equal(HttpStatusCode.OK, authenticated.StatusCode);
     }
 
@@ -149,7 +150,7 @@ public sealed class QrScanAuthTests(SeamAFixture fixture) : IAsyncLifetime
         using var client = factory.CreateClient();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", "not-a-real-token");
 
-        var response = await client.GetAsync("/auth/session");
+        var response = await client.GetAsync("/timetable");
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
