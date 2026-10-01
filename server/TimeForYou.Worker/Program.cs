@@ -1,7 +1,7 @@
 using TimeForYou.Worker;
 
 var builder = Host.CreateApplicationBuilder(args);
-builder.Services.AddHostedService<Worker>();
+builder.Services.AddWorkerModule(builder.Configuration);
 
 var host = builder.Build();
 host.Run();

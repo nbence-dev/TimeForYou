@@ -9,6 +9,7 @@ using Microsoft.Extensions.Hosting;
 using Testcontainers.PostgreSql;
 using TimeForYou.Data;
 using TimeForYou.Domain;
+using TimeForYou.Worker;
 
 namespace TimeForYou.Tests.Infrastructure;
 
@@ -90,10 +91,11 @@ public sealed class SeamAFixture : IAsyncLifetime
                 })));
 
     /// <summary>
-    /// Builds the worker's DI container against this fixture's Postgres and mock, so a test can
-    /// resolve and invoke services directly. The poll job itself arrives in #32; for now this only
-    /// proves the wiring — <see cref="TimeForYouDbContext"/> and <see cref="IPushSender"/> resolve,
-    /// and the hosted <see cref="global::TimeForYou.Worker.Worker"/> is registered.
+    /// Builds the worker's DI container against this fixture's Postgres and mock in test mode
+    /// (#32): the poll job and everything it needs are registered, with <see cref="PushSender"/>
+    /// in place of the real sender, but no Hangfire server or recurring schedule — a test resolves
+    /// <see cref="Worker.Polling.PollJob"/> and invokes it directly. Uses the same AES_KEY as the
+    /// API, so the worker can decrypt credentials the API encrypted.
     /// </summary>
     public IHost CreateWorkerHost() =>
         Host.CreateDefaultBuilder()
@@ -102,13 +104,12 @@ public sealed class SeamAFixture : IAsyncLifetime
                 {
                     ["ConnectionStrings:TimeForYou"] = _postgres.GetConnectionString(),
                     ["WEBUNTIS_BASE_URL"] = MockBaseUrl,
+                    ["AES_KEY"] = TestAesKey,
                 }))
             .ConfigureServices((context, services) =>
             {
-                services.AddDbContext<TimeForYouDbContext>(options =>
-                    options.UseNpgsql(context.Configuration.GetConnectionString("TimeForYou")));
                 services.AddSingleton<IPushSender>(PushSender);
-                services.AddHostedService<global::TimeForYou.Worker.Worker>();
+                services.AddWorkerModule(context.Configuration, scheduleRecurringJob: false);
             })
             .Build();
 
