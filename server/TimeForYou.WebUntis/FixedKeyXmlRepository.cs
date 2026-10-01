@@ -4,19 +4,17 @@ using Microsoft.AspNetCore.DataProtection.AuthenticatedEncryption;
 using Microsoft.AspNetCore.DataProtection.AuthenticatedEncryption.ConfigurationModel;
 using Microsoft.AspNetCore.DataProtection.Repositories;
 
-namespace TimeForYou.Api.Features.Auth;
+namespace TimeForYou.WebUntis;
 
 /// <summary>
 /// Hands DataProtection a single key descriptor built directly from <c>AES_KEY</c> instead of a
-/// randomly generated one persisted to disk. CLAUDE.md: DataProtection does the actual encryption
-/// (nonces, auth tags, key derivation) — this class only supplies the master key material and the
-/// storage format DataProtection itself defines; it does not implement any cryptography.
+/// randomly generated one persisted to disk. DataProtection does the actual encryption (nonces,
+/// auth tags, key derivation) — this class only supplies the master key material and the storage
+/// format DataProtection itself defines; it does not implement any cryptography.
 ///
-/// Deliberately in-memory and never written to <see cref="StoreElement"/> — every process (api,
-/// and eventually worker, #32) rebuilds the same key from the same env var, so there is nothing to
-/// persist and no key ring to lose across container restarts. That is also why there is no
-/// rotation: the key is a pure function of <c>AES_KEY</c>, and rotating means replacing that
-/// variable and re-onboarding (PROJECT-BRIEF.md §11.5), not writing a second key here.
+/// Moved here from TimeForYou.Api (#31) so the worker (#32) can rebuild the exact same key: every
+/// process derives it from the same env var, so there is nothing to persist and no key ring to
+/// lose. The key id must never change, or existing credentials_protected values stop decrypting.
 /// </summary>
 public sealed class FixedKeyXmlRepository : IXmlRepository
 {
@@ -51,7 +49,7 @@ public sealed class FixedKeyXmlRepository : IXmlRepository
 
     public void StoreElement(XElement element, string friendlyName)
     {
-        // AutoGenerateKeys is disabled (AuthServiceCollectionExtensions) so DataProtection never
-        // tries to mint a second key; a no-op keeps the fixed key authoritative if it ever does.
+        // Automatic key generation is disabled, so DataProtection never tries to mint a second
+        // key; a no-op keeps the fixed key authoritative if it ever does.
     }
 }

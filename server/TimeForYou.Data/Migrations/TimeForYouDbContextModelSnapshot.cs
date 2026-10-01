@@ -274,6 +274,10 @@ namespace TimeForYou.Data.Migrations
                         .HasColumnType("text")
                         .HasColumnName("school");
 
+                    b.Property<DateOnly?>("SeededThrough")
+                        .HasColumnType("date")
+                        .HasColumnName("seeded_through");
+
                     b.Property<string>("UntisUserHash")
                         .IsRequired()
                         .HasMaxLength(64)

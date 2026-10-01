@@ -3,13 +3,14 @@ using Microsoft.Extensions.Hosting;
 using TimeForYou.Data;
 using TimeForYou.Domain;
 using TimeForYou.Tests.Infrastructure;
+using TimeForYou.Worker.Polling;
 
 namespace TimeForYou.Tests;
 
 /// <summary>
-/// Placeholder resolution coverage for the worker's DI container (issue #27 scope). The poll job
-/// itself arrives in #32 — this only proves the shared Postgres + mock plumbing resolves what
-/// exists today.
+/// Resolution coverage for the worker's DI container in test mode (#27, updated for #32): the poll
+/// job and its dependencies resolve, the capturing push sender replaces the logging one, and the
+/// recurring schedule is not registered.
 /// </summary>
 [Collection(SeamACollection.Name)]
 public sealed class WorkerHostResolutionTests(SeamAFixture fixture) : IAsyncLifetime
@@ -22,13 +23,11 @@ public sealed class WorkerHostResolutionTests(SeamAFixture fixture) : IAsyncLife
     public void Worker_host_resolves_its_registered_services()
     {
         using var host = fixture.CreateWorkerHost();
+        using var scope = host.Services.CreateScope();
 
-        var dbContext = host.Services.GetRequiredService<TimeForYouDbContext>();
-        var pushSender = host.Services.GetRequiredService<IPushSender>();
-        var hostedServices = host.Services.GetServices<IHostedService>();
-
-        Assert.NotNull(dbContext);
-        Assert.Same(fixture.PushSender, pushSender);
-        Assert.Contains(hostedServices, service => service is global::TimeForYou.Worker.Worker);
+        Assert.NotNull(scope.ServiceProvider.GetRequiredService<TimeForYouDbContext>());
+        Assert.Same(fixture.PushSender, scope.ServiceProvider.GetRequiredService<IPushSender>());
+        Assert.NotNull(scope.ServiceProvider.GetRequiredService<PollJob>());
+        Assert.DoesNotContain(host.Services.GetServices<IHostedService>(), service => service is PollJobScheduler);
     }
 }
