@@ -267,7 +267,9 @@ public sealed class PollJobTests(SeamAFixture fixture) : IAsyncLifetime
 
     private sealed record QrPayload(string Server, string School, string User, string Key);
 
-    private sealed record QrScanResponseWire(string Token, Guid UserId);
+    private sealed record QrScanResponseWire(
+        string Token,
+        [property: System.Text.Json.Serialization.JsonPropertyName("user_id")] Guid UserId);
 
     private HttpClient CreateMockClient() => new() { BaseAddress = new Uri(fixture.MockBaseUrl) };
 
