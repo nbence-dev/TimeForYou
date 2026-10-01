@@ -1,6 +1,4 @@
 using System.Security.Claims;
-using System.Text.Json;
-using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using TimeForYou.Api.Contracts;
@@ -17,10 +15,6 @@ public sealed record QrScanResponse(string Token, Guid UserId);
 
 public static class AuthEndpoints
 {
-    /// <summary>The DataProtection purpose string scoping the credential protector — changing this
-    /// would make every existing `credentials_protected` value undecryptable.</summary>
-    private const string CredentialProtectionPurpose = "TimeForYou.WebUntisCredentials.v1";
-
     public static IEndpointRouteBuilder MapAuthEndpoints(this IEndpointRouteBuilder endpoints)
     {
         endpoints.MapPost("/qr-scan", ScanQrCodeAsync)
@@ -40,7 +34,7 @@ public static class AuthEndpoints
         QrScanRequest request,
         TimeForYouDbContext db,
         IWebUntisClient webUntisClient,
-        IDataProtectionProvider dataProtectionProvider,
+        WebUntisCredentialProtector credentialProtector,
         CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(request.Server) ||
@@ -67,13 +61,10 @@ public static class AuthEndpoints
 
         if (user is null)
         {
-            var protector = dataProtectionProvider.CreateProtector(CredentialProtectionPurpose);
-            var protectedCredentials = protector.Protect(JsonSerializer.Serialize(credentials));
-
             user = new User
             {
                 School = request.School,
-                CredentialsProtected = protectedCredentials,
+                CredentialsProtected = credentialProtector.Protect(credentials),
                 UntisUserHash = untisUserHash,
             };
             db.Users.Add(user);

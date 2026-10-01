@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.DataProtection.KeyManagement;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -23,5 +25,38 @@ public static class ServiceCollectionExtensions
         });
 
         return services;
+    }
+
+    /// <summary>
+    /// DataProtection keyed from <c>AES_KEY</c> plus <see cref="WebUntisCredentialProtector"/>, so the
+    /// api (#31) and worker (#32) encrypt and decrypt credentials identically.
+    /// </summary>
+    public static IServiceCollection AddWebUntisCredentialProtection(this IServiceCollection services, IConfiguration configuration)
+    {
+        services.AddDataProtection()
+            .SetApplicationName("TimeForYou")
+            .DisableAutomaticKeyGeneration();
+
+        // Read lazily (when KeyManagementOptions is first bound), for the same reason as above.
+        services.Configure<KeyManagementOptions>(options =>
+            options.XmlRepository = new FixedKeyXmlRepository(ResolveMasterKey(configuration)));
+
+        services.AddSingleton<WebUntisCredentialProtector>();
+
+        return services;
+    }
+
+    private static byte[] ResolveMasterKey(IConfiguration configuration)
+    {
+        var aesKey = configuration["AES_KEY"]
+            ?? throw new InvalidOperationException("AES_KEY is not configured.");
+        try
+        {
+            return Convert.FromBase64String(aesKey);
+        }
+        catch (FormatException exception)
+        {
+            throw new InvalidOperationException("AES_KEY must be base64 (see .env.example: openssl rand -base64 32).", exception);
+        }
     }
 }
