@@ -97,7 +97,8 @@ public static class TimetableEndpoints
                 return Results.BadRequest(new ErrorResponse("since must be an ISO-8601 timestamp."));
             }
 
-            from = parsed > earliest ? parsed : earliest;
+            var parsedUtc = parsed.ToUniversalTime();
+            from = parsedUtc > earliest ? parsedUtc : earliest;
         }
 
         var changes = await db.ChangeLog

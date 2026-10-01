@@ -208,6 +208,28 @@ public sealed class TimetableChangesTests(SeamAFixture fixture) : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Changes_since_accepts_non_utc_offset()
+    {
+        var (userId, token) = await SeedUserAsync("a");
+        var lesson = await SeedLessonAsync(userId, new(2026, 10, 7, 9, 0, 0, TimeSpan.Zero));
+        var boundary = await SeedChangeAsync(userId, lesson.Id, Now.AddDays(-1));
+        var recent = await SeedChangeAsync(userId, lesson.Id, Now.AddHours(-1));
+
+        using var factory = CreateFactory();
+        using var client = Authed(factory, token);
+
+        var since = Uri.EscapeDataString(
+            boundary.DetectedAt.ToOffset(TimeSpan.FromHours(2)).ToString("O"));
+        var response = await client.GetAsync($"/changes?since={since}");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var changes = await response.Content.ReadFromJsonAsync<JsonElement[]>();
+        Assert.Equal(
+            [recent.Id, boundary.Id],
+            changes!.Select(c => c.GetProperty("id").GetGuid()).ToArray());
+    }
+
+    [Fact]
     public async Task Changes_window_defaults_to_and_is_capped_at_30_days()
     {
         var (userId, token) = await SeedUserAsync("a");
