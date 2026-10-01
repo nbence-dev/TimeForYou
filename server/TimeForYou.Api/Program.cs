@@ -1,4 +1,5 @@
 using TimeForYou.Api.Features.Auth;
+using TimeForYou.Api.Features.Timetable;
 using TimeForYou.Data;
 using TimeForYou.WebUntis;
 
@@ -11,6 +12,7 @@ builder.Services.AddOpenApi();
 builder.Services.AddDataModule(builder.Configuration);
 builder.Services.AddWebUntisClient(builder.Configuration);
 builder.Services.AddAuthModule(builder.Configuration);
+builder.Services.AddSingleton(TimeProvider.System);
 
 var app = builder.Build();
 
@@ -29,6 +31,7 @@ app.MapGet("/health", () => Results.Ok())
     .WithName("GetHealth");
 
 app.MapAuthEndpoints();
+app.MapTimetableEndpoints();
 
 app.Run();
 

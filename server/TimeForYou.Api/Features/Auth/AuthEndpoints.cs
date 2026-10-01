@@ -1,4 +1,4 @@
-using System.Security.Claims;
+using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using TimeForYou.Api.Contracts;
@@ -11,7 +11,7 @@ namespace TimeForYou.Api.Features.Auth;
 /// <summary>docs/openapi.yaml `#/paths/qr-scan` — the door every other API ticket walks through (#31).</summary>
 public sealed record QrScanRequest(string? Server, string? School, string? User, string? Key);
 
-public sealed record QrScanResponse(string Token, Guid UserId);
+public sealed record QrScanResponse(string Token, [property: JsonPropertyName("user_id")] Guid UserId);
 
 public static class AuthEndpoints
 {
@@ -20,12 +20,6 @@ public static class AuthEndpoints
         endpoints.MapPost("/qr-scan", ScanQrCodeAsync)
             .WithName("ScanQrCode")
             .AllowAnonymous();
-
-        // A protected dummy endpoint proving the bearer handler actually gates access (#31 AC),
-        // until #34 lands its own. Not part of docs/openapi.yaml.
-        endpoints.MapGet("/auth/session", GetSession)
-            .WithName("GetAuthSession")
-            .RequireAuthorization();
 
         return endpoints;
     }
@@ -97,11 +91,4 @@ public static class AuthEndpoints
 
     private static bool IsUntisUserHashConflict(DbUpdateException exception) =>
         exception.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation, ConstraintName: "IX_users_untis_user_hash" };
-
-    private static IResult GetSession(ClaimsPrincipal caller)
-    {
-        var userId = caller.FindFirstValue(DeviceBearerAuthenticationHandler.UserIdClaimType);
-        var deviceId = caller.FindFirstValue(DeviceBearerAuthenticationHandler.DeviceIdClaimType);
-        return Results.Ok(new { user_id = userId, device_id = deviceId });
-    }
 }
