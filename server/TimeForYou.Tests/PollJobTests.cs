@@ -1,4 +1,6 @@
 using System.Net.Http.Json;
+using System.Reflection;
+using Hangfire;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using TimeForYou.Data.Entities;
@@ -195,6 +197,74 @@ public sealed class PollJobTests(SeamAFixture fixture) : IAsyncLifetime
         Assert.Single(await ChangeLogAsync());
     }
 
+    [Fact]
+    public async Task The_week_that_enters_the_window_on_monday_is_seeded_silently()
+    {
+        await OnboardDemoUserWithPushDeviceAsync();
+        var sundayNoon = new DateTimeOffset(2026, 10, 18, 12, 0, 0, TimeSpan.FromHours(2));
+        var mondayJustAfterMidnight = new DateTimeOffset(2026, 10, 19, 0, 30, 0, TimeSpan.FromHours(2));
+
+        await RunPollCycleAsync(new FixedTimeProvider(sundayNoon));
+        var seededBefore = (await SnapshotsInOrderAsync()).Count;
+        await RunPollCycleAsync(new FixedTimeProvider(mondayJustAfterMidnight));
+
+        Assert.True((await SnapshotsInOrderAsync()).Count > seededBefore, "the new week should have been saved");
+        Assert.Empty(await ChangeLogAsync());
+        Assert.Empty(fixture.PushSender.Sent);
+    }
+
+    [Fact]
+    public async Task A_lesson_that_appears_after_an_empty_first_poll_is_reported_as_added()
+    {
+        await OnboardDemoUserWithPushDeviceAsync();
+        var clock = new FixedTimeProvider(new DateTimeOffset(2026, 10, 20, 8, 0, 0, TimeSpan.FromHours(2)));
+        var lesson = new WebUntisLesson(
+            "stub-1", "MATH", "Maths", null, "A1", LessonStatus.Scheduled,
+            new DateTimeOffset(2026, 10, 21, 8, 0, 0, TimeSpan.FromHours(2)),
+            new DateTimeOffset(2026, 10, 21, 9, 0, 0, TimeSpan.FromHours(2)));
+
+        await RunPollCycleAsync(clock, new StubWebUntisClient([]));
+        Assert.Empty(fixture.PushSender.Sent);
+
+        await RunPollCycleAsync(clock, new StubWebUntisClient([lesson]));
+
+        var payload = Assert.Single(fixture.PushSender.Sent);
+        Assert.Equal("New lesson: Maths", payload.Body);
+        Assert.Equal(ChangeType.Added, Assert.Single(await ChangeLogAsync()).ChangeType);
+    }
+
+    [Fact]
+    public async Task A_failing_push_to_one_device_does_not_stop_the_users_other_devices()
+    {
+        var userId = await OnboardDemoUserWithPushDeviceAsync();
+        await using (var db = fixture.CreateDbContext())
+        {
+            db.Devices.Add(new Device
+            {
+                UserId = userId, BearerTokenHash = "second-device", PushToken = FailingPushSender.BadToken,
+                Platform = Enum.GetValues<DevicePlatform>()[0],
+            });
+            await db.SaveChangesAsync();
+        }
+
+        await RunPollCycleAsync();
+        var lesson = (await SnapshotsInOrderAsync())[0];
+        await CancelInMockAsync(lesson.UntisLessonId);
+
+        await RunPollCycleAsync(pushSender: new FailingPushSender(fixture.PushSender));
+
+        var payload = Assert.Single(fixture.PushSender.Sent);
+        Assert.Equal("test-push-token", payload.PushToken);
+    }
+
+    [Fact]
+    public void Poll_runs_cannot_overlap()
+    {
+        var run = typeof(PollJob).GetMethod(nameof(PollJob.RunAsync));
+
+        Assert.NotNull(run!.GetCustomAttribute<DisableConcurrentExecutionAttribute>());
+    }
+
     private sealed record QrPayload(string Server, string School, string User, string Key);
 
     private sealed record QrScanResponseWire(string Token, Guid UserId);
@@ -227,9 +297,15 @@ public sealed class PollJobTests(SeamAFixture fixture) : IAsyncLifetime
 
     /// <summary>A fresh worker host per cycle, so state carries over only through the database —
     /// the same as the worker restarting between polls.</summary>
-    private async Task RunPollCycleAsync()
+    private async Task RunPollCycleAsync(
+        TimeProvider? clock = null, IWebUntisClient? webUntis = null, IPushSender? pushSender = null)
     {
-        using var host = fixture.CreateWorkerHost();
+        using var host = fixture.CreateWorkerHost(services =>
+        {
+            if (clock is not null) services.AddSingleton(clock);
+            if (webUntis is not null) services.AddSingleton(webUntis);
+            if (pushSender is not null) services.AddSingleton(pushSender);
+        });
         using var scope = host.Services.CreateScope();
         await scope.ServiceProvider.GetRequiredService<PollJob>().RunAsync(CancellationToken.None);
     }
@@ -263,5 +339,30 @@ public sealed class PollJobTests(SeamAFixture fixture) : IAsyncLifetime
         using var mock = CreateMockClient();
         (await mock.PostAsJsonAsync($"/mock/move-lesson/{lessonId}", new { start_ts = start, end_ts = end }))
             .EnsureSuccessStatusCode();
+    }
+
+    private sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider
+    {
+        public override DateTimeOffset GetUtcNow() => now.ToUniversalTime();
+    }
+
+    private sealed class StubWebUntisClient(IReadOnlyList<WebUntisLesson> lessons) : IWebUntisClient
+    {
+        public Task<WebUntisSession> LoginAsync(WebUntisCredentials credentials, CancellationToken cancellationToken = default) =>
+            Task.FromResult(new WebUntisSession("stub"));
+
+        public Task<IReadOnlyList<WebUntisLesson>> GetTimetableAsync(
+            WebUntisSession session, DateOnly from, DateOnly to, CancellationToken cancellationToken = default) =>
+            Task.FromResult(lessons);
+    }
+
+    private sealed class FailingPushSender(IPushSender inner) : IPushSender
+    {
+        public const string BadToken = "bad-push-token";
+
+        public Task SendAsync(PushNotification notification, CancellationToken cancellationToken = default) =>
+            notification.PushToken == BadToken
+                ? throw new InvalidOperationException("FCM rejected the token")
+                : inner.SendAsync(notification, cancellationToken);
     }
 }

@@ -32,6 +32,7 @@ public static class WorkerServiceCollectionExtensions
 
         // Real FCM (FirebaseAdmin) replaces this in Week 3; Seam A registers its capturing sender first.
         services.TryAddSingleton<IPushSender, LoggingPushSender>();
+        services.TryAddSingleton(TimeProvider.System);
         services.AddScoped<PollJob>();
 
         if (!scheduleRecurringJob)

@@ -21,6 +21,13 @@ public class User
 
     public DateTimeOffset CreatedAt { get; set; }
 
+    /// <summary>
+    /// The last day (SAST) of the newest poll window this user has been polled for; null until the
+    /// first poll. Lessons the worker has never seen that fall after this date are weeks that just
+    /// entered the rolling window, so they are seeded silently instead of reported as "added".
+    /// </summary>
+    public DateOnly? SeededThrough { get; set; }
+
     public List<Device> Devices { get; set; } = [];
 
     public List<LessonSnapshot> LessonSnapshots { get; set; } = [];

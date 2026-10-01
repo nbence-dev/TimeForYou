@@ -97,7 +97,7 @@ public sealed class SeamAFixture : IAsyncLifetime
     /// <see cref="Worker.Polling.PollJob"/> and invokes it directly. Uses the same AES_KEY as the
     /// API, so the worker can decrypt credentials the API encrypted.
     /// </summary>
-    public IHost CreateWorkerHost() =>
+    public IHost CreateWorkerHost(Action<IServiceCollection>? configureServices = null) =>
         Host.CreateDefaultBuilder()
             .ConfigureAppConfiguration((_, config) =>
                 config.AddInMemoryCollection(new Dictionary<string, string?>
@@ -110,6 +110,7 @@ public sealed class SeamAFixture : IAsyncLifetime
             {
                 services.AddSingleton<IPushSender>(PushSender);
                 services.AddWorkerModule(context.Configuration, scheduleRecurringJob: false);
+                configureServices?.Invoke(services);
             })
             .Build();
 

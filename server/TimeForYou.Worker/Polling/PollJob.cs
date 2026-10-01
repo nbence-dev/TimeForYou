@@ -1,3 +1,4 @@
+using Hangfire;
 using Microsoft.EntityFrameworkCore;
 using TimeForYou.Data;
 using TimeForYou.Data.Entities;
@@ -13,10 +14,11 @@ namespace TimeForYou.Worker.Polling;
 /// </summary>
 /// <remarks>
 /// No re-notify (story 16): snapshots and change_log rows are saved before anything is pushed, so the
-/// next cycle — even after a worker restart — diffs against the already-updated state. A user's first
-/// poll seeds snapshots silently; otherwise every lesson would be reported as "added".
+/// next cycle — even after a worker restart — diffs against the already-updated state. Lessons the
+/// worker has never seen in weeks it hasn't polled before (a user's first poll, or the week that
+/// enters the rolling window each Monday) are seeded silently; otherwise they'd be reported as "added".
 /// </remarks>
-public sealed class PollJob(IServiceScopeFactory scopeFactory, ILogger<PollJob> logger)
+public sealed class PollJob(IServiceScopeFactory scopeFactory, ILogger<PollJob> logger, TimeProvider timeProvider)
 {
     public const string RecurringJobId = "poll-timetables";
 
@@ -29,9 +31,12 @@ public sealed class PollJob(IServiceScopeFactory scopeFactory, ILogger<PollJob> 
     /// sides agree on which Monday "this week" starts on.</summary>
     private static readonly TimeSpan Sast = TimeSpan.FromHours(2);
 
+    /// <summary>Overlapping runs (a Hangfire retry still going when the next schedule fires) would both
+    /// diff the same stale snapshots and push twice, so a second run waits briefly and then gives up.</summary>
+    [DisableConcurrentExecution(timeoutInSeconds: 10)]
     public async Task RunAsync(CancellationToken cancellationToken)
     {
-        var now = DateTimeOffset.UtcNow;
+        var now = timeProvider.GetUtcNow();
 
         List<Guid> userIds;
         using (var scope = scopeFactory.CreateScope())
@@ -90,7 +95,6 @@ public sealed class PollJob(IServiceScopeFactory scopeFactory, ILogger<PollJob> 
         var snapshots = await db.LessonSnapshots
             .Where(s => s.UserId == userId)
             .ToDictionaryAsync(s => s.UntisLessonId, cancellationToken);
-        var isFirstPoll = snapshots.Count == 0;
 
         var windowStart = new DateTimeOffset(from.ToDateTime(TimeOnly.MinValue), Sast);
         var windowEnd = new DateTimeOffset(to.AddDays(1).ToDateTime(TimeOnly.MinValue), Sast);
@@ -100,7 +104,15 @@ public sealed class PollJob(IServiceScopeFactory scopeFactory, ILogger<PollJob> 
             .Select(FromSnapshot)
             .ToList();
 
-        List<LessonChange> changes = isFirstPoll ? [] : TimetableDiff.Compute(previous, incoming);
+        // A lesson the worker has never seen, dated after the last window it polled, is in a week that
+        // just entered the window (or the user has never been polled): seed it, don't report it.
+        // The marker is on the user rather than inferred from "no snapshots", so a first poll that
+        // returned no lessons still counts as done and the first real lesson afterwards is reported.
+        var silentlySeeded = incoming
+            .Where(l => !snapshots.ContainsKey(l.UntisLessonId) && IsBeyondSeededWindow(l, user.SeededThrough))
+            .Select(l => l.UntisLessonId)
+            .ToHashSet();
+        var changes = TimetableDiff.Compute(previous, incoming.Where(l => !silentlySeeded.Contains(l.UntisLessonId)));
 
         // Upsert on (user_id, untis_lesson_id). A removed lesson's row is left as-is: change_log
         // references it, so it is never deleted.
@@ -123,6 +135,11 @@ public sealed class PollJob(IServiceScopeFactory scopeFactory, ILogger<PollJob> 
             {
                 snapshot.UpdatedAt = now;
             }
+        }
+
+        if (user.SeededThrough is null || user.SeededThrough < to)
+        {
+            user.SeededThrough = to;
         }
 
         foreach (var change in changes)
@@ -150,12 +167,24 @@ public sealed class PollJob(IServiceScopeFactory scopeFactory, ILogger<PollJob> 
         {
             if (device is { PushToken: { } pushToken, Platform: { } platform })
             {
-                await pushSender.SendAsync(
-                    new PushNotification(userId, device.Id, platform, pushToken, NotificationTitle, body, changes.Count),
-                    cancellationToken);
+                // Already saved, so a failed send is not retried (story 16). One bad token must not
+                // stop the user's other devices being told.
+                try
+                {
+                    await pushSender.SendAsync(
+                        new PushNotification(userId, device.Id, platform, pushToken, NotificationTitle, body, changes.Count),
+                        cancellationToken);
+                }
+                catch (Exception exception) when (exception is not OperationCanceledException)
+                {
+                    logger.LogError(exception, "Push to device {DeviceId} of user {UserId} failed; continuing with the next device", device.Id, userId);
+                }
             }
         }
     }
+
+    private static bool IsBeyondSeededWindow(Lesson lesson, DateOnly? seededThrough) =>
+        seededThrough is null || DateOnly.FromDateTime(lesson.StartTs.ToOffset(Sast).DateTime) > seededThrough;
 
     /// <summary>This week's Monday through next week's Sunday, in SAST (issue #32: "this week + next").</summary>
     private static (DateOnly From, DateOnly To) FetchWindow(DateTimeOffset now)

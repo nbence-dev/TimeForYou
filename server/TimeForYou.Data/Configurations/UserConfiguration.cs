@@ -32,5 +32,8 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(u => u.CreatedAt)
             .HasColumnName("created_at")
             .HasDefaultValueSql("now()");
+
+        builder.Property(u => u.SeededThrough)
+            .HasColumnName("seeded_through");
     }
 }
