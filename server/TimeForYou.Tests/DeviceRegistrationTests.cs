@@ -78,6 +78,22 @@ public sealed class DeviceRegistrationTests(SeamAFixture fixture) : IAsyncLifeti
     }
 
     [Fact]
+    public async Task Registering_a_token_already_held_by_another_device_moves_it()
+    {
+        using var factory = fixture.CreateApiFactory();
+        using var api = factory.CreateClient();
+        var oldBearer = await ScanDemoQrAsync(api);
+        var newBearer = await ScanDemoQrAsync(api); // reinstall: new device row, same phone
+
+        var oldDevice = await ReadDeviceAsync(await RegisterAsync(api, oldBearer, new { platform = "android_fcm", push_token = "same-phone" }));
+        var newDevice = await ReadDeviceAsync(await RegisterAsync(api, newBearer, new { platform = "android_fcm", push_token = "same-phone" }));
+
+        await using var db = fixture.CreateDbContext();
+        Assert.Null((await db.Devices.SingleAsync(d => d.Id == oldDevice.Id)).PushToken);
+        Assert.Equal("same-phone", (await db.Devices.SingleAsync(d => d.Id == newDevice.Id)).PushToken);
+    }
+
+    [Fact]
     public async Task Unknown_platform_returns_400()
     {
         using var factory = fixture.CreateApiFactory();

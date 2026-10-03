@@ -23,7 +23,7 @@ public sealed record DeviceResponse(
 /// <summary>
 /// docs/openapi.yaml `POST /devices` (#36): stores the FCM registration token on the calling
 /// device's own row — the one its bearer token belongs to. Calling again overwrites the token;
-/// it never creates a second row.
+/// it never creates a second row, and a token already held by another row is moved here.
 /// </summary>
 public static class DeviceEndpoints
 {
@@ -54,7 +54,17 @@ public static class DeviceEndpoints
         }
 
         var deviceId = Guid.Parse(caller.FindFirstValue(DeviceBearerAuthenticationHandler.DeviceIdClaimType)!);
-        var device = await db.Devices.SingleAsync(d => d.Id == deviceId, cancellationToken);
+        var device = await db.Devices.FirstOrDefaultAsync(d => d.Id == deviceId, cancellationToken);
+        if (device is null)
+        {
+            return Results.Unauthorized();
+        }
+
+        // A re-scan on a reinstalled app leaves an older row holding the same FCM token;
+        // clear it there so the phone is pushed to once, not once per row.
+        await db.Devices
+            .Where(d => d.Id != deviceId && d.PushToken == request.PushToken)
+            .ExecuteUpdateAsync(s => s.SetProperty(d => d.PushToken, (string?)null), cancellationToken);
 
         device.Platform = platform;
         device.PushToken = request.PushToken;
