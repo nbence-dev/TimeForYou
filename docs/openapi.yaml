@@ -268,6 +268,26 @@ paths:
         "401":
           $ref: "#/components/responses/Unauthorized"
 
+  /calendar:
+    get:
+      operationId: getCalendar
+      tags: [calendar]
+      summary: Get the caller's calendar-feed URL
+      description: |
+        Returns the absolute URL of the caller's `GET /ics/{token}.ics` feed so the app can show
+        it or hand it to a calendar app. The `ics_tokens` row is created on the first call; every
+        later call, from any of the user's devices, returns the same URL. The origin is
+        `PUBLIC_BASE_URL` when configured, otherwise the origin the request arrived on.
+      responses:
+        "200":
+          description: The caller's feed URL.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CalendarFeed"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
   /ics/{token}.ics:
     get:
       operationId: getIcsFeed
@@ -276,7 +296,10 @@ paths:
       description: |
         `token` is the opaque 64-character value from an `ics_tokens` row — not a bearer token,
         and not tied to any device. Anyone with the URL can read the feed; this is the same trust
-        model as a Google Calendar secret address. Only future lessons are included.
+        model as a Google Calendar secret address. Only future lessons are included. Each event's
+        `UID` is `<untis_lesson_id>@timeforyou`, stable across polls so calendar apps update the
+        event in place; cancelled lessons stay in the feed with `STATUS:CANCELLED`. The event
+        `DESCRIPTION` carries the lecturer and the user's notes for that lesson.
       security: []
       parameters:
         - name: token
@@ -336,6 +359,15 @@ components:
         message:
           type: string
           description: Human-readable explanation. Not for programmatic branching.
+
+    CalendarFeed:
+      type: object
+      required: [url]
+      properties:
+        url:
+          type: string
+          format: uri
+          description: Absolute URL of the user's iCalendar feed, ending in `/ics/<64-char token>.ics`.
 
     QrScanRequest:
       type: object
