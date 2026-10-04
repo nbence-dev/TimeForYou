@@ -62,6 +62,16 @@ services:
       FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID}
       GOOGLE_APPLICATION_CREDENTIALS: ${GOOGLE_APPLICATION_CREDENTIALS}
       POLL_INTERVAL_SECONDS: ${POLL_INTERVAL_SECONDS}
+    # POST /nudge and the Hangfire dashboard: LAN-only and unauthenticated on purpose.
+    # Never add this to the cloudflared tunnel config.
+    ports:
+      - "${WORKER_PORT:-8081}:8081"
+    # The aspnet image has no curl/wget, so speak HTTP to /healthz over bash's /dev/tcp.
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/8081 && printf 'GET /healthz HTTP/1.0\\r\\n\\r\\n' >&3 && head -n1 <&3 | grep -q ' 200 '"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
     volumes:
       - ${FIREBASE_SERVICE_ACCOUNT_PATH}:${GOOGLE_APPLICATION_CREDENTIALS}:ro
     depends_on:

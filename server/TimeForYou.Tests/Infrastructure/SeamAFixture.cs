@@ -1,7 +1,10 @@
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
 using DotNet.Testcontainers.Images;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -113,6 +116,41 @@ public sealed class SeamAFixture : IAsyncLifetime
                 configureServices?.Invoke(services);
             })
             .Build();
+
+    /// <summary>
+    /// The full worker web host (#33) on an in-memory test server: Hangfire server, recurring poll,
+    /// <c>/nudge</c> and the dashboard, against this fixture's Postgres and mock, with
+    /// <see cref="PushSender"/> in place of the real sender. The recurring poll is set to 600s so it
+    /// never fires on its own during a test.
+    /// </summary>
+    public WebApplication CreateWorkerWebApp() =>
+        TimeForYou.Worker.WorkerApp.Build([], builder =>
+        {
+            builder.WebHost.UseTestServer();
+            builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["ConnectionStrings:TimeForYou"] = _postgres.GetConnectionString(),
+                ["WEBUNTIS_BASE_URL"] = MockBaseUrl,
+                ["AES_KEY"] = TestAesKey,
+                ["POLL_INTERVAL_SECONDS"] = "600",
+            });
+            builder.Services.AddSingleton<IPushSender>(PushSender);
+            // TestServer requests carry no remote address; give them a loopback one.
+            builder.Services.AddTransient<IStartupFilter, LoopbackRemoteAddressStartupFilter>();
+        });
+
+    private sealed class LoopbackRemoteAddressStartupFilter : IStartupFilter
+    {
+        public Action<IApplicationBuilder> Configure(Action<IApplicationBuilder> next) => app =>
+        {
+            app.Use((context, nextMiddleware) =>
+            {
+                context.Connection.RemoteIpAddress ??= System.Net.IPAddress.Loopback;
+                return nextMiddleware();
+            });
+            next(app);
+        };
+    }
 
     /// <summary>
     /// Truncates every app table so the next test starts from an empty database. Does not touch
