@@ -28,7 +28,10 @@ let database: Promise<SQLite.SQLiteDatabase> | null = null;
 function openDatabase(): Promise<SQLite.SQLiteDatabase> {
   database ??= (async () => {
     const db = await SQLite.openDatabaseAsync(DATABASE_NAME);
+    // WAL lets readLessons() run while replaceLessons() holds its write transaction on a second
+    // connection; without it that read can fail with "database is locked".
     await db.execAsync(`
+      PRAGMA journal_mode = WAL;
       CREATE TABLE IF NOT EXISTS lessons (
         id TEXT PRIMARY KEY NOT NULL,
         untis_lesson_id TEXT NOT NULL,
@@ -59,7 +62,7 @@ export const lessonCache: LessonCache = {
 
   async replaceLessons(lessons: readonly Lesson[]) {
     const db = await openDatabase();
-    // Exclusive, so no other query on this connection can run inside the transaction.
+    // Exclusive: the transaction runs on its own connection, so reads on the main one rely on WAL.
     await db.withExclusiveTransactionAsync(async (txn) => {
       await txn.runAsync("DELETE FROM lessons");
       for (const lesson of lessons) {

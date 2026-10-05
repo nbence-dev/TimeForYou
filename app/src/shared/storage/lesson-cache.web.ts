@@ -23,7 +23,17 @@ function openDatabase(): Promise<IDBDatabase> {
     request.onupgradeneeded = () => {
       request.result.createObjectStore(LESSONS_STORE, { keyPath: "id" });
     };
-    request.onsuccess = () => resolve(request.result);
+    request.onsuccess = () => {
+      const db = request.result;
+      // If the browser closes or upgrades the connection, drop the cached handle so the next call reopens.
+      const invalidate = () => {
+        database = null;
+        db.close();
+      };
+      db.onclose = invalidate;
+      db.onversionchange = invalidate;
+      resolve(db);
+    };
     request.onerror = () => reject(request.error);
   }).catch((error: unknown) => {
     database = null; // don't cache a failed open: the next call gets a fresh attempt
