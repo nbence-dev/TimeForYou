@@ -15,6 +15,7 @@ public static class AuthServiceCollectionExtensions
         // Credential encryption lives in TimeForYou.WebUntis so the worker (#32) decrypts with the
         // exact same AES_KEY-derived key and purpose string the api encrypts with.
         services.AddWebUntisCredentialProtection(configuration);
+        services.AddFirstPollEnqueuer(configuration);
 
         services.AddAuthentication(BearerScheme)
             .AddScheme<AuthenticationSchemeOptions, DeviceBearerAuthenticationHandler>(BearerScheme, _ => { });

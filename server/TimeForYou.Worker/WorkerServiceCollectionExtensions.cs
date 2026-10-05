@@ -34,6 +34,7 @@ public static class WorkerServiceCollectionExtensions
         services.TryAddSingleton<IPushSender, LoggingPushSender>();
         services.TryAddSingleton(TimeProvider.System);
         services.AddScoped<PollJob>();
+        services.AddScoped<IUserPollJob>(provider => provider.GetRequiredService<PollJob>());
 
         if (!scheduleRecurringJob)
         {

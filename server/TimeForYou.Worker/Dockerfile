@@ -4,9 +4,8 @@
 #
 #   docker build -f TimeForYou.Worker/Dockerfile server/
 #
-# Same multi-stage shape as the API, but the runtime image is the plain
-# `dotnet/runtime` — this service serves no HTTP, it polls outward and talks
-# to Postgres and FCM.
+# Same multi-stage shape as the API. It polls outward, but also serves POST /nudge,
+# the Hangfire dashboard and /healthz on 8081 — LAN-only, never tunnelled.
 
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
@@ -24,11 +23,13 @@ COPY TimeForYou.Data/ TimeForYou.Data/
 COPY TimeForYou.WebUntis/ TimeForYou.WebUntis/
 RUN dotnet publish TimeForYou.Worker/TimeForYou.Worker.csproj -c Release -o /app --no-restore
 
-FROM mcr.microsoft.com/dotnet/runtime:10.0 AS runtime
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 WORKDIR /app
 
 RUN useradd --no-create-home --shell /usr/sbin/nologin appuser
 COPY --from=build /app .
 USER appuser
 
+EXPOSE 8081
+ENV ASPNETCORE_URLS=http://+:8081
 ENTRYPOINT ["dotnet", "TimeForYou.Worker.dll"]

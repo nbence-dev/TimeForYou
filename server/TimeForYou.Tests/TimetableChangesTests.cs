@@ -17,7 +17,7 @@ namespace TimeForYou.Tests;
 [Collection(SeamACollection.Name)]
 public sealed class TimetableChangesTests(SeamAFixture fixture) : IAsyncLifetime
 {
-    // Wednesday — so "this week" is Mon 2026-10-05 .. Sun 2026-10-11, "next week" ends Sun 2026-10-18.
+    // Wednesday — so the seven-week window (#59) is Mon 2026-10-05 .. Sun 2026-11-22.
     private static readonly DateTimeOffset Now = new(2026, 10, 7, 12, 0, 0, TimeSpan.Zero);
 
     public Task InitializeAsync() => fixture.ResetDatabaseAsync();
@@ -98,13 +98,14 @@ public sealed class TimetableChangesTests(SeamAFixture fixture) : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Timetable_returns_only_lessons_in_this_week_and_next()
+    public async Task Timetable_returns_only_lessons_in_the_seven_week_window()
     {
         var (userId, token) = await SeedUserAsync("a");
         var thisMonday = await SeedLessonAsync(userId, new(2026, 10, 5, 8, 0, 0, TimeSpan.Zero));
-        var nextSunday = await SeedLessonAsync(userId, new(2026, 10, 18, 20, 0, 0, TimeSpan.Zero));
-        await SeedLessonAsync(userId, new(2026, 10, 4, 20, 0, 0, TimeSpan.Zero)); // last week
-        await SeedLessonAsync(userId, new(2026, 10, 19, 8, 0, 0, TimeSpan.Zero)); // week after next
+        var weekFive = await SeedLessonAsync(userId, new(2026, 11, 3, 8, 0, 0, TimeSpan.Zero));
+        var lastSunday = await SeedLessonAsync(userId, new(2026, 11, 22, 20, 0, 0, TimeSpan.Zero));
+        await SeedLessonAsync(userId, new(2026, 10, 4, 18, 0, 0, TimeSpan.Zero)); // last week
+        await SeedLessonAsync(userId, new(2026, 11, 23, 8, 0, 0, TimeSpan.Zero)); // week eight
 
         using var factory = CreateFactory();
         using var client = Authed(factory, token);
@@ -112,7 +113,28 @@ public sealed class TimetableChangesTests(SeamAFixture fixture) : IAsyncLifetime
         var lessons = await client.GetFromJsonAsync<JsonElement[]>("/timetable");
 
         Assert.Equal(
-            [thisMonday.Id, nextSunday.Id],
+            [thisMonday.Id, weekFive.Id, lastSunday.Id],
+            lessons!.Select(l => l.GetProperty("id").GetGuid()).ToArray());
+    }
+
+    [Fact]
+    public async Task Timetable_window_boundaries_are_south_african_midnight()
+    {
+        // Sunday 22:30 UTC is already Monday 00:30 in South Africa, so it opens the window; the same
+        // clock reading closes it: 2026-11-22 22:30 UTC is Monday 2026-11-23 00:30 SAST, week eight.
+        var (userId, token) = await SeedUserAsync("a");
+        var opensWindow = await SeedLessonAsync(userId, new(2026, 10, 4, 22, 30, 0, TimeSpan.Zero));
+        await SeedLessonAsync(userId, new(2026, 10, 4, 21, 30, 0, TimeSpan.Zero)); // Sunday 23:30 SAST, last week
+        var closesWindow = await SeedLessonAsync(userId, new(2026, 11, 22, 21, 30, 0, TimeSpan.Zero)); // Sunday 23:30 SAST
+        await SeedLessonAsync(userId, new(2026, 11, 22, 22, 30, 0, TimeSpan.Zero)); // Monday 00:30 SAST, week eight
+
+        using var factory = CreateFactory();
+        using var client = Authed(factory, token);
+
+        var lessons = await client.GetFromJsonAsync<JsonElement[]>("/timetable");
+
+        Assert.Equal(
+            [opensWindow.Id, closesWindow.Id],
             lessons!.Select(l => l.GetProperty("id").GetGuid()).ToArray());
     }
 
