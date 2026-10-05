@@ -8,7 +8,8 @@ using TimeForYou.WebUntis;
 namespace TimeForYou.Worker.Polling;
 
 /// <summary>
-/// One poll cycle (issue #32): for every user, fetch this week and next from WebUntis, diff against
+/// One poll cycle (issue #32): for every user, fetch the seven-week <see cref="TimetableWindow"/>
+/// (#59) from WebUntis, diff against
 /// lesson_snapshots with <see cref="TimetableDiff"/>, upsert the snapshots, write one change_log row
 /// per material change, and send one grouped notification to each of the user's push devices.
 /// </summary>
@@ -26,10 +27,6 @@ public sealed class PollJob(IServiceScopeFactory scopeFactory, ILogger<PollJob> 
 
     /// <summary>change_log retention (issue #3): older rows are pruned at the start of each cycle.</summary>
     public static readonly TimeSpan ChangeLogRetention = TimeSpan.FromDays(30);
-
-    /// <summary>Eduvos is in South Africa (UTC+2, no DST) — the same offset the mock uses, so both
-    /// sides agree on which Monday "this week" starts on.</summary>
-    private static readonly TimeSpan Sast = TimeSpan.FromHours(2);
 
     /// <summary>Overlapping runs (a Hangfire retry still going when the next schedule fires) would both
     /// diff the same stale snapshots and push twice, so a second run waits briefly and then gives up.</summary>
@@ -96,7 +93,8 @@ public sealed class PollJob(IServiceScopeFactory scopeFactory, ILogger<PollJob> 
         var user = await db.Users.SingleAsync(u => u.Id == userId, cancellationToken);
         var credentials = protector.Unprotect(user.CredentialsProtected);
 
-        var (from, to) = FetchWindow(now);
+        var window = TimetableWindow.Containing(now);
+        var (from, to) = (window.FirstDay, window.LastDay);
         var session = await webUntis.LoginAsync(credentials, cancellationToken);
         var fetched = await webUntis.GetTimetableAsync(session, from, to, cancellationToken);
         var incoming = fetched.Select(FromWebUntis).ToList();
@@ -105,8 +103,8 @@ public sealed class PollJob(IServiceScopeFactory scopeFactory, ILogger<PollJob> 
             .Where(s => s.UserId == userId)
             .ToDictionaryAsync(s => s.UntisLessonId, cancellationToken);
 
-        var windowStart = new DateTimeOffset(from.ToDateTime(TimeOnly.MinValue), Sast);
-        var windowEnd = new DateTimeOffset(to.AddDays(1).ToDateTime(TimeOnly.MinValue), Sast);
+        var windowStart = window.StartsAt;
+        var windowEnd = window.EndsBefore;
         var alreadyRemoved = await LessonsLastLoggedAsRemovedAsync(db, userId, cancellationToken);
         var previous = snapshots.Values
             .Where(s => s.StartTs >= windowStart && s.StartTs < windowEnd && !alreadyRemoved.Contains(s.Id))
@@ -193,15 +191,7 @@ public sealed class PollJob(IServiceScopeFactory scopeFactory, ILogger<PollJob> 
     }
 
     private static bool IsBeyondSeededWindow(Lesson lesson, DateOnly? seededThrough) =>
-        seededThrough is null || DateOnly.FromDateTime(lesson.StartTs.ToOffset(Sast).DateTime) > seededThrough;
-
-    /// <summary>This week's Monday through next week's Sunday, in SAST (issue #32: "this week + next").</summary>
-    private static (DateOnly From, DateOnly To) FetchWindow(DateTimeOffset now)
-    {
-        var today = DateOnly.FromDateTime(now.ToOffset(Sast).Date);
-        var monday = today.AddDays(-(((int)today.DayOfWeek + 6) % 7));
-        return (monday, monday.AddDays(13));
-    }
+        seededThrough is null || DateOnly.FromDateTime(lesson.StartTs.ToOffset(TimetableWindow.Offset).DateTime) > seededThrough;
 
     /// <summary>
     /// Lessons whose most recent change_log row is "removed" were already reported gone. They're left
