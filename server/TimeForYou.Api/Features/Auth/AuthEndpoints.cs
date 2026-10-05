@@ -29,6 +29,8 @@ public static class AuthEndpoints
         TimeForYouDbContext db,
         IWebUntisClient webUntisClient,
         WebUntisCredentialProtector credentialProtector,
+        IFirstPollEnqueuer firstPoll,
+        ILoggerFactory loggerFactory,
         CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(request.Server) ||
@@ -80,13 +82,41 @@ public static class AuthEndpoints
             db.Entry(user).State = EntityState.Detached;
             db.Entry(device).State = EntityState.Detached;
 
+            // The request that created the user enqueues its first poll, so this one must not.
+            isNewUser = false;
+
             user = await db.Users.SingleAsync(u => u.UntisUserHash == untisUserHash, cancellationToken);
             device = new Device { User = user, BearerTokenHash = AuthCrypto.HashBearerToken(token) };
             db.Devices.Add(device);
             await db.SaveChangesAsync(cancellationToken);
         }
 
+        if (isNewUser)
+        {
+            EnqueueFirstPoll(firstPoll, loggerFactory, user.Id);
+        }
+
         return Results.Ok(new QrScanResponse(token, user.Id));
+    }
+
+    /// <summary>
+    /// A new user's timetable is empty until the worker polls them, so ask for that poll now rather
+    /// than waiting for the recurring cycle (#58). A second device for an existing user gets none:
+    /// that user's lessons are already there. Never fails the scan — the recurring poll is the fallback.
+    /// </summary>
+    private static void EnqueueFirstPoll(IFirstPollEnqueuer firstPoll, ILoggerFactory loggerFactory, Guid userId)
+    {
+        try
+        {
+            firstPoll.Enqueue(userId);
+        }
+        catch (Exception exception)
+        {
+            loggerFactory.CreateLogger(typeof(AuthEndpoints)).LogWarning(
+                exception,
+                "Could not enqueue the first poll for new user {UserId}; the recurring poll will pick them up",
+                userId);
+        }
     }
 
     private static bool IsUntisUserHashConflict(DbUpdateException exception) =>
