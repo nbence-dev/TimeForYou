@@ -76,12 +76,15 @@ paths:
     get:
       operationId: getTimetable
       tags: [timetable]
-      summary: List the caller's lessons for this week and next
+      summary: List the caller's lessons for the next seven weeks
       description: |
-        Returns every `lesson_snapshots` row for the caller's `user_id` whose window falls within
-        this week or next (the fixed, non-configurable lookahead — see `.env.example`). The app
-        renders Today and Week views by grouping this list client-side; there is no separate
-        per-day endpoint.
+        Returns every `lesson_snapshots` row for the caller's `user_id` that starts within the
+        seven-week window: Monday 00:00 of the current week through the Sunday seven weeks later
+        (49 days), in South African time (UTC+2). The cohort works in 7-week blocks, so this is
+        the whole block. It is the same window the worker polls, defined once in
+        `TimetableWindow`, and is fixed rather than configurable. It rolls forward every Monday
+        and is not aligned to term or recess dates. The app renders Today and Week views by
+        grouping this list client-side; there is no separate per-day endpoint.
       responses:
         "200":
           description: The caller's current lesson snapshots, unordered.
