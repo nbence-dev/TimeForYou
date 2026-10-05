@@ -224,7 +224,10 @@ Once `docker-compose.yml` exists (vertical 6), the actual acceptance test for th
 docker compose up
 ```
 
-from a clean clone, with nothing else installed. That is the same command the marker runs.
+from a clean clone, with nothing else installed. That is the same command the marker runs. There
+is no separate migration step: the API applies pending EF Core migrations on startup, and the
+worker waits for it. Authoring a migration is unchanged (`dotnet ef migrations add` through the
+design-time factory).
 
 ## 7. Per-language sanity checks
 

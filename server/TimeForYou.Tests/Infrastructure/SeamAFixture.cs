@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Npgsql;
 using Testcontainers.PostgreSql;
 using TimeForYou.Data;
 using TimeForYou.Domain;
@@ -66,12 +67,27 @@ public sealed class SeamAFixture : IAsyncLifetime
         await _postgres.DisposeAsync();
     }
 
-    public TimeForYouDbContext CreateDbContext()
+    public TimeForYouDbContext CreateDbContext() => CreateDbContext(_postgres.GetConnectionString());
+
+    public static TimeForYouDbContext CreateDbContext(string connectionString)
     {
         var options = new DbContextOptionsBuilder<TimeForYouDbContext>()
-            .UseNpgsql(_postgres.GetConnectionString())
+            .UseNpgsql(connectionString)
             .Options;
         return new TimeForYouDbContext(options);
+    }
+
+    /// <summary>
+    /// Creates a brand-new, empty database on the shared Postgres (no migrations applied) and
+    /// returns its connection string — for tests that prove the API migrates on startup.
+    /// </summary>
+    public async Task<string> CreateEmptyDatabaseAsync()
+    {
+        var name = $"empty_{Guid.NewGuid():N}";
+        await using var admin = CreateDbContext();
+        var createSql = "create database \"" + name + "\"";
+        await admin.Database.ExecuteSqlRawAsync(createSql);
+        return new NpgsqlConnectionStringBuilder(_postgres.GetConnectionString()) { Database = name }.ConnectionString;
     }
 
     /// <summary>Fixed test-only key (32 zero bytes, base64) — not a secret, never used outside
@@ -80,12 +96,12 @@ public sealed class SeamAFixture : IAsyncLifetime
     private const string TestAesKey = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
 
     /// <summary>Boots TimeForYou.Api in-process, pointed at this fixture's Postgres and mock.</summary>
-    public WebApplicationFactory<Program> CreateApiFactory() =>
+    public WebApplicationFactory<Program> CreateApiFactory(string? connectionString = null) =>
         new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
             builder.ConfigureAppConfiguration((_, config) =>
                 config.AddInMemoryCollection(new Dictionary<string, string?>
                 {
-                    ["ConnectionStrings:TimeForYou"] = _postgres.GetConnectionString(),
+                    ["ConnectionStrings:TimeForYou"] = connectionString ?? _postgres.GetConnectionString(),
                     ["WEBUNTIS_BASE_URL"] = MockBaseUrl,
                     ["AES_KEY"] = TestAesKey,
                 })));
