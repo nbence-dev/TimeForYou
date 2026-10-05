@@ -19,7 +19,7 @@ namespace TimeForYou.Worker.Polling;
 /// worker has never seen in weeks it hasn't polled before (a user's first poll, or the week that
 /// enters the rolling window each Monday) are seeded silently; otherwise they'd be reported as "added".
 /// </remarks>
-public sealed class PollJob(IServiceScopeFactory scopeFactory, ILogger<PollJob> logger, TimeProvider timeProvider)
+public sealed class PollJob(IServiceScopeFactory scopeFactory, ILogger<PollJob> logger, TimeProvider timeProvider) : IUserPollJob
 {
     public const string RecurringJobId = "poll-timetables";
 
@@ -70,6 +70,15 @@ public sealed class PollJob(IServiceScopeFactory scopeFactory, ILogger<PollJob> 
             throw new WebUntisUnavailableException($"WebUntis was unavailable for {unavailable} user(s) this cycle.");
         }
     }
+
+    /// <summary>
+    /// Polls one user straight away (#58): the api enqueues this when a QR scan creates a new user, so
+    /// their timetable fills within seconds instead of at the next recurring cycle. A first poll is
+    /// silent (SeededThrough is null), so it never pushes. Failures go to Hangfire's retry, and the
+    /// recurring poll still covers the user either way.
+    /// </summary>
+    public Task RunForUserAsync(Guid userId, CancellationToken cancellationToken) =>
+        PollUserAsync(userId, timeProvider.GetUtcNow(), cancellationToken);
 
     private async Task PollUserAsync(Guid userId, DateTimeOffset now, CancellationToken cancellationToken)
     {
