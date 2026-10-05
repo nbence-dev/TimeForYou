@@ -19,6 +19,10 @@ builder.Services.AddSingleton(TimeProvider.System);
 
 var app = builder.Build();
 
+// Apply pending EF migrations before serving (#62). A failure throws here, so the process exits
+// and the container never reports healthy against a half-migrated schema.
+await app.Services.ApplyMigrationsAsync();
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {

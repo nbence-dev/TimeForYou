@@ -50,6 +50,9 @@ public static class WorkerServiceCollectionExtensions
                     configuration.GetConnectionString("TimeForYou")
                         ?? throw new InvalidOperationException("ConnectionStrings:TimeForYou is not configured.")),
                 new PostgreSqlStorageOptions { SchemaName = HangfireSchema }));
+        // Registered before the Hangfire server so hosted services start in order: the worker
+        // waits for the API's migrations rather than polling against missing tables (#62).
+        services.AddHostedService<SchemaReadyGate>();
         services.AddHangfireServer();
         services.AddHostedService<PollJobScheduler>();
 
