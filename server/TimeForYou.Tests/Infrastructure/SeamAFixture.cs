@@ -161,6 +161,11 @@ public sealed class SeamAFixture : IAsyncLifetime
         await using var context = CreateDbContext();
         await context.Database.ExecuteSqlRawAsync(
             "truncate table change_log, ics_tokens, notes, lesson_snapshots, devices, users restart identity cascade");
+        
+        // First-visit polls the api enqueued in an earlier test (#58) must not be picked up by a later
+        // test's worker web app (#33). Hangfire creates its schema lazily, so it may not exist yet.
+        await context.Database.ExecuteSqlRawAsync(
+            "do $$ begin if to_regclass('hangfire.jobqueue') is not null then truncate table hangfire.jobqueue; end if; end $$");
         PushSender.Clear();
     }
 }

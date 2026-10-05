@@ -48,18 +48,6 @@ public static class TimetableEndpoints
         return endpoints;
     }
 
-    /// <summary>
-    /// "This week and next": Monday 00:00 UTC of the current week up to (excluding) Monday 00:00 UTC
-    /// two weeks later. Users carry no timezone, so UTC is the fixed, documented boundary.
-    /// </summary>
-    internal static (DateTimeOffset From, DateTimeOffset To) LookaheadWindow(DateTimeOffset now)
-    {
-        var utc = now.ToUniversalTime();
-        var daysSinceMonday = ((int)utc.DayOfWeek + 6) % 7;
-        var monday = new DateTimeOffset(utc.Date.AddDays(-daysSinceMonday), TimeSpan.Zero);
-        return (monday, monday.AddDays(14));
-    }
-
     private static async Task<IResult> GetTimetableAsync(
         ClaimsPrincipal caller,
         TimeForYouDbContext db,
@@ -67,7 +55,10 @@ public static class TimetableEndpoints
         CancellationToken cancellationToken)
     {
         var userId = CallerUserId(caller);
-        var (from, to) = LookaheadWindow(clock.GetUtcNow());
+        // The same window the worker polls (#59), so nothing is stored that this endpoint won't serve.
+        var window = TimetableWindow.Containing(clock.GetUtcNow());
+        var from = window.StartsAt;
+        var to = window.EndsBefore;
 
         var lessons = await db.LessonSnapshots
             .AsNoTracking()
