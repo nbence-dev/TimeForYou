@@ -74,7 +74,7 @@ public sealed class PollJob(IServiceScopeFactory scopeFactory, ILogger<PollJob> 
         }
     }
 
-        /// <summary>
+    /// <summary>
     /// Polls one user straight away (#58): the api enqueues this when a QR scan creates a new user, so
     /// their timetable fills within seconds instead of at the next recurring cycle. A first poll is
     /// silent (SeededThrough is null), so it never pushes. Failures go to Hangfire's retry, and the
@@ -82,6 +82,7 @@ public sealed class PollJob(IServiceScopeFactory scopeFactory, ILogger<PollJob> 
     /// </summary>
     public Task RunForUserAsync(Guid userId, CancellationToken cancellationToken) =>
         PollUserAsync(userId, timeProvider.GetUtcNow(), cancellationToken);
+
     private async Task PollUserAsync(Guid userId, DateTimeOffset now, CancellationToken cancellationToken)
     {
         // A fresh scope (and so a fresh DbContext) per user: one user's failed save can't leave
