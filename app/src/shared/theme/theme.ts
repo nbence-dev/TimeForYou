@@ -55,7 +55,11 @@ export const Status = {
   live: { strip: '#CC5A01', bg: '#ECFDF5', text: '#065F46', border: '#A7F3D0' },
 } as const;
 
-export type LessonStatus = keyof typeof Status;
+/**
+ * A lesson card's visual state. Not the API's lesson status (`scheduled | cancelled | irregular`,
+ * see `@/shared/types/lesson`): use `toCardStatus` to get from one to the other.
+ */
+export type CardStatus = keyof typeof Status;
 
 export const Radius = {
   base: 8,

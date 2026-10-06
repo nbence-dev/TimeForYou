@@ -1,12 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { Brand, Colors, Radius, Spacing, Status, type LessonStatus } from '@/shared/theme/theme';
+import { Brand, Colors, Radius, Spacing, Status, type CardStatus } from '@/shared/theme/theme';
 import { Font } from '@/shared/theme/fonts';
 
 export type LessonCardProps = {
-  /** `onTime` is the normal state. */
-  status?: LessonStatus;
+  /** `onTime` is the normal state. A lesson from the API goes through `toCardStatus` first. */
+  status?: CardStatus;
   /** Display times, e.g. "08:00" and "09:30". */
   start: string;
   end: string;
@@ -33,7 +33,9 @@ export function LessonCard({
   onPress,
 }: LessonCardProps) {
   const cancelled = status === 'cancelled';
-  const colors = Status[status];
+  // The fallback is for a status that slipped past the types (a cast, or JS callers): render a
+  // normal card instead of throwing on `colors.strip`.
+  const colors = Status[status] ?? Status.onTime;
   const metaColor = cancelled ? Status.cancelled.text : Colors.light.textSecondary;
 
   return (
