@@ -36,13 +36,22 @@ export const Brand = {
   white: '#FFFFFF',
   border: '#E2E8F0',
   borderStrong: '#CBD5E1',
+  /** Backdrop for the bottom-nav shadow. */
+  shadow: '#0F172A',
 } as const;
 
 /** Lesson status colours. `strip` is the 4px card edge; `bg`/`text`/`border` style the chip. */
 export const Status = {
   onTime: { strip: '#059669', bg: '#ECFDF5', text: '#065F46', border: '#A7F3D0' },
   changed: { strip: '#A16207', bg: '#FEF9C3', text: '#854D0E', border: '#FDE68A' },
-  cancelled: { strip: '#DC2626', bg: '#FEE2E2', text: '#991B1B', border: '#FECACA' },
+  cancelled: {
+    strip: '#DC2626',
+    bg: '#FEE2E2',
+    text: '#991B1B',
+    border: '#FECACA',
+    /** Whole-card background for a cancelled lesson. */
+    surface: '#FEF2F2',
+  },
   live: { strip: '#CC5A01', bg: '#ECFDF5', text: '#065F46', border: '#A7F3D0' },
 } as const;
 
