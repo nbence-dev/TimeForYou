@@ -10,7 +10,8 @@ export type LessonCardProps = {
   /** Display times, e.g. "08:00" and "09:30". */
   start: string;
   end: string;
-  courseCode: string;
+  /** Omit when there is none: the API's lesson carries a subject name but no course code. */
+  courseCode?: string;
   title: string;
   room?: string | null;
   teacher?: string | null;
@@ -50,9 +51,11 @@ export function LessonCard({
           <Text style={[styles.time, cancelled && { color: Status.cancelled.strip }]}>
             {start} – {end}
           </Text>
-          <View style={styles.code}>
-            <Text style={styles.codeText}>{courseCode}</Text>
-          </View>
+          {courseCode ? (
+            <View style={styles.code}>
+              <Text style={styles.codeText}>{courseCode}</Text>
+            </View>
+          ) : null}
           <View style={styles.flex} />
           {hasNote ? (
             <Ionicons
