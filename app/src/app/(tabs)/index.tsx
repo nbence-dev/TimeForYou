@@ -1,12 +1,1 @@
-import { Text, View } from 'react-native';
-
-import { Font } from '@/shared/theme/fonts';
-
-/** Placeholder. The screen ticket fills this in. */
-export default function TodayScreen() {
-  return (
-    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-      <Text style={{ fontFamily: Font.textBold }}>Today</Text>
-    </View>
-  );
-}
+export { TodayScreen as default } from '@/features/timetable/today-screen';
