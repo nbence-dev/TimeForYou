@@ -14,6 +14,7 @@ Implements: FR- / NFR-
 - [ ] Runs from a clean clone via `docker compose up`
 - [ ] Tested against the mock WebUntis service
 - [ ] Tests added for logic that can break
+- [ ] UI changes only: matches the `Design:` screen in the ticket and uses shared tokens and components (`docs/design/README.md`)
 
 ## Checklist
 

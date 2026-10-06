@@ -80,6 +80,7 @@ from every wave before it.
 ```markdown
 ## Context
 Part of #<epic>. Spec: #3 § <section>.
+Design: `docs/design/screens/<screen>.png` (UI tickets only; see `docs/design/README.md`).
 
 ## Scope
 <what this ticket changes, in behaviour terms>
