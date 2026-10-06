@@ -34,6 +34,13 @@
           "imageWidth": 76
         }
       ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "TimeForYou uses the camera to scan your WebUntis mobile-access QR code.",
+          "recordAudioAndroid": false
+        }
+      ],
       "expo-secure-store",
       "expo-sqlite"
     ],
