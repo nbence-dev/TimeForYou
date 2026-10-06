@@ -59,6 +59,10 @@ the system's only backend, since there is no reachable real WebUntis tenant to f
 fifth, the Cloudflare Tunnel, is team instance only and stays out of a bare `up` — the marker
 never needs it. The team brings it up with `docker compose --profile tunnel up`.
 
+There is no manual database step: the API applies any pending EF Core migrations on startup, so a
+fresh volume gets its schema and an old one is brought up to date. The worker waits for that to
+finish before it starts polling.
+
 The demo path — the whole point of the mock — is:
 
 1. Scan the demo QR code from the mock's seeded fixtures, using the app.

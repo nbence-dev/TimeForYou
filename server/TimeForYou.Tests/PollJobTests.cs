@@ -181,7 +181,7 @@ public sealed class PollJobTests(SeamAFixture fixture) : IAsyncLifetime
         await OnboardDemoUserWithPushDeviceAsync();
         await RunPollCycleAsync();
         var lesson = (await SnapshotsInOrderAsync())[0];
-        var farAway = DateTimeOffset.UtcNow.AddDays(30);
+        var farAway = DateTimeOffset.UtcNow.AddDays(90); // well past the seven-week window (#59)
 
         await MoveInMockAsync(lesson.UntisLessonId, farAway, farAway.AddHours(1));
         await RunPollCycleAsync();

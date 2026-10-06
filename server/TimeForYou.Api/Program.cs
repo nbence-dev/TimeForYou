@@ -1,4 +1,7 @@
 using TimeForYou.Api.Features.Auth;
+using TimeForYou.Api.Features.Calendar;
+using TimeForYou.Api.Features.Devices;
+using TimeForYou.Api.Features.Notes;
 using TimeForYou.Api.Features.Timetable;
 using TimeForYou.Data;
 using TimeForYou.WebUntis;
@@ -16,6 +19,10 @@ builder.Services.AddSingleton(TimeProvider.System);
 
 var app = builder.Build();
 
+// Apply pending EF migrations before serving (#62). A failure throws here, so the process exits
+// and the container never reports healthy against a half-migrated schema.
+await app.Services.ApplyMigrationsAsync();
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
@@ -32,6 +39,9 @@ app.MapGet("/health", () => Results.Ok())
 
 app.MapAuthEndpoints();
 app.MapTimetableEndpoints();
+app.MapDeviceEndpoints();
+app.MapCalendarEndpoints();
+app.MapNoteEndpoints();
 
 app.Run();
 
