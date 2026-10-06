@@ -9,11 +9,11 @@ import { Platform } from 'react-native';
 
 export const Colors = {
   light: {
-    text: '#000000',
-    background: '#ffffff',
-    backgroundElement: '#F0F0F3',
-    backgroundSelected: '#E0E1E6',
-    textSecondary: '#60646C',
+    text: '#0F172A',
+    background: '#F8FAFC',
+    backgroundElement: '#F1F5F9',
+    backgroundSelected: '#E2E8F0',
+    textSecondary: '#64748B',
   },
   dark: {
     text: '#ffffff',
@@ -22,6 +22,42 @@ export const Colors = {
     backgroundSelected: '#2E3135',
     textSecondary: '#B0B4BA',
   },
+} as const;
+
+/**
+ * TimeForYou brand and status colours. Single source of truth: see docs/design/README.md.
+ * Never hard-code a hex value in a feature; import it from here.
+ */
+export const Brand = {
+  /** App bars, primary buttons, active navigation, headings. */
+  navy: '#15315D',
+  /** Accent only: hero action, active day, current-time line, unseen dots, focus rings. */
+  orange: '#CC5A01',
+  white: '#FFFFFF',
+  border: '#E2E8F0',
+  borderStrong: '#CBD5E1',
+} as const;
+
+/** Lesson status colours. `strip` is the 4px card edge; `bg`/`text`/`border` style the chip. */
+export const Status = {
+  onTime: { strip: '#059669', bg: '#ECFDF5', text: '#065F46', border: '#A7F3D0' },
+  changed: { strip: '#A16207', bg: '#FEF9C3', text: '#854D0E', border: '#FDE68A' },
+  cancelled: { strip: '#DC2626', bg: '#FEE2E2', text: '#991B1B', border: '#FECACA' },
+  live: { strip: '#CC5A01', bg: '#ECFDF5', text: '#065F46', border: '#A7F3D0' },
+} as const;
+
+export type LessonStatus = keyof typeof Status;
+
+export const Radius = {
+  base: 8,
+  card: 16,
+  pill: 9999,
+} as const;
+
+/** Font family names. The font files are loaded by the shared UI components ticket (#81). */
+export const FontFamily = {
+  text: 'HankenGrotesk',
+  label: 'PublicSans',
 } as const;
 
 export type ThemeColor = keyof typeof Colors.light & keyof typeof Colors.dark;
