@@ -20,6 +20,8 @@ export function ScanScreen() {
   const [permission, requestPermission] = useCameraPermissions();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // expo-camera on web always says canAskAgain, so remember that a request we made came back denied.
+  const [refused, setRefused] = useState(false);
   // A camera fires onBarcodeScanned many times a second; this guards the in-flight scan.
   const handling = useRef(false);
 
@@ -38,6 +40,7 @@ export function ScanScreen() {
       await api.scanQr(payload);
       markSignedIn();
     } catch (e) {
+      console.warn('QR scan failed', e);
       setError(
         e instanceof NetworkError
           ? "Couldn't reach the server. Check your connection and try again."
@@ -49,6 +52,11 @@ export function ScanScreen() {
     }
   }
 
+  async function allowCamera() {
+    const result = await requestPermission();
+    setRefused(!result.granted && result.status === 'denied');
+  }
+
   function retry() {
     setError(null);
     handling.current = false;
@@ -57,6 +65,7 @@ export function ScanScreen() {
   if (!permission) return <View style={styles.screen} />;
 
   if (!permission.granted) {
+    const blocked = !permission.canAskAgain || refused;
     return (
       <View style={[styles.screen, styles.centered, { paddingTop: insets.top }]}>
         <View style={styles.sheet}>
@@ -65,14 +74,14 @@ export function ScanScreen() {
           </Text>
           <Text style={styles.body}>
             TimeForYou links your timetable by scanning a QR code, so it needs the camera.
-            {permission.canAskAgain
-              ? ''
-              : Platform.OS === 'web'
-                ? ' Camera access is blocked: allow it for this site in your browser settings, then reload.'
-                : ' Camera access is blocked: turn it on for TimeForYou in your device settings.'}
+            {blocked
+              ? Platform.OS === 'web'
+                ? ' The browser did not give access: it is blocked for this site or no camera was found. Allow the camera in the address bar or site settings, then try again.'
+                : ' Camera access is blocked: turn it on for TimeForYou in your device settings.'
+              : ''}
           </Text>
           {permission.canAskAgain ? (
-            <Button label="Allow camera" onPress={requestPermission} />
+            <Button label={refused ? 'Try again' : 'Allow camera'} onPress={allowCamera} />
           ) : Platform.OS !== 'web' ? (
             <Button label="Open settings" onPress={() => Linking.openSettings()} />
           ) : null}
