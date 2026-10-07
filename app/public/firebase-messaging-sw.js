@@ -7,23 +7,24 @@ importScripts('https://www.gstatic.com/firebasejs/12.19.0/firebase-messaging-com
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', (event) => event.waitUntil(self.clients.claim()));
 
-// Tapping a push opens the Changes screen (#71 fills it in), reusing an open window if there is one.
-// This must be registered BEFORE firebase.messaging(): the SDK's own notificationclick handler calls
-// stopImmediatePropagation(), so anything added after it never runs.
+// Tapping a push opens the Changes screen (#71 fills it in). With a tab open we focus it and ask the
+// app to route itself (no openWindow, which Chrome refuses outside a fresh click); with none, we open one.
+// This must be registered BEFORE firebase.messaging(): the SDK's own notificationclick handler would
+// otherwise run first, and it swallows the event. We stop propagation so it does not also try to open a window.
 self.addEventListener('notificationclick', (event) => {
+  event.stopImmediatePropagation();
   event.notification.close();
   event.waitUntil(
-    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windows) => {
-      for (const w of windows) {
-        if ('focus' in w) {
-          return w
-            .navigate('/changes')
-            .then((c) => (c || w).focus())
-            .catch(() => self.clients.openWindow('/changes'));
-        }
+    (async () => {
+      const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+      const w = windows[0];
+      if (w) {
+        await w.focus().catch(() => {});
+        w.postMessage({ type: 'open-changes' });
+        return;
       }
-      return self.clients.openWindow('/changes');
-    }),
+      await self.clients.openWindow('/changes');
+    })().catch((e) => console.warn('Could not open the app from a notification', e)),
   );
 });
 

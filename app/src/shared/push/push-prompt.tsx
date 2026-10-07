@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -15,6 +16,7 @@ import { enablePush, syncPush, type PushState } from './index';
  */
 export function PushPrompt() {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const [state, setState] = useState<PushState>('checking');
   const [busy, setBusy] = useState(false);
 
@@ -28,6 +30,16 @@ export function PushPrompt() {
       cancelled = true;
     };
   }, []);
+
+  // The service worker asks an already-open tab to go to Changes when a notification is tapped.
+  useEffect(() => {
+    if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return;
+    const onMessage = (e: MessageEvent) => {
+      if (e.data?.type === 'open-changes') router.navigate('/changes');
+    };
+    navigator.serviceWorker.addEventListener('message', onMessage);
+    return () => navigator.serviceWorker.removeEventListener('message', onMessage);
+  }, [router]);
 
   if (state === 'default') {
     return (
