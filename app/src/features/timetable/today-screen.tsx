@@ -12,6 +12,7 @@ import type { Lesson } from '@/shared/types/lesson';
 
 import {
   cardStatusFor,
+  clampDay,
   dayKey,
   dayRange,
   formatDayTitle,
@@ -41,9 +42,10 @@ export function TodayScreen() {
   const [chosenDay, setChosenDay] = useState<string | null>(null);
 
   const today = dayKey(now);
-  const day = chosenDay ?? today;
   const byDay = useMemo(() => lessonsByDay(lessons), [lessons]);
   const range = useMemo(() => dayRange(lessons, today), [lessons, today]);
+  // A refresh can shrink the range under a chosen day; keep the view inside the days that exist.
+  const day = clampDay(chosenDay ?? today, range);
   const dayLessons = byDay.get(day) ?? [];
 
   const isToday = day === today;

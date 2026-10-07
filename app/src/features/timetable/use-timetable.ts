@@ -5,6 +5,8 @@ import { lessonCache } from '@/shared/storage';
 import { sortLessonsByStart } from '@/shared/storage/sort-lessons';
 import type { Lesson } from '@/shared/types/lesson';
 
+import { createLatestGuard } from './latest-guard';
+
 /** Why the last refresh did not produce fresh data. `null` when it did (or has not finished). */
 export type TimetableProblem = 'offline' | 'session' | 'failed' | null;
 
@@ -30,35 +32,52 @@ export function useTimetable({ retryWhileEmptyMs }: UseTimetableOptions = {}) {
 
   const mounted = useRef(true);
   const gotFreshData = useRef(false);
+  const [requests] = useState(createLatestGuard);
 
   // State is only ever set from the promise callbacks below, after the request settles.
   const onFresh = useCallback((lessonsFromServer: Lesson[]) => {
-    if (!mounted.current) return;
     const fresh = sortLessonsByStart(lessonsFromServer);
-    gotFreshData.current = true;
     setLessons(fresh);
+    // Tells the cache read, which may still be in flight, not to replace these lessons.
+    gotFreshData.current = true;
     setSyncedAt(new Date());
     setProblem(null);
-    // Saving is best effort: a storage failure must not hide a timetable we already have.
-    lessonCache.replaceLessons(fresh).catch(() => undefined);
+    // Saving is best effort: a storage failure, even a synchronous one, must not turn a
+    // timetable we already have into a failed refresh.
+    Promise.resolve()
+      .then(() => lessonCache.replaceLessons(fresh))
+      .catch(() => undefined);
   }, []);
 
   const onFailed = useCallback((error: unknown) => {
-    if (!mounted.current) return;
     if (error instanceof NetworkError) setProblem('offline');
     else if (error instanceof UnauthorizedError) setProblem('session');
     else setProblem('failed');
   }, []);
 
-  const onSettled = useCallback(() => {
-    if (mounted.current) setRefreshing(false);
-  }, []);
-
-  /** Fetches fresh lessons and reconciles them over what is on screen. */
-  const load = useCallback(
-    () => api.getTimetable().then(onFresh, onFailed).finally(onSettled),
-    [onFresh, onFailed, onSettled],
-  );
+  /**
+   * Fetches fresh lessons and reconciles them over what is on screen. A slow older response cannot
+   * overwrite a newer one, but it still applies if the newer request failed. Only the newest
+   * request reports a problem. Anything that goes wrong while applying a response is reported as
+   * a failed refresh instead of an unhandled rejection.
+   */
+  const load = useCallback(() => {
+    const request = requests.next();
+    const newest = () => mounted.current && request.isNewest();
+    return api
+      .getTimetable()
+      .then((lessonsFromServer) => {
+        if (!mounted.current || request.isSuperseded()) return;
+        onFresh(lessonsFromServer);
+        request.markApplied();
+      })
+      .catch((error: unknown) => {
+        if (newest()) onFailed(error);
+      })
+      .finally(() => {
+        if (newest()) setRefreshing(false);
+      });
+  }, [requests, onFresh, onFailed]);
 
   /** A refresh the student asked for (pull-down, retry). The first load starts as `refreshing`. */
   const refresh = useCallback(async () => {

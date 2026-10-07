@@ -40,12 +40,15 @@ export function formatTime(timestamp: string | Date): string {
 }
 
 /**
- * The local day a lesson starts on, or `null` if its `start_ts` cannot be parsed. A bad timestamp
- * must not become a day (`"NaN-NaN-NaN"` would sort after every real one and break navigation).
+ * The local day a lesson starts on, or `null` if its start or end time cannot be parsed. A lesson
+ * with a bad timestamp is left out entirely: a bad start would become the day `"NaN-NaN-NaN"`
+ * (sorting after every real one and breaking navigation), and a bad end would leave the lesson
+ * "still to come" forever and show `NaN:NaN`.
  */
 function startDay(lesson: Lesson): string | null {
   const start = new Date(lesson.start_ts);
-  return Number.isNaN(start.getTime()) ? null : dayKey(start);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(Date.parse(lesson.end_ts))) return null;
+  return dayKey(start);
 }
 
 /** Groups lessons by local day; each day's lessons are earliest first. */
@@ -79,6 +82,16 @@ export function dayRange(lessons: readonly Lesson[], today: string): { first: st
     if (key > last) last = key;
   }
   return { first, last };
+}
+
+/**
+ * Keeps a chosen day inside the days that exist. After a refresh the range can shrink (the window
+ * rolls forward, or the cache is replaced), and a day left outside it would show an empty page.
+ */
+export function clampDay(day: string, range: { first: string; last: string }): string {
+  if (day < range.first) return range.first;
+  if (day > range.last) return range.last;
+  return day;
 }
 
 export type LessonPhase = 'past' | 'live' | 'upcoming';
