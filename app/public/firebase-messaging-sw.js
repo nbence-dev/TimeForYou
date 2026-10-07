@@ -3,12 +3,13 @@
 importScripts('https://www.gstatic.com/firebasejs/12.19.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/12.19.0/firebase-messaging-compat.js');
 
-const config = Object.fromEntries(new URL(self.location.href).searchParams);
-firebase.initializeApp(config);
-// Initialising messaging makes the SDK display `notification` payloads that arrive in the background.
-firebase.messaging();
+// Take over open pages straight away, so a changed worker applies without a second reload.
+self.addEventListener('install', () => self.skipWaiting());
+self.addEventListener('activate', (event) => event.waitUntil(self.clients.claim()));
 
 // Tapping a push opens the Changes screen (#71 fills it in), reusing an open window if there is one.
+// This must be registered BEFORE firebase.messaging(): the SDK's own notificationclick handler calls
+// stopImmediatePropagation(), so anything added after it never runs.
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   event.waitUntil(
@@ -25,3 +26,8 @@ self.addEventListener('notificationclick', (event) => {
     }),
   );
 });
+
+const config = Object.fromEntries(new URL(self.location.href).searchParams);
+firebase.initializeApp(config);
+// Initialising messaging makes the SDK display `notification` payloads that arrive in the background.
+firebase.messaging();
