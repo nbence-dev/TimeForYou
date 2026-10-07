@@ -1,3 +1,4 @@
+import { lessonCache } from '@/shared/storage';
 import { clearToken, getToken, setToken } from '@/shared/storage/token-store';
 
 import { ApiError, NetworkError, UnauthorizedError } from './errors';
@@ -20,6 +21,19 @@ const unauthorizedListeners = new Set<UnauthorizedListener>();
 export function onUnauthorized(listener: UnauthorizedListener): () => void {
   unauthorizedListeners.add(listener);
   return () => unauthorizedListeners.delete(listener);
+}
+
+/**
+ * The saved timetable belongs to whoever was signed in. When that changes hands (a 401 signs the
+ * student out, or a new scan links an account) it must not be shown to the next person, so it is
+ * emptied. Best effort: if the wipe fails the next successful fetch replaces it anyway.
+ */
+async function forgetSavedTimetable(): Promise<void> {
+  try {
+    await lessonCache.replaceLessons([]);
+  } catch {
+    // see above
+  }
 }
 
 interface RequestOptions {
@@ -62,6 +76,7 @@ async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
     const message = await readErrorMessage(res);
     if (res.status === 401 && auth) {
       await clearToken();
+      await forgetSavedTimetable();
       unauthorizedListeners.forEach((l) => l());
       throw new UnauthorizedError(message);
     }
@@ -94,6 +109,8 @@ export const api = {
       auth: false,
     });
     await setToken(res.token);
+    // A new account on this device: whatever was saved belonged to the previous one.
+    await forgetSavedTimetable();
     return res;
   },
 
