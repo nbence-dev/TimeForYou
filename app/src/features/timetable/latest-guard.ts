@@ -1,15 +1,25 @@
 /**
- * Lets only the newest of several overlapping requests apply its result. Each request calls
- * `next()` when it starts and checks the function it gets back before touching state: it returns
- * `true` only while no newer request has started. Without it, a slow older response that lands
- * last would overwrite a newer one.
+ * Keeps overlapping requests from clobbering each other. Each request calls `next()` when it
+ * starts and gets back two checks:
+ * - `isNewest()`: no newer request has started. Failures and the spinner follow this, so only the
+ *   latest request reports a problem.
+ * - `claimApply()`: no newer request has already applied its result. A success follows this, so a
+ *   slow older response cannot overwrite a newer one, but still lands if the newer one failed.
  */
 export function createLatestGuard() {
   let latest = 0;
+  let applied = 0;
   return {
-    next(): () => boolean {
+    next() {
       const id = ++latest;
-      return () => id === latest;
+      return {
+        isNewest: () => id === latest,
+        claimApply: () => {
+          if (id <= applied) return false;
+          applied = id;
+          return true;
+        },
+      };
     },
   };
 }

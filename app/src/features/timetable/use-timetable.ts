@@ -28,12 +28,16 @@ export function useTimetable() {
   // State is only ever set from the promise callbacks below, after the request settles.
   const onFresh = useCallback((lessonsFromServer: Lesson[]) => {
     const fresh = sortLessonsByStart(lessonsFromServer);
-    gotFreshData.current = true;
     setLessons(fresh);
+    // Only after the lessons are on screen, so a throw above cannot block the cached fallback.
+    gotFreshData.current = true;
     setSyncedAt(new Date());
     setProblem(null);
-    // Saving is best effort: a storage failure must not hide a timetable we already have.
-    lessonCache.replaceLessons(fresh).catch(() => undefined);
+    // Saving is best effort: a storage failure, even a synchronous one, must not turn a
+    // timetable we already have into a failed refresh.
+    Promise.resolve()
+      .then(() => lessonCache.replaceLessons(fresh))
+      .catch(() => undefined);
   }, []);
 
   const onFailed = useCallback((error: unknown) => {
@@ -43,23 +47,24 @@ export function useTimetable() {
   }, []);
 
   /**
-   * Fetches fresh lessons and reconciles them over what is on screen. Only the newest request may
-   * touch state, so a slow older response cannot overwrite a newer one. Anything that goes wrong
-   * while applying a response is reported as a failed refresh instead of an unhandled rejection.
+   * Fetches fresh lessons and reconciles them over what is on screen. A slow older response cannot
+   * overwrite a newer one, but it still applies if the newer request failed. Only the newest
+   * request reports a problem. Anything that goes wrong while applying a response is reported as
+   * a failed refresh instead of an unhandled rejection.
    */
   const load = useCallback(() => {
-    const isNewest = requests.next();
-    const current = () => mounted.current && isNewest();
+    const request = requests.next();
+    const newest = () => mounted.current && request.isNewest();
     return api
       .getTimetable()
       .then((lessonsFromServer) => {
-        if (current()) onFresh(lessonsFromServer);
+        if (mounted.current && request.claimApply()) onFresh(lessonsFromServer);
       })
       .catch((error: unknown) => {
-        if (current()) onFailed(error);
+        if (newest()) onFailed(error);
       })
       .finally(() => {
-        if (current()) setRefreshing(false);
+        if (newest()) setRefreshing(false);
       });
   }, [requests, onFresh, onFailed]);
 
