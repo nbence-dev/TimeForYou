@@ -8,11 +8,20 @@ import type { Lesson } from '@/shared/types/lesson';
 /** Why the last refresh did not produce fresh data. `null` when it did (or has not finished). */
 export type TimetableProblem = 'offline' | 'session' | 'failed' | null;
 
+export type UseTimetableOptions = {
+  /**
+   * While there are no lessons at all, fetch again this often (ms) until some arrive. A student who
+   * opens the app right after linking can get an empty timetable while their first poll is still
+   * running (#58); this lets the empty state replace itself without a restart (#60).
+   */
+  retryWhileEmptyMs?: number;
+};
+
 /**
  * The student's timetable, cache first: the last saved lessons are on screen as soon as the local
  * read finishes, then a fresh `GET /timetable` replaces them. First paint never waits on a request.
  */
-export function useTimetable() {
+export function useTimetable({ retryWhileEmptyMs }: UseTimetableOptions = {}) {
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [cacheRead, setCacheRead] = useState(false);
   const [refreshing, setRefreshing] = useState(true);
@@ -77,6 +86,16 @@ export function useTimetable() {
       mounted.current = false;
     };
   }, [load]);
+
+  // Empty after a finished fetch: try again shortly. Stops once lessons arrive, and never retries a
+  // dead session (that needs the student to link again, not another request).
+  useEffect(() => {
+    if (!retryWhileEmptyMs || !cacheRead || refreshing || lessons.length > 0 || problem === 'session') return;
+    const id = setTimeout(() => {
+      void refresh();
+    }, retryWhileEmptyMs);
+    return () => clearTimeout(id);
+  }, [retryWhileEmptyMs, cacheRead, refreshing, lessons.length, problem, refresh]);
 
   return { lessons, cacheRead, refreshing, problem, syncedAt, refresh };
 }
