@@ -5,6 +5,8 @@ import { lessonCache } from '@/shared/storage';
 import { sortLessonsByStart } from '@/shared/storage/sort-lessons';
 import type { Lesson } from '@/shared/types/lesson';
 
+import { createLatestGuard } from './latest-guard';
+
 /** Why the last refresh did not produce fresh data. `null` when it did (or has not finished). */
 export type TimetableProblem = 'offline' | 'session' | 'failed' | null;
 
@@ -21,10 +23,10 @@ export function useTimetable() {
 
   const mounted = useRef(true);
   const gotFreshData = useRef(false);
+  const [requests] = useState(createLatestGuard);
 
   // State is only ever set from the promise callbacks below, after the request settles.
   const onFresh = useCallback((lessonsFromServer: Lesson[]) => {
-    if (!mounted.current) return;
     const fresh = sortLessonsByStart(lessonsFromServer);
     gotFreshData.current = true;
     setLessons(fresh);
@@ -35,21 +37,31 @@ export function useTimetable() {
   }, []);
 
   const onFailed = useCallback((error: unknown) => {
-    if (!mounted.current) return;
     if (error instanceof NetworkError) setProblem('offline');
     else if (error instanceof UnauthorizedError) setProblem('session');
     else setProblem('failed');
   }, []);
 
-  const onSettled = useCallback(() => {
-    if (mounted.current) setRefreshing(false);
-  }, []);
-
-  /** Fetches fresh lessons and reconciles them over what is on screen. */
-  const load = useCallback(
-    () => api.getTimetable().then(onFresh, onFailed).finally(onSettled),
-    [onFresh, onFailed, onSettled],
-  );
+  /**
+   * Fetches fresh lessons and reconciles them over what is on screen. Only the newest request may
+   * touch state, so a slow older response cannot overwrite a newer one. Anything that goes wrong
+   * while applying a response is reported as a failed refresh instead of an unhandled rejection.
+   */
+  const load = useCallback(() => {
+    const isNewest = requests.next();
+    const current = () => mounted.current && isNewest();
+    return api
+      .getTimetable()
+      .then((lessonsFromServer) => {
+        if (current()) onFresh(lessonsFromServer);
+      })
+      .catch((error: unknown) => {
+        if (current()) onFailed(error);
+      })
+      .finally(() => {
+        if (current()) setRefreshing(false);
+      });
+  }, [requests, onFresh, onFailed]);
 
   /** A refresh the student asked for (pull-down, retry). The first load starts as `refreshing`. */
   const refresh = useCallback(async () => {
