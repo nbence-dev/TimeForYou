@@ -3,8 +3,9 @@
  * starts and gets back two checks:
  * - `isNewest()`: no newer request has started. Failures and the spinner follow this, so only the
  *   latest request reports a problem.
- * - `claimApply()`: no newer request has already applied its result. A success follows this, so a
- *   slow older response cannot overwrite a newer one, but still lands if the newer one failed.
+ * - `isSuperseded()` / `markApplied()`: a newer request has already applied its result. A success
+ *   checks the first and calls the second only once it has applied, so a slow older response
+ *   cannot overwrite a newer one, but still lands if the newer one failed or could not be applied.
  */
 export function createLatestGuard() {
   let latest = 0;
@@ -14,10 +15,9 @@ export function createLatestGuard() {
       const id = ++latest;
       return {
         isNewest: () => id === latest,
-        claimApply: () => {
-          if (id <= applied) return false;
+        isSuperseded: () => id <= applied,
+        markApplied: () => {
           applied = id;
-          return true;
         },
       };
     },

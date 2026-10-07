@@ -29,7 +29,7 @@ export function useTimetable() {
   const onFresh = useCallback((lessonsFromServer: Lesson[]) => {
     const fresh = sortLessonsByStart(lessonsFromServer);
     setLessons(fresh);
-    // Only after the lessons are on screen, so a throw above cannot block the cached fallback.
+    // Tells the cache read, which may still be in flight, not to replace these lessons.
     gotFreshData.current = true;
     setSyncedAt(new Date());
     setProblem(null);
@@ -58,7 +58,9 @@ export function useTimetable() {
     return api
       .getTimetable()
       .then((lessonsFromServer) => {
-        if (mounted.current && request.claimApply()) onFresh(lessonsFromServer);
+        if (!mounted.current || request.isSuperseded()) return;
+        onFresh(lessonsFromServer);
+        request.markApplied();
       })
       .catch((error: unknown) => {
         if (newest()) onFailed(error);
