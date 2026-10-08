@@ -6,12 +6,12 @@ namespace TimeForYou.Worker.Polling;
 /// <summary>
 /// Firebase-backed <see cref="IPushSender"/> (#95): one <c>FirebaseMessaging.SendAsync</c> call
 /// serves both <c>android_fcm</c> and <c>web_push</c> tokens. A token Firebase rejects as invalid
-/// or unregistered is logged and swallowed, so it cannot fail the poll cycle (the job also isolates
-/// each device, but a dead token is expected, not an error).
+/// is logged and swallowed. Any other failure, including a malformed message, propagates so the
+/// poll job logs it as an error.
 /// </summary>
-public sealed class FcmPushSender(FirebaseMessaging messaging, ILogger<FcmPushSender> logger) : IPushSender
+public sealed class FcmPushSender(FirebaseMessaging messaging, ILogger<FcmPushSender> logger, string? webAppUrl = null) : IPushSender
 {
-    /// <summary>Where a tapped web notification lands: the Changes screen (#71).</summary>
+    /// <summary>Where a tapped web notification lands: the Changes screen (#71). FCM requires the link to be absolute https, so it is prefixed with <c>WEB_APP_URL</c>.</summary>
     public const string ChangesLink = "/changes";
 
     public async Task SendAsync(PushNotification notification, CancellationToken cancellationToken = default)
@@ -21,23 +21,23 @@ public sealed class FcmPushSender(FirebaseMessaging messaging, ILogger<FcmPushSe
             await messaging.SendAsync(BuildMessage(notification), cancellationToken);
         }
         catch (FirebaseMessagingException exception)
-            when (exception.MessagingErrorCode is MessagingErrorCode.Unregistered or MessagingErrorCode.InvalidArgument)
+            when (exception.MessagingErrorCode is MessagingErrorCode.Unregistered)
         {
             logger.LogWarning(
                 exception,
-                "FCM rejected the token for device {DeviceId} of user {UserId} ({ErrorCode}); skipping it",
+                "FCM reports the token for device {DeviceId} of user {UserId} as unregistered ({ErrorCode}); skipping it",
                 notification.DeviceId,
                 notification.UserId,
                 exception.MessagingErrorCode);
         }
     }
 
-    public static Message BuildMessage(PushNotification notification) => new()
+    public Message BuildMessage(PushNotification notification) => new()
     {
         Token = notification.PushToken,
         Notification = new Notification { Title = notification.Title, Body = notification.Body },
-        Webpush = notification.Platform == DevicePlatform.WebPush
-            ? new WebpushConfig { FcmOptions = new WebpushFcmOptions { Link = ChangesLink } }
+        Webpush = notification.Platform == DevicePlatform.WebPush && webAppUrl is { Length: > 0 }
+            ? new WebpushConfig { FcmOptions = new WebpushFcmOptions { Link = webAppUrl.TrimEnd('/') + ChangesLink } }
             : null,
     };
 }

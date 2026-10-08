@@ -72,6 +72,8 @@ public static class WorkerServiceCollectionExtensions
         if (string.IsNullOrWhiteSpace(credentialsPath) || !File.Exists(credentialsPath))
         {
             services.TryAddSingleton<IPushSender, LoggingPushSender>();
+            services.AddSingleton<IHostedService>(provider => new PushFallbackWarning(
+                provider.GetRequiredService<ILogger<PushFallbackWarning>>(), credentialsPath));
             return;
         }
 
@@ -81,6 +83,9 @@ public static class WorkerServiceCollectionExtensions
                 Credential = GoogleCredential.FromFile(credentialsPath),
                 ProjectId = configuration["FIREBASE_PROJECT_ID"],
             })));
-        services.TryAddSingleton<IPushSender, FcmPushSender>();
+        services.TryAddSingleton<IPushSender>(provider => new FcmPushSender(
+            provider.GetRequiredService<FirebaseMessaging>(),
+            provider.GetRequiredService<ILogger<FcmPushSender>>(),
+            configuration["WEB_APP_URL"]));
     }
 }
