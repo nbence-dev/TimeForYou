@@ -16,6 +16,8 @@ builder.Services.AddDataModule(builder.Configuration);
 builder.Services.AddWebUntisClient(builder.Configuration);
 builder.Services.AddAuthModule(builder.Configuration);
 builder.Services.AddSingleton(TimeProvider.System);
+// Prototype: the web app is a different origin from the API. Bearer tokens, no cookies, so open is fine.
+builder.Services.AddCors(o => o.AddDefaultPolicy(p => p.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader()));
 
 var app = builder.Build();
 
@@ -29,6 +31,7 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
+app.UseCors();
 app.UseHttpsRedirection();
 
 app.UseAuthentication();
