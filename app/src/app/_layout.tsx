@@ -19,16 +19,22 @@ export default function RootLayout() {
   );
 }
 
-/** A device with a token skips onboarding; one without (or after a 401) lands on the scan screen. */
+/**
+ * A device with a token skips onboarding; one without (or after a 401) lands on the scan screen.
+ * On iPhone Safari outside the Home Screen, a fresh sign-in (or the banner) shows the install guide (#67).
+ */
 function Routes() {
-  const { signedIn } = useSession();
+  const { signedIn, showingInstallGuide } = useSession();
   const ready = signedIn !== null;
   return (
     <View style={{ flex: 1 }}>
       {ready && (
         <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Protected guard={signedIn}>
+          <Stack.Protected guard={signedIn === true && !showingInstallGuide}>
             <Stack.Screen name="(tabs)" />
+          </Stack.Protected>
+          <Stack.Protected guard={signedIn === true && showingInstallGuide}>
+            <Stack.Screen name="add-to-home-screen" />
           </Stack.Protected>
           <Stack.Protected guard={!signedIn}>
             <Stack.Screen name="scan" />
