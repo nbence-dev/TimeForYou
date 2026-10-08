@@ -72,6 +72,9 @@ public sealed class IcsFeedTests(SeamAFixture fixture) : IAsyncLifetime
             StartTs = start,
             EndTs = start.AddHours(1),
             Status = status,
+            // Pin to the test clock; otherwise the DB default now() leaks wall-clock time into LAST-MODIFIED.
+            CreatedAt = Now,
+            UpdatedAt = Now,
         };
         db.LessonSnapshots.Add(lesson);
         await db.SaveChangesAsync();
