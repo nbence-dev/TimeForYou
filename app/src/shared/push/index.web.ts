@@ -22,6 +22,13 @@ const SW_URL = `/firebase-messaging-sw.js?${new URLSearchParams(config as Record
 
 let foregroundListening = false;
 
+/**
+ * Whether push works here, worked out once by `syncPush` on launch. `enablePush` reads this instead
+ * of asking again, because asking is async (Firebase opens a test IndexedDB) and anything awaited
+ * between the tap and `Notification.requestPermission()` can make iOS ignore the prompt.
+ */
+let supportedAtLaunch = false;
+
 async function supported(): Promise<boolean> {
   if (!configured || typeof Notification === 'undefined' || !('serviceWorker' in navigator)) {
     return false;
@@ -55,7 +62,8 @@ async function register(): Promise<PushState> {
       });
     }
     return 'registered';
-  } catch {
+  } catch (error) {
+    console.warn('Push registration failed', error);
     return 'failed';
   }
 }
@@ -65,14 +73,19 @@ async function register(): Promise<PushState> {
  * changed token reaches the server); otherwise it just reports the state.
  */
 export async function syncPush(): Promise<PushState> {
-  if (!(await supported())) return 'unsupported';
+  supportedAtLaunch = await supported();
+  if (!supportedAtLaunch) return 'unsupported';
   if (Notification.permission === 'granted') return register();
   return Notification.permission === 'denied' ? 'denied' : 'default';
 }
 
-/** Asks for permission, then registers. Must be called from a tap, or iOS ignores the prompt. */
+/**
+ * Asks for permission, then registers. Must be called from a tap, or iOS ignores the prompt, so
+ * nothing is awaited before `requestPermission()`. The prompt strip only shows once `syncPush` has
+ * finished, so `supportedAtLaunch` is always set by the time this can be called.
+ */
 export async function enablePush(): Promise<PushState> {
-  if (!(await supported())) return 'unsupported';
+  if (!supportedAtLaunch) return 'unsupported';
   const permission = await Notification.requestPermission();
   if (permission === 'granted') return register();
   return permission === 'denied' ? 'denied' : 'default';

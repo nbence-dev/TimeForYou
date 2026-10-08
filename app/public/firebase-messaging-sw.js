@@ -1,5 +1,7 @@
 /* FCM Web service worker. Firebase config arrives on the registration URL's query string
    (see src/shared/push/index.web.ts), because a worker cannot read build-time env vars. */
+// Keep this version in step with the `firebase` dependency in app/package.json: the page and the
+// worker should run the same SDK.
 importScripts('https://www.gstatic.com/firebasejs/12.19.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/12.19.0/firebase-messaging-compat.js');
 

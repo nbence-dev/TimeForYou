@@ -1,6 +1,7 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState, type ReactNode } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -19,6 +20,7 @@ export function PushPrompt() {
   const router = useRouter();
   const [state, setState] = useState<PushState>('checking');
   const [busy, setBusy] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -41,9 +43,14 @@ export function PushPrompt() {
     return () => navigator.serviceWorker.removeEventListener('message', onMessage);
   }, [router]);
 
+  // Closing a strip hides it until the next launch, which re-checks the state.
+  if (dismissed) return null;
+  const dismiss = () => setDismissed(true);
+  const top = insets.top + Spacing.three;
+
   if (state === 'default') {
     return (
-      <View style={[styles.strip, { marginTop: insets.top + Spacing.three }]}>
+      <Strip marginTop={top} onDismiss={dismiss}>
         <Text style={styles.text}>Get a notification when a lesson changes.</Text>
         <Button
           label="Turn on notifications"
@@ -60,29 +67,54 @@ export function PushPrompt() {
             }
           }}
         />
-      </View>
+      </Strip>
     );
   }
   if (state === 'denied') {
     return (
-      <View style={[styles.strip, { marginTop: insets.top + Spacing.three }]}>
+      <Strip marginTop={top} onDismiss={dismiss}>
         <Text style={styles.text}>
           Notifications are off. Turn them on for TimeForYou in your phone&apos;s Settings to hear
           about changes.
         </Text>
-      </View>
+      </Strip>
     );
   }
   if (state === 'failed') {
     return (
-      <View style={[styles.strip, { marginTop: insets.top + Spacing.three }]}>
+      <Strip marginTop={top} onDismiss={dismiss}>
         <Text style={styles.text}>
           Couldn&apos;t set up notifications. We&apos;ll try again next time you open the app.
         </Text>
-      </View>
+      </Strip>
     );
   }
   return null;
+}
+
+/** The strip's frame: its content, and a close button in the corner (banners are dismissable). */
+function Strip({
+  marginTop,
+  onDismiss,
+  children,
+}: {
+  marginTop: number;
+  onDismiss: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <View style={[styles.strip, { marginTop }]}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Dismiss"
+        hitSlop={8}
+        onPress={onDismiss}
+        style={styles.close}>
+        <Ionicons name="close" size={18} color={Brand.navy} />
+      </Pressable>
+      {children}
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
@@ -96,4 +128,5 @@ const styles = StyleSheet.create({
     borderRadius: Radius.base,
   },
   text: { fontFamily: Font.text, fontSize: 14, color: Brand.navy },
+  close: { position: 'absolute', top: Spacing.two, right: Spacing.two, zIndex: 1, padding: Spacing.one },
 });
