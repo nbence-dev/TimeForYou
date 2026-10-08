@@ -1,0 +1,1 @@
+export { AddToHomeScreenScreen as default } from '@/features/onboarding/add-to-home-screen-screen';
