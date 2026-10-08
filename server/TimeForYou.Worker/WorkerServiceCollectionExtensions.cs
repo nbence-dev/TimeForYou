@@ -1,3 +1,6 @@
+using FirebaseAdmin;
+using FirebaseAdmin.Messaging;
+using Google.Apis.Auth.OAuth2;
 using Hangfire;
 using Hangfire.PostgreSql;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -30,8 +33,8 @@ public static class WorkerServiceCollectionExtensions
         services.AddWebUntisClient(configuration);
         services.AddWebUntisCredentialProtection(configuration);
 
-        // Real FCM (FirebaseAdmin) replaces this in Week 3; Seam A registers its capturing sender first.
-        services.TryAddSingleton<IPushSender, LoggingPushSender>();
+        // Seam A registers its capturing sender first, so TryAdd leaves it in place.
+        AddPushSender(services, configuration);
         services.TryAddSingleton(TimeProvider.System);
         services.AddScoped<PollJob>();
         services.AddScoped<IUserPollJob>(provider => provider.GetRequiredService<PollJob>());
@@ -57,5 +60,27 @@ public static class WorkerServiceCollectionExtensions
         services.AddHostedService<PollJobScheduler>();
 
         return services;
+    }
+
+    /// <summary>
+    /// FCM when a Firebase service account is configured and present on disk; otherwise the logging
+    /// sender, so the worker still starts with no credentials (#95).
+    /// </summary>
+    private static void AddPushSender(IServiceCollection services, IConfiguration configuration)
+    {
+        var credentialsPath = configuration["GOOGLE_APPLICATION_CREDENTIALS"];
+        if (string.IsNullOrWhiteSpace(credentialsPath) || !File.Exists(credentialsPath))
+        {
+            services.TryAddSingleton<IPushSender, LoggingPushSender>();
+            return;
+        }
+
+        services.TryAddSingleton(_ => FirebaseMessaging.GetMessaging(
+            FirebaseApp.DefaultInstance ?? FirebaseApp.Create(new AppOptions
+            {
+                Credential = GoogleCredential.FromFile(credentialsPath),
+                ProjectId = configuration["FIREBASE_PROJECT_ID"],
+            })));
+        services.TryAddSingleton<IPushSender, FcmPushSender>();
     }
 }
