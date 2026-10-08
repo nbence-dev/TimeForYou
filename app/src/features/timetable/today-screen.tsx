@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from '@/shared/components/button';
 import { LessonCard } from '@/shared/components/lesson-card';
 import { StatusChip } from '@/shared/components/status-chip';
+import { HomeScreenBanner } from '@/shared/pwa/home-screen-banner';
 import { Font } from '@/shared/theme/fonts';
 import { Brand, Colors, MaxContentWidth, Radius, Spacing, Status } from '@/shared/theme/theme';
 import type { Lesson } from '@/shared/types/lesson';
@@ -73,6 +74,7 @@ export function TodayScreen() {
       refreshControl={<RefreshControl refreshing={pulling} onRefresh={onPullToRefresh} />}>
       <View style={styles.column}>
         <Header offline={problem === 'offline'} syncedAt={syncedAt} />
+                <HomeScreenBanner />
 
         <View style={styles.dayRow}>
           <DayArrow

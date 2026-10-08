@@ -13,11 +13,21 @@ self.addEventListener('activate', (event) => event.waitUntil(self.clients.claim(
 // app to route itself (no openWindow, which Chrome refuses outside a fresh click); with none, we open one.
 // This must be registered BEFORE firebase.messaging(): the SDK's own notificationclick handler would
 // otherwise run first, and it swallows the event. We stop propagation so it does not also try to open a window.
+// iOS Home Screen apps ignore the URL given to openWindow() (WebKit bug 263687), so the worker also
+// leaves a short-lived note in the Cache API (readable from the page, unlike localStorage). The page
+// looks for it when it opens or returns to the foreground and routes to Changes itself.
+// Keep the cache name and key in step with src/shared/push/notification-intent.ts.
+async function leaveOpenChangesNote() {
+  const cache = await self.caches.open('tfy-notification-intent');
+  await cache.put('/open-changes', new Response(String(Date.now())));
+}
+
 self.addEventListener('notificationclick', (event) => {
   event.stopImmediatePropagation();
   event.notification.close();
   event.waitUntil(
     (async () => {
+      await leaveOpenChangesNote().catch(() => {});
       const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
       const w = windows[0];
       if (w) {

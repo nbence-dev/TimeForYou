@@ -1,0 +1,15 @@
+{
+  "name": "TimeForYou",
+  "short_name": "TimeForYou",
+  "description": "Your timetable, with alerts when it changes.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#15315D",
+  "theme_color": "#15315D",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

@@ -44,6 +44,73 @@ device with the backend running and the mock reset (`POST /mock/reset`).
 - Once lessons are available, the screen replaces the empty state with this week's lessons
   within a few seconds, with no reload or restart.
 
+## Add to Home Screen (#67)
+
+A2HS-1 and A2HS-3 need a real iPhone: iOS only opens the app full-screen (and delivers Web Push)
+from the Home Screen, which a desktop browser cannot fake. A2HS-2 and A2HS-4 can also be checked
+on the web with DevTools device mode set to an iPhone (reload after switching).
+
+### A2HS-1 Guide before linking on iPhone Safari
+
+**Setup:** A real iPhone, TimeForYou not on the Home Screen, device not linked.
+
+**Steps:**
+
+1. Open the app in Safari.
+2. Tap "Skip for now".
+3. Scan the QR code.
+
+**Expected:**
+
+- Opening the app shows the "Turn on notifications" guide first, before the scan screen.
+- "Skip for now" goes to the scan screen. After the scan, the Today screen shows the "Notifications
+  are off" banner.
+- In Chrome on the iPhone, the guide starts with an extra "Open this page in Safari" step.
+
+### A2HS-2 Banner on the Today screen
+
+**Setup:** iPhone Safari (or DevTools iPhone mode), linked, not on the Home Screen.
+
+**Steps:**
+
+1. Open the Today screen and tap "Fix Settings →" on the banner.
+2. Tap "Skip for now", then tap ✕ on the banner.
+3. Reload the page.
+
+**Expected:**
+
+- "Fix Settings →" opens the guide; "Skip for now" returns to Today with the banner still there.
+- ✕ hides the banner, and it stays hidden after the reload. It comes back in a new tab.
+
+### A2HS-3 Opened from the Home Screen
+
+**Setup:** A real iPhone, not linked, TimeForYou not on the Home Screen.
+
+**Steps:**
+
+1. In Safari, follow the guide: Share › Add to Home Screen.
+2. Open TimeForYou from the new Home Screen icon.
+3. Scan the QR code.
+
+**Expected:**
+
+- The app opens full-screen, with no Safari address bar, and shows the scan screen (not the guide).
+- After the scan the Today screen shows, with no banner and no guide. The icon is the tfy logo,
+  labelled "TimeForYou".
+- Closing and reopening the app from the icon stays signed in.
+
+### A2HS-4 Not shown off iPhone
+
+**Setup:** A desktop browser or an Android phone, linked.
+
+**Steps:**
+
+1. Open the Today screen.
+
+**Expected:**
+
+- No "Notifications are off" banner, and linking goes straight to the Today screen.
+
 ## Web push registration (#69)
 
 Needs a real iPhone (iOS 16.4+) with the PWA added to the Home Screen, the Firebase web config in
