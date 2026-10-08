@@ -4,31 +4,42 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/shared/components/button';
+import { isIosNonSafari } from '@/shared/pwa/install';
 import { useSession } from '@/shared/session/session';
 import { Font } from '@/shared/theme/fonts';
 import { Brand, Colors, MaxContentWidth, Radius, Spacing } from '@/shared/theme/theme';
 
 type IconName = ComponentProps<typeof Ionicons>['name'];
 
-const STEPS: { title: string; detail: string; icon: IconName; filled?: boolean }[] = [
+type Step = { title: string; detail: string; icon: IconName; filled?: boolean };
+
+const OPEN_IN_SAFARI: Step = {
+  title: 'Open this page in Safari',
+  detail: 'Copy the link and paste it into Safari. Other browsers cannot add it reliably',
+  icon: 'compass-outline',
+};
+
+const STEPS: Step[] = [
   { title: 'Tap the Share button in Safari', detail: 'Look at the bottom toolbar below', icon: 'share-outline' },
   { title: 'Choose Add to Home Screen', detail: 'Scroll down the share sheet menu', icon: 'add-outline' },
   {
     title: 'Open TimeForYou from Home',
-    detail: 'Launch the app icon to turn on live alerts',
+    detail: 'Open it from there, then scan your QR code to link your timetable',
     icon: 'calendar-outline',
     filled: true,
   },
 ];
 
 /**
- * Shown on iOS Safari right after a successful scan (#67). iOS only delivers Web Push to a site
- * launched from the Home Screen, so this walks the student through Add to Home Screen. A soft gate:
- * both buttons go on into the app, and skipping leaves the "notifications are off" banner instead.
+ * Shown on iPhone Safari to a device that has not linked yet (#67). iOS only delivers Web Push to a
+ * site launched from the Home Screen, and the installed app has its own storage, so the student
+ * installs first and scans inside it. A soft gate: both buttons go on to the scan screen, and
+ * skipping leaves the "notifications are off" banner after linking instead.
  */
 export function AddToHomeScreenScreen() {
   const insets = useSafeAreaInsets();
   const { closeInstallGuide } = useSession();
+  const steps = isIosNonSafari() ? [OPEN_IN_SAFARI, ...STEPS] : STEPS;
 
   return (
     <View style={[styles.screen, { paddingTop: insets.top }]}>
@@ -60,7 +71,7 @@ export function AddToHomeScreenScreen() {
             </Text>
           </View>
 
-          {STEPS.map((step, i) => (
+          {steps.map((step, i) => (
             <View key={step.title} style={styles.step}>
               <View style={styles.stepNumber}>
                 <Text style={styles.stepNumberText}>{i + 1}</Text>
@@ -100,7 +111,9 @@ export function AddToHomeScreenScreen() {
           <Pressable accessibilityRole="button" onPress={closeInstallGuide} style={styles.skip}>
             <Text style={styles.skipText}>Skip for now</Text>
           </Pressable>
-          <Text style={styles.footnote}>You can still use the app, but you won&apos;t get change alerts.</Text>
+          <Text style={styles.footnote}>
+            You can still link here, but you won&apos;t get change alerts.
+          </Text>
         </View>
       </View>
     </View>

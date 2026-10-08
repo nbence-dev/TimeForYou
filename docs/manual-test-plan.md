@@ -50,19 +50,22 @@ A2HS-1 and A2HS-3 need a real iPhone: iOS only opens the app full-screen (and de
 from the Home Screen, which a desktop browser cannot fake. A2HS-2 and A2HS-4 can also be checked
 on the web with DevTools device mode set to an iPhone (reload after switching).
 
-### A2HS-1 Guide after linking on iPhone Safari
+### A2HS-1 Guide before linking on iPhone Safari
 
 **Setup:** A real iPhone, TimeForYou not on the Home Screen, device not linked.
 
 **Steps:**
 
-1. Open the app in Safari and scan the QR code.
+1. Open the app in Safari.
 2. Tap "Skip for now".
+3. Scan the QR code.
 
 **Expected:**
 
-- After the scan, the "Turn on notifications" guide shows instead of the Today screen.
-- "Skip for now" goes to the Today screen, which shows the "Notifications are off" banner.
+- Opening the app shows the "Turn on notifications" guide first, before the scan screen.
+- "Skip for now" goes to the scan screen. After the scan, the Today screen shows the "Notifications
+  are off" banner.
+- In Chrome on the iPhone, the guide starts with an extra "Open this page in Safari" step.
 
 ### A2HS-2 Banner on the Today screen
 
@@ -81,17 +84,20 @@ on the web with DevTools device mode set to an iPhone (reload after switching).
 
 ### A2HS-3 Opened from the Home Screen
 
-**Setup:** A real iPhone, linked in Safari.
+**Setup:** A real iPhone, not linked, TimeForYou not on the Home Screen.
 
 **Steps:**
 
-1. In Safari, tap Share › Add to Home Screen.
+1. In Safari, follow the guide: Share › Add to Home Screen.
 2. Open TimeForYou from the new Home Screen icon.
+3. Scan the QR code.
 
 **Expected:**
 
-- The app opens full-screen, with no Safari address bar.
-- No banner and no guide. The icon is labelled "TimeForYou".
+- The app opens full-screen, with no Safari address bar, and shows the scan screen (not the guide).
+- After the scan the Today screen shows, with no banner and no guide. The icon is the tfy logo,
+  labelled "TimeForYou".
+- Closing and reopening the app from the icon stays signed in.
 
 ### A2HS-4 Not shown off iPhone
 

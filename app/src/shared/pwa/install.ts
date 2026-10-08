@@ -15,6 +15,11 @@ export function isIos(): boolean {
   return /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
 }
 
+/** iOS, but not Safari: Chrome, Firefox, Edge, Opera, the Google app. Add to Home Screen is only dependable in Safari. */
+export function isIosNonSafari(): boolean {
+  return isIos() && /CriOS|FxiOS|EdgiOS|OPiOS|GSA/.test(navigator.userAgent);
+}
+
 /** Launched from the Home Screen rather than a browser tab. */
 export function isStandalone(): boolean {
   if (!hasBrowser()) return false;

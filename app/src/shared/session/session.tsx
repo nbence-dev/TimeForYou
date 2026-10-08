@@ -13,7 +13,7 @@ interface Session {
   showingInstallGuide: boolean;
   /** Reopens the guide, e.g. from the "notifications are off" banner. */
   openInstallGuide: () => void;
-  /** "I've added it" or "Skip for now": back to the app. */
+  /** "I've added it" or "Skip for now": on to the scan screen, or back to the app if signed in. */
   closeInstallGuide: () => void;
 }
 
@@ -26,10 +26,14 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let cancelled = false;
-    getToken().then(
-      (token) => !cancelled && setSignedIn(token !== null),
-      () => !cancelled && setSignedIn(false),
-    );
+    // No token on iPhone Safari: guide the student to the Home Screen *before* the scan, because an
+    // installed app has its own storage and would otherwise ask for a second scan (#67).
+    const resolve = (token: string | null) => {
+      if (cancelled) return;
+      setSignedIn(token !== null);
+      setShowingInstallGuide(token === null && needsHomeScreenInstall());
+    };
+    getToken().then(resolve, () => resolve(null));
     const unsubscribe = onUnauthorized(() => setSignedIn(false));
     return () => {
       cancelled = true;
@@ -39,9 +43,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   const markSignedIn = useCallback(() => {
     setSignedIn(true);
-    // iOS only delivers Web Push from the Home Screen, so guide the student there right after linking
-    // (#67). Everywhere else (Android, desktop, already installed) this stays false.
-    setShowingInstallGuide(needsHomeScreenInstall());
+    setShowingInstallGuide(false);
   }, []);
 
   const openInstallGuide = useCallback(() => setShowingInstallGuide(true), []);
