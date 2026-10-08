@@ -23,6 +23,7 @@ import {
   lessonsByDay,
   shiftDay,
 } from './lesson-time';
+import { useChangeMarkers } from './change-markers-context';
 import { useTimetable, type TimetableProblem } from './use-timetable';
 
 /** Re-evaluates "now" so the live and finished lessons update while the screen stays open. */
@@ -39,6 +40,7 @@ function useNow(intervalMs: number): Date {
 export function TodayScreen() {
   const insets = useSafeAreaInsets();
   const { lessons, cacheRead, refreshing, problem, syncedAt, refresh } = useTimetable();
+  const { reload: reloadChanges } = useChangeMarkers();
   const now = useNow(30_000);
   const [pulling, setPulling] = useState(false);
   const [chosenDay, setChosenDay] = useState<string | null>(null);
@@ -58,7 +60,7 @@ export function TodayScreen() {
   async function onPullToRefresh() {
     setPulling(true);
     try {
-      await refresh();
+      await Promise.all([refresh(), reloadChanges()]);
     } finally {
       setPulling(false);
     }
@@ -202,6 +204,7 @@ function ProblemNotice({
 
 function LessonRow({ lesson, now, isToday }: { lesson: Lesson; now: Date; isToday: boolean }) {
   const router = useRouter();
+  const { unseenLessonIds, markLessonSeen } = useChangeMarkers();
   // Only today has a "now": other days show every lesson as it is scheduled.
   const phase = isToday ? lessonPhase(lesson, now) : 'upcoming';
   const cancelled = lesson.status === 'cancelled';
@@ -216,7 +219,11 @@ function LessonRow({ lesson, now, isToday }: { lesson: Lesson; now: Date; isToda
         title={lesson.subject}
         room={lesson.room}
         teacher={lesson.lecturer}
-        onPress={() => router.push(`/lesson/${encodeURIComponent(lesson.id)}`)}
+        unseen={unseenLessonIds.has(lesson.id)}
+        onPress={() => {
+          markLessonSeen(lesson.id); // opening a lesson is seeing its changes
+          router.push(`/lesson/${encodeURIComponent(lesson.id)}`);
+        }}
       />
     </View>
   );

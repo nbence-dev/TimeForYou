@@ -1,4 +1,4 @@
-import { lessonCache } from '@/shared/storage';
+import { changesStore, lessonCache } from '@/shared/storage';
 import { clearToken, getToken, setToken } from '@/shared/storage/token-store';
 
 import { ApiError, NetworkError, UnauthorizedError } from './errors';
@@ -24,16 +24,13 @@ export function onUnauthorized(listener: UnauthorizedListener): () => void {
 }
 
 /**
- * The saved timetable belongs to whoever was signed in. When that changes hands (a 401 signs the
- * student out, or a new scan links an account) it must not be shown to the next person, so it is
- * emptied. Best effort: if the wipe fails the next successful fetch replaces it anyway.
+ * The saved timetable, and the saved changes with the point the student has seen them up to (#72),
+ * belong to whoever was signed in. When that changes hands (a 401 signs the student out, or a new
+ * scan links an account) they must not be shown to the next person, so they are emptied. Best
+ * effort, each on its own: if a wipe fails the next successful fetch replaces what is saved anyway.
  */
 async function forgetSavedTimetable(): Promise<void> {
-  try {
-    await lessonCache.replaceLessons([]);
-  } catch {
-    // see above
-  }
+  await Promise.allSettled([lessonCache.replaceLessons([]), changesStore.clear()]);
 }
 
 interface RequestOptions {
@@ -76,8 +73,10 @@ async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
     const message = await readErrorMessage(res);
     if (res.status === 401 && auth) {
       await clearToken();
-      await forgetSavedTimetable();
+      // Tell the app before the wipe, so anything still in flight stops saving first and cannot
+      // write the signed-out student's data back after it. The wipe is queued behind earlier writes.
       unauthorizedListeners.forEach((l) => l());
+      await forgetSavedTimetable();
       throw new UnauthorizedError(message);
     }
     throw new ApiError(res.status, message);
