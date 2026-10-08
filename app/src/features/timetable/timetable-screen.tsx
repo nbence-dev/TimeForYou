@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -206,6 +207,7 @@ function RefreshingLine() {
 }
 
 function DaySchedule({ day, lessons }: { day: string; lessons: Lesson[] }) {
+  const router = useRouter();
   const cancelled = lessons.filter((l) => l.status === 'cancelled').length;
   const scheduled = lessons.length - cancelled;
 
@@ -232,6 +234,7 @@ function DaySchedule({ day, lessons }: { day: string; lessons: Lesson[] }) {
             title={lesson.subject}
             room={lesson.room}
             teacher={lesson.lecturer}
+            onPress={() => router.push(`/lesson/${encodeURIComponent(lesson.id)}`)}
           />
         </View>
       ))}

@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -198,6 +199,7 @@ function ProblemNotice({
 }
 
 function LessonRow({ lesson, now, isToday }: { lesson: Lesson; now: Date; isToday: boolean }) {
+  const router = useRouter();
   // Only today has a "now": other days show every lesson as it is scheduled.
   const phase = isToday ? lessonPhase(lesson, now) : 'upcoming';
   const cancelled = lesson.status === 'cancelled';
@@ -212,6 +214,7 @@ function LessonRow({ lesson, now, isToday }: { lesson: Lesson; now: Date; isToda
         title={lesson.subject}
         room={lesson.room}
         teacher={lesson.lecturer}
+        onPress={() => router.push(`/lesson/${encodeURIComponent(lesson.id)}`)}
       />
     </View>
   );

@@ -43,3 +43,70 @@ device with the backend running and the mock reset (`POST /mock/reset`).
   connection), not a blank screen. The week bar and day chips are hidden.
 - Once lessons are available, the screen replaces the empty state with this week's lessons
   within a few seconds, with no reload or restart.
+
+## Notes (#73)
+
+### NT-1 Add, edit and delete a note
+
+**Setup:** A linked device that has a lesson on Today or Timetable.
+
+**Steps:**
+
+1. Tap a lesson to open its sheet. It shows the lesson and "No notes on this lesson yet."
+2. Tap **Add note**, type "Bring laptop charger", tap **Save note**.
+3. Tap the pencil on the note, add " and a pen", tap **Save note**.
+4. Tap the trash icon on the note, then **Delete** on the "Delete this note?" prompt.
+
+**Expected:**
+
+- After step 2 you are back on the lesson sheet and the note is listed straight away, marked
+  "Created just now · Private to you".
+- After step 3 the note shows the edited text.
+- After step 4 the note is gone and the empty message returns. Tapping **Cancel** on the prompt
+  instead keeps the note.
+
+### NT-2 A note written on one device shows on another
+
+**Setup:** Link two devices (or two browsers) to the same student by scanning the same QR code on
+each. The second scan gives a second token for the same user.
+
+**Steps:**
+
+1. On device A add a note to a lesson.
+2. On device B open that lesson's sheet (or close and reopen it).
+3. On device B add a second note, then reopen the sheet on device A.
+
+**Expected:**
+
+- Device B lists device A's note, and device A lists device B's, each after the sheet is opened.
+  No restart is needed.
+
+### NT-3 Empty and over-length notes are blocked
+
+**Steps:**
+
+1. Open **Add note** and tap **Save note** without typing, then with only spaces.
+2. Type or paste more than 500 characters.
+
+**Expected:**
+
+- An empty or spaces-only note shows "Write something before saving." and nothing is sent.
+- The input stops accepting characters at 500 and the counter reads "500 / 500". If a longer text
+  somehow gets in, saving shows "A note can be at most 500 characters."
+
+### NT-4 A failed save keeps the text
+
+**Steps:**
+
+1. Open **Add note** and type "This text must survive a failed save".
+2. Take the device offline (airplane mode, or stop the `api` container when testing on the web).
+3. Tap **Save note**.
+4. Go back online and tap **Save note** again.
+
+**Expected:**
+
+- Step 3 shows "Couldn't reach the server. Your note is still here: try again when you're
+  online." and the typed text is still in the box.
+- Step 4 saves the note and returns to the lesson sheet, where it is listed.
+- With the device offline, opening a lesson's sheet shows the lesson but says the notes can't be
+  shown right now, with **Try again**. Notes are online only until the Week 4 offline queue.
