@@ -10,6 +10,7 @@ import { Font } from '@/shared/theme/fonts';
 import { Brand, Radius, Spacing } from '@/shared/theme/theme';
 
 import { enablePush, syncPush, type PushState } from './index';
+import { takeOpenChangesNote } from './notification-intent';
 
 /**
  * Registers for push on launch and, while permission is still open or refused, shows a strip that
@@ -41,6 +42,25 @@ export function PushPrompt() {
     };
     navigator.serviceWorker.addEventListener('message', onMessage);
     return () => navigator.serviceWorker.removeEventListener('message', onMessage);
+  }, [router]);
+
+  // iOS ignores the URL a notification tap asks for, so the worker leaves a note instead; pick it up
+  // on launch and whenever the app returns to the foreground.
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const check = () => {
+      takeOpenChangesNote().then((tapped) => tapped && router.navigate('/changes'));
+    };
+    check();
+    const onVisible = () => document.visibilityState === 'visible' && check();
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('pageshow', check);
+    window.addEventListener('focus', check);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('pageshow', check);
+      window.removeEventListener('focus', check);
+    };
   }, [router]);
 
   // Closing a strip hides it until the next launch, which re-checks the state.
