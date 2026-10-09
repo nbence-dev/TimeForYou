@@ -3,8 +3,8 @@ using TimeForYou.Domain;
 namespace TimeForYou.Worker.Polling;
 
 /// <summary>
-/// No-credentials fallback <see cref="IPushSender"/> (and the default in Seam A): logs the
-/// grouped notification the poll job would have pushed instead of sending it.
+/// No-credentials fallback <see cref="IPushSender"/>: logs the grouped notification the poll job
+/// would have pushed instead of sending it.
 /// </summary>
 public sealed class LoggingPushSender(ILogger<LoggingPushSender> logger) : IPushSender
 {

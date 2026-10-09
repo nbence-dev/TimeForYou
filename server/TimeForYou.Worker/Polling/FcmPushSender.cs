@@ -5,9 +5,10 @@ namespace TimeForYou.Worker.Polling;
 
 /// <summary>
 /// Firebase-backed <see cref="IPushSender"/> (#95): one <c>FirebaseMessaging.SendAsync</c> call
-/// serves both <c>android_fcm</c> and <c>web_push</c> tokens. A token Firebase rejects as invalid
-/// is logged and swallowed. Any other failure, including a malformed message, propagates so the
-/// poll job logs it as an error.
+/// serves both <c>android_fcm</c> and <c>web_push</c> tokens. A token Firebase reports as
+/// unregistered is logged and swallowed. Any other failure propagates so the poll job logs it as
+/// an error, and that includes a junk token: Firebase answers it with InvalidArgument, the same as
+/// a malformed message, so the two cannot be told apart here.
 /// </summary>
 public sealed class FcmPushSender(FirebaseMessaging messaging, ILogger<FcmPushSender> logger, string? webAppUrl = null) : IPushSender
 {
