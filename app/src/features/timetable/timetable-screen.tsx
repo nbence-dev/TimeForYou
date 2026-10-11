@@ -12,6 +12,7 @@ import { Brand, Colors, MaxContentWidth, Radius, Spacing, Status } from '@/share
 import type { Lesson } from '@/shared/types/lesson';
 
 import { cardStatusFor, dayKey, dayRange, formatDayTitle, formatTime, lessonsByDay, shiftDay } from './lesson-time';
+import { useChangeMarkers } from './change-markers-context';
 import { useTimetable, type TimetableProblem } from './use-timetable';
 import {
   clampDay,
@@ -37,6 +38,7 @@ const RETRY_WHILE_EMPTY_MS = 5_000;
 export function TimetableScreen() {
   const insets = useSafeAreaInsets();
   const { lessons, refreshing, problem, refresh } = useTimetable({ retryWhileEmptyMs: RETRY_WHILE_EMPTY_MS });
+  const { reload: reloadChanges } = useChangeMarkers();
   const [chosenDay, setChosenDay] = useState<string | null>(null);
   const [pulling, setPulling] = useState(false);
 
@@ -58,7 +60,7 @@ export function TimetableScreen() {
   async function onPullToRefresh() {
     setPulling(true);
     try {
-      await refresh();
+      await Promise.all([refresh(), reloadChanges()]);
     } finally {
       setPulling(false);
     }
@@ -208,6 +210,7 @@ function RefreshingLine() {
 
 function DaySchedule({ day, lessons }: { day: string; lessons: Lesson[] }) {
   const router = useRouter();
+  const { unseenLessonIds, markLessonSeen } = useChangeMarkers();
   const cancelled = lessons.filter((l) => l.status === 'cancelled').length;
   const scheduled = lessons.length - cancelled;
 
@@ -234,7 +237,11 @@ function DaySchedule({ day, lessons }: { day: string; lessons: Lesson[] }) {
             title={lesson.subject}
             room={lesson.room}
             teacher={lesson.lecturer}
-            onPress={() => router.push(`/lesson/${encodeURIComponent(lesson.id)}`)}
+            unseen={unseenLessonIds.has(lesson.id)}
+            onPress={() => {
+              markLessonSeen(lesson.id); // opening a lesson is seeing its changes
+              router.push(`/lesson/${encodeURIComponent(lesson.id)}`);
+            }}
           />
         </View>
       ))}
