@@ -202,3 +202,109 @@ each. The second scan gives a second token for the same user.
 - With the device offline, opening a lesson's sheet shows the lesson but says the notes can't be
   shown right now, with **Try again**. Notes are online only until the Week 4 offline queue.
 
+## Changes screen (#71)
+
+Set `POLL_INTERVAL_SECONDS=30` in `.env` (then `docker compose up -d`) so a mock change is picked up
+within a minute instead of ten.
+
+### CH-1 No changes
+
+**Setup:** A linked device; the mock reset (`POST /mock/reset`) and no changes in the last 30 days.
+
+**Steps:**
+
+1. Open the Changes tab.
+
+**Expected:**
+
+- "You're all caught up" with a tick, a "View timetable" button and "Last checked HH:MM".
+- "View timetable" opens the Timetable tab.
+
+### CH-2 Several changes at once
+
+**Setup:** A linked device. Pick three upcoming lessons from `GET /timetable` (their `untis_lesson_id`).
+
+**Steps:**
+
+1. In one go, call `POST /mock/cancel-lesson/{id}` for the first, `POST /mock/change-room/{id}`
+   with `{"room": "Z99"}` for the second, and `POST /mock/move-lesson/{id}` (one hour later) for
+   the third.
+2. Wait for the next poll, then open the Changes tab (or tap ↻).
+
+**Expected:**
+
+- The summary reads "3 changes in your timetable" with 1 cancelled, 1 room, 1 time.
+- All three cards show, newest first: the cancelled lesson struck through on a red card, then
+  "Room: old → Z99", then "Time: old → new" one hour later.
+- Each card names the lesson and when it is.
+
+### CH-3 Opened by route
+
+**Steps:**
+
+1. With the app open on another tab, go to `/changes` directly (type it in the address bar on the
+   web, or tap a change notification).
+
+**Expected:**
+
+- The Changes screen opens and loads the latest changes.
+
+## Changed-lesson marker (#72)
+
+### CM-1 A changed lesson shows a dot and the Changes tab shows a count
+
+**Setup:** A linked device that has already opened the app once (the first launch marks nothing,
+however much history exists). The lesson to change is on a day the app shows.
+
+**Steps:**
+
+1. On the mock, change a lesson's room, using the lesson's mock id (template id and date, e.g.
+   `1006-2026-10-08`): `POST /mock/change-room/1006-2026-10-08` with `{"room":"Z77"}`. Pick a room
+   the lesson does not already have, or the poll finds nothing to report.
+2. Wait for the next poll, or `POST /nudge` on the worker.
+3. Open the app again (a reload on the web).
+4. On a different day, look at a lesson that did not change.
+
+**Expected:**
+
+- The changed lesson shows a small orange dot at the top right of its card, on Today and on
+  Timetable, and the Changes tab shows an orange badge with the number of unseen changes.
+- The lesson that did not change shows no dot.
+
+### CM-2 A marker stays until the student has seen the change
+
+**Steps:**
+
+1. Do CH-1 with changes on two lessons, one on a day other than today, so the dots and a badge of 2
+   are showing.
+2. Close and reopen the app (a reload on the web) without tapping anything. Repeat with the device
+   offline (stop the `api` container on the web).
+3. Tap the lesson that has the dot on Today, then go back.
+4. Close and reopen the app again.
+5. Tap the **Changes** tab, then close and reopen the app once more.
+
+**Expected:**
+
+- After step 2 the dot and the badge are still there, online and offline: nothing has been seen
+  yet, so a restart does not clear them.
+- After step 3 that lesson's dot is gone and the badge drops by its changes. The other lesson's
+  change is still counted.
+- After step 4 the opened lesson stays clear and the other change is still marked.
+- After step 5 the badge is gone and stays gone. A change made after that shows on its own.
+- The very first launch on a device shows no dots even if the student has weeks of change
+  history.
+
+### CM-3 Signing out forgets what was seen
+
+**Steps:**
+
+1. Use the app until a changes list has been fetched.
+2. Make the login stop working (on the web, replace the stored `timeforyou.token` with any other
+   text) and reload, or link another account by scanning.
+
+**Expected:**
+
+- The app lands on the scan screen. On the web, the `timeforyou.kv.changes.*` entries in Local
+  Storage are gone, so the next student starts with no markers and none of the previous student's
+  changes.
+

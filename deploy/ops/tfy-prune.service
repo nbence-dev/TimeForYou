@@ -1,0 +1,11 @@
+[Unit]
+Description=Weekly Docker safety-net prune (never touches volumes)
+After=docker.service
+
+[Service]
+Type=oneshot
+# Stopped containers, dangling images, unused networks, build cache older than a week.
+# deploy.sh already removes old release images on every deploy; this only catches leftovers.
+# NEVER add --volumes here: db-data is a named volume.
+ExecStart=/usr/bin/docker system prune -f --filter until=168h
+ExecStart=/usr/bin/docker builder prune -f --filter until=168h

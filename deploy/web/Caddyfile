@@ -1,0 +1,25 @@
+# Serves the exported PWA inside the `web` image. Not the edge proxy (that is deploy/caddy/Caddyfile).
+{
+	auto_https off
+	admin off
+}
+
+:80 {
+	handle /healthz {
+		respond 200
+	}
+
+	handle {
+		root * /srv
+		encode zstd gzip
+
+		# The Firebase service worker must always be revalidated, or a new release can keep serving
+		# an old worker to installed PWAs.
+		@sw path /firebase-messaging-sw.js
+		header @sw Cache-Control "no-cache"
+
+		# expo export writes one .html per route (changes.html); anything unknown falls back to the SPA shell.
+		try_files {path} {path}.html /index.html
+		file_server
+	}
+}

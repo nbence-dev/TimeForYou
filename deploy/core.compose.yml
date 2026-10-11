@@ -1,0 +1,78 @@
+# TimeForYou — core stack for the tfy-prod VM. Long-lived: a deploy never touches this.
+#
+# Holds the things that must survive every release: Postgres (the state), Caddy (the stable
+# switch that points at the live release), cloudflared (the public tunnel).
+# Releases (release.compose.yml, one Compose project per commit) join the two networks below.
+#
+#   docker compose -p tfy-core -f core.compose.yml --env-file /srv/tfy/.env up -d --wait
+#
+# cloudflared is behind the `tunnel` profile on purpose: a tunnel's routes are shared by every
+# connector attached to it, so it is only started at cutover, never as part of a plain `up`.
+
+name: tfy-core
+
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    mem_limit: 512m
+    networks: [tfy-db]
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"      # tunnel and LAN: web app (and api.* host)
+      - "8080:8080"  # LAN/tailnet: API direct
+      - "8000:8000"  # LAN/tailnet only: mock admin (unauthenticated by design, never tunnelled)
+      - "8081:8081"  # LAN/tailnet only: worker /nudge + Hangfire (never tunnelled)
+    volumes:
+      # Mount the DIRECTORY, not single files: the deploy rewrites live.caddy by renaming a new
+      # file over it, and a single-file bind mount would keep pointing at the old inode.
+      - /srv/tfy/caddy:/etc/caddy:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    healthcheck:
+      test: ["CMD", "caddy", "validate", "--config", "/etc/caddy/Caddyfile"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    mem_limit: 128m
+    networks: [tfy-edge]
+
+  cloudflared:
+    # Pinned on purpose: `latest` moves, and a rebuilt VM should run what was tested. Bump it deliberately.
+    image: cloudflare/cloudflared:2026.10.0
+    profiles: ["tunnel"]
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN}
+    depends_on:
+      caddy:
+        condition: service_healthy
+    mem_limit: 128m
+    networks: [tfy-edge]
+
+# Fixed names so release stacks can attach with `external: true`.
+networks:
+  tfy-edge:
+    name: tfy-edge
+  tfy-db:
+    name: tfy-db
+
+volumes:
+  db-data:
+  caddy-data:
+  caddy-config:
