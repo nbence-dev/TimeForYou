@@ -1,0 +1,108 @@
+# TimeForYou — one RELEASE of the app tier. Run as its own Compose project per commit:
+#
+#   SHA=<short-sha> IMAGE_PREFIX=ghcr.io/nbence-dev/timeforyou \
+#     docker compose -p tfy-<short-sha> -f release.compose.yml --env-file /srv/tfy/.env up -d --wait
+#
+# Never run by hand in normal life: deploy.sh does it. Postgres, Caddy and cloudflared live in
+# core.compose.yml and are not touched by a release.
+#
+# Every service gets a release-unique alias (api-<sha>, mock-<sha>, ...) on the shared edge network.
+# Compose also adds the bare service name (`api`, `mock`) as an alias, and during a deploy two
+# releases are on that network at once, so NOTHING may address a bare name. Caddy and the
+# WEBUNTIS_BASE_URL below both use the unique aliases. `db` is fine: only the core stack has one.
+
+services:
+  mock:
+    image: ${IMAGE_PREFIX:?set IMAGE_PREFIX}/mock:${SHA:?set SHA}
+    restart: unless-stopped
+    # Admin endpoints are unauthenticated on purpose; reachable only on the LAN port Caddy exposes.
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; socket.create_connection(('localhost', 8000), 2)"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    mem_limit: 256m
+    networks:
+      tfy-edge:
+        aliases: ["mock-${SHA}"]
+
+  api:
+    image: ${IMAGE_PREFIX}/api:${SHA}
+    restart: unless-stopped
+    environment:
+      ConnectionStrings__TimeForYou: ${ConnectionStrings__TimeForYou}
+      AES_KEY: ${AES_KEY}
+      WEBUNTIS_BASE_URL: http://mock-${SHA}:8000
+      WEBUNTIS_SCHOOL: ${WEBUNTIS_SCHOOL}
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-}
+      FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID}
+      GOOGLE_APPLICATION_CREDENTIALS: ${GOOGLE_APPLICATION_CREDENTIALS}
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Production}
+    volumes:
+      - ${FIREBASE_SERVICE_ACCOUNT_PATH}:${GOOGLE_APPLICATION_CREDENTIALS}:ro
+    # The aspnet image has no curl/wget: speak HTTP to /health over bash's /dev/tcp.
+    # The API migrates the database before it serves, so it is only healthy once the schema is done.
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/8080 && printf 'GET /health HTTP/1.0\\r\\n\\r\\n' >&3 && head -n1 <&3 | grep -q ' 200 '"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    depends_on:
+      mock:
+        condition: service_healthy
+    mem_limit: 512m
+    networks:
+      tfy-db: {}
+      tfy-edge:
+        aliases: ["api-${SHA}"]
+
+  worker:
+    image: ${IMAGE_PREFIX}/worker:${SHA}
+    restart: unless-stopped
+    environment:
+      ConnectionStrings__TimeForYou: ${ConnectionStrings__TimeForYou}
+      AES_KEY: ${AES_KEY}
+      WEBUNTIS_BASE_URL: http://mock-${SHA}:8000
+      WEBUNTIS_SCHOOL: ${WEBUNTIS_SCHOOL}
+      FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID}
+      GOOGLE_APPLICATION_CREDENTIALS: ${GOOGLE_APPLICATION_CREDENTIALS}
+      POLL_INTERVAL_SECONDS: ${POLL_INTERVAL_SECONDS}
+      # Not read on every branch yet (see .env.example, #95); harmless when unused.
+      WEB_APP_URL: ${WEB_APP_URL:-}
+    volumes:
+      - ${FIREBASE_SERVICE_ACCOUNT_PATH}:${GOOGLE_APPLICATION_CREDENTIALS}:ro
+    # Same bash /dev/tcp probe as docker-compose.yml. The worker waits for the API's migration.
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/8081 && printf 'GET /healthz HTTP/1.0\\r\\n\\r\\n' >&3 && head -n1 <&3 | grep -q ' 200 '"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    depends_on:
+      mock:
+        condition: service_healthy
+    mem_limit: 512m
+    networks:
+      tfy-db: {}
+      tfy-edge:
+        aliases: ["worker-${SHA}"]
+
+  web:
+    image: ${IMAGE_PREFIX}/web:${SHA}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/healthz"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    mem_limit: 64m
+    networks:
+      tfy-edge:
+        aliases: ["web-${SHA}"]
+
+networks:
+  tfy-edge:
+    external: true
+    name: tfy-edge
+  tfy-db:
+    external: true
+    name: tfy-db

@@ -1,0 +1,14 @@
+# Placeholder until the first release is deployed. The deploy script overwrites this file with
+# snippets pointing at the live release, e.g.  reverse_proxy api-<sha>:8080
+(live_api) {
+	respond "no release deployed yet" 503
+}
+(live_web) {
+	respond "no release deployed yet" 503
+}
+(live_mock) {
+	respond "no release deployed yet" 503
+}
+(live_worker) {
+	respond "no release deployed yet" 503
+}

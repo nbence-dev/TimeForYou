@@ -1,0 +1,137 @@
+name: Deploy
+
+# Builds the images in GitHub's cloud, pushes them to GHCR, then the self-hosted runner on tfy-prod
+# starts the new release next to the old one and switches over (deploy/deploy.sh). The VM never builds.
+#
+# Only runs on main, never on pull requests: the runner has root-equivalent Docker access on the VM.
+# PR checks stay in ci.yml.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# One deploy at a time, and never cancel one halfway through a switch.
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: build and push images
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Names
+        run: |
+          {
+            echo "SHORT_SHA=${GITHUB_SHA::12}"
+            echo "IMAGE_PREFIX=ghcr.io/${GITHUB_REPOSITORY,,}"   # GHCR names must be lowercase
+            echo "SOURCE_URL=https://github.com/${GITHUB_REPOSITORY}"
+          } >> "$GITHUB_ENV"
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/setup-buildx-action@v3
+
+      # The source label links each package to this repo, which is what lets the VM pull it with GITHUB_TOKEN.
+      - name: api
+        uses: docker/build-push-action@v6
+        with:
+          context: server
+          file: server/TimeForYou.Api/Dockerfile
+          push: true
+          provenance: false
+          tags: ${{ env.IMAGE_PREFIX }}/api:${{ env.SHORT_SHA }}
+          labels: org.opencontainers.image.source=${{ env.SOURCE_URL }}
+          cache-from: type=gha,scope=api
+          cache-to: type=gha,scope=api,mode=max
+
+      - name: worker
+        uses: docker/build-push-action@v6
+        with:
+          context: server
+          file: server/TimeForYou.Worker/Dockerfile
+          push: true
+          provenance: false
+          tags: ${{ env.IMAGE_PREFIX }}/worker:${{ env.SHORT_SHA }}
+          labels: org.opencontainers.image.source=${{ env.SOURCE_URL }}
+          cache-from: type=gha,scope=worker
+          cache-to: type=gha,scope=worker,mode=max
+
+      - name: mock
+        uses: docker/build-push-action@v6
+        with:
+          context: mock
+          push: true
+          provenance: false
+          tags: ${{ env.IMAGE_PREFIX }}/mock:${{ env.SHORT_SHA }}
+          labels: org.opencontainers.image.source=${{ env.SOURCE_URL }}
+          cache-from: type=gha,scope=mock
+          cache-to: type=gha,scope=mock,mode=max
+
+      # The PWA bakes its configuration in at export time. All five EXPO_PUBLIC_* values are public by
+      # design (they ship in the JS bundle), so they are repository VARIABLES, not secrets.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - name: export the PWA
+        working-directory: app
+        env:
+          EXPO_PUBLIC_API_URL: ${{ vars.EXPO_PUBLIC_API_URL }}
+          EXPO_PUBLIC_FIREBASE_API_KEY: ${{ vars.EXPO_PUBLIC_FIREBASE_API_KEY }}
+          EXPO_PUBLIC_FIREBASE_APP_ID: ${{ vars.EXPO_PUBLIC_FIREBASE_APP_ID }}
+          EXPO_PUBLIC_FIREBASE_SENDER_ID: ${{ vars.EXPO_PUBLIC_FIREBASE_SENDER_ID }}
+          EXPO_PUBLIC_FIREBASE_PROJECT_ID: ${{ vars.EXPO_PUBLIC_FIREBASE_PROJECT_ID }}
+        run: |
+          npm ci
+          npx expo export -p web
+
+      - name: web
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: deploy/web/Dockerfile
+          push: true
+          provenance: false
+          tags: ${{ env.IMAGE_PREFIX }}/web:${{ env.SHORT_SHA }}
+          labels: org.opencontainers.image.source=${{ env.SOURCE_URL }}
+          cache-from: type=gha,scope=web
+          cache-to: type=gha,scope=web,mode=max
+
+  deploy:
+    name: deploy to tfy-prod
+    needs: build
+    runs-on: [self-hosted, tfy]
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      # Only the deploy/ folder is needed on the VM.
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: deploy
+
+      - name: Deploy
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          SHORT_SHA="${GITHUB_SHA::12}"
+          export IMAGE_PREFIX="ghcr.io/${GITHUB_REPOSITORY,,}"
+          echo "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          bash deploy/deploy.sh "$SHORT_SHA"
+
+      - name: Forget the registry login
+        if: always()
+        run: docker logout ghcr.io
