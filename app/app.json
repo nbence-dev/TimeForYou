@@ -46,7 +46,7 @@
         }
       ],
       "expo-secure-store",
-      ["expo-notifications", { "color": "#15315D" }],
+      ["expo-notifications", { "color": "#15315D", "defaultChannel": "default" }],
       "expo-sqlite"
     ],
     "experiments": {

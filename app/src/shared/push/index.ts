@@ -4,7 +4,7 @@
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 
-import { api } from '@/shared/api';
+import { api, onUnauthorized } from '@/shared/api';
 
 import type { PushState } from './types';
 
@@ -20,17 +20,23 @@ Notifications.setNotificationHandler({
   }),
 });
 
-let tokenListening = false;
+let tokenSubscription: ReturnType<typeof Notifications.addPushTokenListener> | null = null;
 
 /** Stores the raw FCM token against this user's device, and again whenever Firebase rotates it. */
 async function register(): Promise<PushState> {
   try {
-    if (!tokenListening) {
-      tokenListening = true;
-      Notifications.addPushTokenListener((token) => {
+    if (!tokenSubscription) {
+      const subscription = Notifications.addPushTokenListener((token) => {
         api
           .registerDevice({ platform: 'android_fcm', push_token: String(token.data) })
           .catch((error) => console.warn('Push re-registration failed', error));
+      });
+      tokenSubscription = subscription;
+      // Unlinked or signed out: stop, so a later token rotation does not call the API with no login.
+      const stop = onUnauthorized(() => {
+        subscription.remove();
+        tokenSubscription = null;
+        stop();
       });
     }
     const { data } = await Notifications.getDevicePushTokenAsync();
