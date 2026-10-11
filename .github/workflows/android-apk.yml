@@ -1,8 +1,13 @@
 name: Android APK
 
 # Builds an installable Android APK and publishes it as a GitHub pre-release so the team can
-# download it straight onto a phone. Only the newest 3 APK releases are kept; older ones (and
-# their tags) are deleted at the end of every run.
+# download it straight onto a phone. Only the newest 3 APK releases are kept; older releases are
+# deleted at the end of every run (their git tags stay, as the version history).
+#
+# Dev versions are tagged dev-vMAJOR.MINOR.PATCH and are separate from the version in app.json.
+# Computed from the commits since the latest dev-v* tag: any feat -> minor bump, anything else ->
+# patch bump. Major is manual: run the workflow with bump=major. With no dev-v* tag yet, the first
+# build takes the version from app.json.
 #
 # The APK is signed with the throwaway debug keystore that `expo prebuild` generates. That is
 # fine for sideloading to teammates' phones, and it is NOT a Play Store build.
@@ -21,6 +26,11 @@ on:
         type: choice
         options: [release, debug]
         default: release
+      bump:
+        description: Version bump (auto = from commit types; major is the only manual one)
+        type: choice
+        options: [auto, major]
+        default: auto
 
 concurrency:
   group: android-apk
@@ -42,6 +52,30 @@ jobs:
         working-directory: app
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # full history and tags, to work out the version bump
+
+      - name: Compute version
+        working-directory: .
+        env:
+          BUMP: ${{ inputs.bump || 'auto' }}
+        run: |
+          last="$(git tag --list 'dev-v*' --sort=-v:refname | head -n1)"
+          if [ -z "$last" ]; then
+            version="$(jq -r .expo.version app/app.json)"
+          else
+            IFS=. read -r major minor patch <<< "${last#dev-v}"
+            if [ "$BUMP" = major ]; then
+              major=$((major + 1)); minor=0; patch=0
+            elif git log "$last..HEAD" --format=%s | grep -qE '^feat(\(.+\))?:'; then
+              minor=$((minor + 1)); patch=0
+            else
+              patch=$((patch + 1))
+            fi
+            version="$major.$minor.$patch"
+          fi
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+          echo "Building v$version (previous: ${last:-none})"
 
       - uses: actions/setup-node@v4
         with:
@@ -87,14 +121,14 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           short="${GITHUB_SHA::7}"
-          tag="android-${GITHUB_RUN_NUMBER}-${short}"
+          tag="dev-v${VERSION}"
           apk_src="$(find android/app/build/outputs/apk/"$VARIANT" -name '*.apk' | head -n1)"
-          apk="timeforyou-${VARIANT}-${GITHUB_RUN_NUMBER}-${short}.apk"
+          apk="timeforyou-v${VERSION}-${VARIANT}.apk"
           cp "$apk_src" "$apk"
           gh release create "$tag" "$apk" \
             --target "$GITHUB_SHA" \
             --prerelease \
-            --title "Android ${VARIANT} #${GITHUB_RUN_NUMBER} (${short})" \
+            --title "v${VERSION} (${VARIANT}, ${short})" \
             --notes "Built from ${GITHUB_SHA}. Download the APK on your phone and open it to install (allow installs from this source if asked)."
 
       - name: Keep only the newest releases
@@ -102,8 +136,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release list --limit 100 --json tagName,createdAt \
-            --jq '[.[] | select(.tagName | startswith("android-"))] | sort_by(.createdAt) | reverse | .[env.KEEP | tonumber:] | .[].tagName' |
+            --jq '[.[] | select(.tagName | startswith("dev-v"))] | sort_by(.createdAt) | reverse | .[env.KEEP | tonumber:] | .[].tagName' |
           while read -r old; do
             echo "Deleting $old"
-            gh release delete "$old" --cleanup-tag --yes
+            gh release delete "$old" --yes
           done
