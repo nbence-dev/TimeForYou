@@ -1,0 +1,33 @@
+# Edge proxy for tfy-prod. Static: a deploy never edits this file, it rewrites live.caddy only.
+#
+# TLS is terminated by Cloudflare, so Caddy speaks plain HTTP and must not try to get certificates.
+{
+	auto_https off
+}
+
+# (live_api) (live_web) (live_mock) (live_worker): written by the deploy script, one release at a time.
+import live.caddy
+
+# Public hostnames, arriving through the Cloudflare tunnel.
+http://api.timeforyou.co.za {
+	import live_api
+}
+http://app.timeforyou.co.za {
+	import live_web
+}
+
+# Anything else on :80 (LAN or tailnet by IP): the web app.
+:80 {
+	import live_web
+}
+
+# LAN/tailnet-only ports. They are not reachable through the tunnel, which only targets :80.
+:8080 {
+	import live_api
+}
+:8000 {
+	import live_mock
+}
+:8081 {
+	import live_worker
+}
