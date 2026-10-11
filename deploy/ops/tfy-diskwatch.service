@@ -1,0 +1,6 @@
+[Unit]
+Description=Warn when / or /var/lib/docker passes 80%
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/lib/tfy/diskwatch.sh

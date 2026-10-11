@@ -1,0 +1,7 @@
+[Unit]
+Description=TimeForYou nightly Postgres dump
+After=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/lib/tfy/backup.sh
