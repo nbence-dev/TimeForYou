@@ -44,7 +44,7 @@ jobs:
   apk:
     name: build and publish apk
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 60
     permissions:
       contents: write
     defaults:
@@ -114,7 +114,8 @@ jobs:
         run: |
           task=assembleRelease
           [ "$VARIANT" = debug ] && task=assembleDebug
-          ./gradlew "$task" --no-daemon
+          # arm64-v8a only: every current phone, and a quarter of the native compile time
+          ./gradlew "$task" --no-daemon -PreactNativeArchitectures=arm64-v8a
 
       - name: Publish release
         env:
