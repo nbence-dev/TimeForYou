@@ -364,3 +364,36 @@ however much history exists). The lesson to change is on a day the app shows.
 
 - A message says the student is offline and still signed in. They stay on Settings, and the
   timetable and notes are untouched. With the connection back, **Unlink** works.
+
+## Calendar subscription (#109)
+
+### CS-1 Show and copy the feed link
+
+**Steps:**
+
+1. Open **Settings** and tap **Calendar subscription**.
+2. Tap **Copy link**, then paste somewhere (the address bar will do).
+3. Open the pasted address in a browser.
+4. Sign in on a second device (or scan the same QR again) and open the same screen.
+
+**Expected:**
+
+- The screen shows a long `.../ics/<token>.ics` address, and the button says **Copied** for a moment
+  after the tap.
+- What you paste is exactly that address, and the browser gets a calendar file (it downloads or
+  opens as `text/calendar`).
+- The second device shows the same address.
+- Add to Apple Calendar, Add to Google Calendar and Reset link are dimmed with a "Soon" tag and do
+  nothing. The note says anyone with the link can see the timetable.
+
+### CS-2 Offline
+
+**Steps:**
+
+1. Stop the `api` container, then open **Calendar subscription**.
+2. Start the container again and tap **Try again**.
+
+**Expected:**
+
+- Step 1 shows "You're offline…" with a **Try again** button, not a blank screen.
+- Step 2 shows the address.
