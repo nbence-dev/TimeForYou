@@ -52,7 +52,8 @@ services:
     networks: [tfy-edge]
 
   cloudflared:
-    image: cloudflare/cloudflared:latest
+    # Pinned on purpose: `latest` moves, and a rebuilt VM should run what was tested. Bump it deliberately.
+    image: cloudflare/cloudflared:2026.10.0
     profiles: ["tunnel"]
     restart: unless-stopped
     command: tunnel --no-autoupdate run
