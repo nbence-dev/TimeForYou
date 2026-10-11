@@ -1,0 +1,109 @@
+name: Android APK
+
+# Builds an installable Android APK and publishes it as a GitHub pre-release so the team can
+# download it straight onto a phone. Only the newest 3 APK releases are kept; older ones (and
+# their tags) are deleted at the end of every run.
+#
+# The APK is signed with the throwaway debug keystore that `expo prebuild` generates. That is
+# fine for sideloading to teammates' phones, and it is NOT a Play Store build.
+#
+# Needs one repo secret: GOOGLE_SERVICES_JSON (the contents of app/google-services.json, which is
+# git-ignored). Optional repo variable: EXPO_PUBLIC_API_URL (defaults to the public tunnel URL).
+
+on:
+  push:
+    branches: [main]
+    paths: ['app/**', '.github/workflows/android-apk.yml']
+  workflow_dispatch:
+    inputs:
+      variant:
+        description: Build variant
+        type: choice
+        options: [release, debug]
+        default: release
+
+concurrency:
+  group: android-apk
+  cancel-in-progress: false
+
+env:
+  KEEP: 3
+  VARIANT: ${{ inputs.variant || 'release' }}
+
+jobs:
+  apk:
+    name: build and publish apk
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    permissions:
+      contents: write
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - run: npm ci
+
+      - name: Write google-services.json
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: |
+          if [ -z "$GOOGLE_SERVICES_JSON" ]; then
+            echo "::error::Repo secret GOOGLE_SERVICES_JSON is missing (Settings > Secrets and variables > Actions)."
+            exit 1
+          fi
+          printf '%s' "$GOOGLE_SERVICES_JSON" > google-services.json
+
+      - name: Generate native project
+        env:
+          EXPO_PUBLIC_API_URL: ${{ vars.EXPO_PUBLIC_API_URL || 'https://api.timeforyou.co.za' }}
+        run: npx expo prebuild --platform android --no-install
+
+      - name: Build APK
+        env:
+          EXPO_PUBLIC_API_URL: ${{ vars.EXPO_PUBLIC_API_URL || 'https://api.timeforyou.co.za' }}
+        working-directory: app/android
+        run: |
+          task=assembleRelease
+          [ "$VARIANT" = debug ] && task=assembleDebug
+          ./gradlew "$task" --no-daemon
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          short="${GITHUB_SHA::7}"
+          tag="android-${GITHUB_RUN_NUMBER}-${short}"
+          apk_src="$(find android/app/build/outputs/apk/"$VARIANT" -name '*.apk' | head -n1)"
+          apk="timeforyou-${VARIANT}-${GITHUB_RUN_NUMBER}-${short}.apk"
+          cp "$apk_src" "$apk"
+          gh release create "$tag" "$apk" \
+            --target "$GITHUB_SHA" \
+            --prerelease \
+            --title "Android ${VARIANT} #${GITHUB_RUN_NUMBER} (${short})" \
+            --notes "Built from ${GITHUB_SHA}. Download the APK on your phone and open it to install (allow installs from this source if asked)."
+
+      - name: Keep only the newest releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release list --limit 100 --json tagName,createdAt \
+            --jq '[.[] | select(.tagName | startswith("android-"))] | sort_by(.createdAt) | reverse | .[env.KEEP | tonumber:] | .[].tagName' |
+          while read -r old; do
+            echo "Deleting $old"
+            gh release delete "$old" --cleanup-tag --yes
+          done
