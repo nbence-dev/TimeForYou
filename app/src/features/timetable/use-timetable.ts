@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { api, NetworkError, UnauthorizedError } from '@/shared/api';
 import { lessonCache } from '@/shared/storage';
 import { sortLessonsByStart } from '@/shared/storage/sort-lessons';
+import { onSynced } from '@/shared/sync/synced';
 import type { Lesson } from '@/shared/types/lesson';
 
 import { createLatestGuard } from './latest-guard';
@@ -100,9 +101,12 @@ export function useTimetable({ retryWhileEmptyMs }: UseTimetableOptions = {}) {
       });
 
     load();
+    // Settings' Sync now fetched fresh data: fetch again so this screen shows it too.
+    const stopSynced = onSynced(() => void load());
 
     return () => {
       mounted.current = false;
+      stopSynced();
     };
   }, [load]);
 

@@ -17,7 +17,7 @@ const BASE_URL = (process.env.EXPO_PUBLIC_API_URL ?? '').replace(/\/+$/, '');
 type UnauthorizedListener = () => void;
 const unauthorizedListeners = new Set<UnauthorizedListener>();
 
-/** Called after a 401 has cleared the token. Returns an unsubscribe function. */
+/** Called after the token has been cleared (a 401, or the student unlinking). Returns an unsubscribe function. */
 export function onUnauthorized(listener: UnauthorizedListener): () => void {
   unauthorizedListeners.add(listener);
   return () => unauthorizedListeners.delete(listener);
@@ -31,6 +31,15 @@ export function onUnauthorized(listener: UnauthorizedListener): () => void {
  */
 async function forgetSavedTimetable(): Promise<void> {
   await Promise.allSettled([lessonCache.replaceLessons([]), changesStore.clear()]);
+}
+
+/** Drops this device's login: the token, then the app's signed-out state, then the saved data. */
+async function signOut(): Promise<void> {
+  await clearToken();
+  // Tell the app before the wipe, so anything still in flight stops saving first and cannot
+  // write the signed-out student's data back after it. The wipe is queued behind earlier writes.
+  unauthorizedListeners.forEach((l) => l());
+  await forgetSavedTimetable();
 }
 
 interface RequestOptions {
@@ -72,11 +81,7 @@ async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
   if (!res.ok) {
     const message = await readErrorMessage(res);
     if (res.status === 401 && auth) {
-      await clearToken();
-      // Tell the app before the wipe, so anything still in flight stops saving first and cannot
-      // write the signed-out student's data back after it. The wipe is queued behind earlier writes.
-      unauthorizedListeners.forEach((l) => l());
-      await forgetSavedTimetable();
+      await signOut();
       throw new UnauthorizedError(message);
     }
     throw new ApiError(res.status, message);
@@ -120,6 +125,12 @@ export const api = {
 
   registerDevice: (payload: DeviceRegisterRequest) =>
     request<Device>('/devices', { method: 'POST', body: payload }),
+
+  /** Removes this device on the server, then signs it out here. A failure leaves it signed in. */
+  async unlinkDevice(): Promise<void> {
+    await request<void>('/devices', { method: 'DELETE' });
+    await signOut();
+  },
 
   listNotes: (lessonId: string) => request<Note[]>(noteBase(lessonId)),
 

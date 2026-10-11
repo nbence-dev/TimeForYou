@@ -4,6 +4,7 @@ import { api, onUnauthorized } from '@/shared/api';
 import type { ChangeLogEntry } from '@/shared/api/types';
 import { onPushReceived } from '@/shared/push';
 import { changesStore } from '@/shared/storage';
+import { onSynced } from '@/shared/sync/synced';
 
 import {
   initialSeenIds,
@@ -152,6 +153,7 @@ export function ChangeMarkersProvider({ children }: { children: ReactNode }) {
     // A new change shows up without a pull-to-refresh: when a push arrives while the app is open,
     // and when the app comes back to the foreground.
     const stopPush = onPushReceived(() => void reload());
+    const stopSynced = onSynced(() => void reload());
     const onVisible = () => {
       if (typeof document === 'undefined' || document.visibilityState === 'visible') void reload();
     };
@@ -165,6 +167,7 @@ export function ChangeMarkersProvider({ children }: { children: ReactNode }) {
       mounted.current = false;
       stopListening();
       stopPush();
+      stopSynced();
       if (canListen) {
         document.removeEventListener('visibilitychange', onVisible);
         window.removeEventListener('focus', onVisible);

@@ -308,3 +308,59 @@ however much history exists). The lesson to change is on a day the app shows.
   Storage are gone, so the next student starts with no markers and none of the previous student's
   changes.
 
+
+## Settings screen and unlinking (#108)
+
+### ST-1 The layout, and the "Soon" rows do nothing
+
+**Steps:**
+
+1. Sign in and open the **Settings** tab.
+2. Tap Change alerts, Calendar subscription, Linked devices and Help and FAQ.
+
+**Expected:**
+
+- The screen shows Notifications, Calendar, Devices, Data and About sections and an **Unlink this
+  device** button. There is no profile card.
+- The four rows above are dimmed with a "Soon" tag, and tapping them does nothing.
+- Notification status shows On, Off, Not set up, Unavailable or Error to match this device. Version shows
+  the app version.
+
+### ST-2 Sync now
+
+**Steps:**
+
+1. Open Settings. Note that Last synced fills in once the first fetch finishes.
+2. Make a change in the mock (for example cancel a lesson), then tap **Sync now**.
+3. Stop the `api` container and tap **Sync now** again.
+
+**Expected:**
+
+- After step 2 Last synced moves forward, the Changes tab lists the new change and shows its badge,
+  and the cancelled lesson shows on the Timetable and Today tabs without pulling to refresh them.
+- After step 3 the chip says Offline and Last synced keeps its earlier time.
+
+### ST-3 Unlink and link again
+
+**Steps:**
+
+1. Add a note to a lesson, then open Settings and tap **Unlink this device**, then **Cancel**.
+2. Tap **Unlink this device**, then **Unlink**.
+3. Scan the same QR again.
+
+**Expected:**
+
+- Cancel leaves the student on Settings, still signed in.
+- After step 2 the app lands on the scan screen, and the device is gone from the `devices` table.
+- After step 3 the timetable returns and the note from step 1 is still there.
+
+### ST-4 Unlink offline
+
+**Steps:**
+
+1. Stop the `api` container, open Settings, tap **Unlink this device**, then **Unlink**.
+
+**Expected:**
+
+- A message says the student is offline and still signed in. They stay on Settings, and the
+  timetable and notes are untouched. With the connection back, **Unlink** works.
