@@ -33,7 +33,22 @@ public static class DeviceEndpoints
             .WithName("RegisterDevice")
             .RequireAuthorization();
 
+        endpoints.MapDelete("/devices", UnlinkDeviceAsync)
+            .WithName("UnlinkDevice")
+            .RequireAuthorization();
+
         return endpoints;
+    }
+
+    /// <summary>Deletes only the calling device's row; the user, stored login and notes stay (#107).</summary>
+    private static async Task<IResult> UnlinkDeviceAsync(
+        ClaimsPrincipal caller,
+        TimeForYouDbContext db,
+        CancellationToken cancellationToken)
+    {
+        var deviceId = Guid.Parse(caller.FindFirstValue(DeviceBearerAuthenticationHandler.DeviceIdClaimType)!);
+        await db.Devices.Where(d => d.Id == deviceId).ExecuteDeleteAsync(cancellationToken);
+        return Results.NoContent();
     }
 
     private static async Task<IResult> RegisterDeviceAsync(

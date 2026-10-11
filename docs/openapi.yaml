@@ -270,6 +270,19 @@ paths:
                 $ref: "#/components/schemas/Error"
         "401":
           $ref: "#/components/responses/Unauthorized"
+    delete:
+      operationId: unlinkDevice
+      tags: [devices]
+      summary: Unlink this device
+      description: |
+        Deletes the calling device's `devices` row, so its bearer token stops working (401) and it
+        receives no more pushes. The user, their stored login, notes and the user's other devices
+        are untouched.
+      responses:
+        "204":
+          description: Device unlinked.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
 
   /calendar:
     get:

@@ -159,6 +159,64 @@ public sealed class DeviceRegistrationTests(SeamAFixture fixture) : IAsyncLifeti
         Assert.Equal(DevicePlatform.WebPush, payload.Platform);
     }
 
+    [Fact]
+    public async Task Unlink_removes_only_the_calling_device_and_its_token_stops_working()
+    {
+        using var factory = fixture.CreateApiFactory();
+        using var api = factory.CreateClient();
+        var unlinked = await ScanDemoQrAsync(api);
+        var kept = await ScanDemoQrAsync(api);
+
+        var response = await SendAsync(api, HttpMethod.Delete, "/devices", unlinked);
+
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await SendAsync(api, HttpMethod.Get, "/timetable", unlinked)).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await SendAsync(api, HttpMethod.Get, "/timetable", kept)).StatusCode);
+        await using var db = fixture.CreateDbContext();
+        Assert.Equal(1, await db.Devices.CountAsync());
+        Assert.Equal(1, await db.Users.CountAsync());
+    }
+
+    [Fact]
+    public async Task Unlink_without_a_bearer_token_returns_401()
+    {
+        using var factory = fixture.CreateApiFactory();
+        using var api = factory.CreateClient();
+
+        var response = await api.DeleteAsync("/devices");
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task An_unlinked_device_is_not_pushed_to()
+    {
+        using var factory = fixture.CreateApiFactory();
+        using var api = factory.CreateClient();
+        var bearer = await ScanDemoQrAsync(api);
+        var keptBearer = await ScanDemoQrAsync(api);
+        await RegisterAsync(api, bearer, new { platform = "web_push", push_token = "gone" });
+        await RegisterAsync(api, keptBearer, new { platform = "web_push", push_token = "kept" });
+        await RunPollCycleAsync(); // first poll seeds silently
+        await SendAsync(api, HttpMethod.Delete, "/devices", bearer);
+
+        string lessonId;
+        await using (var db = fixture.CreateDbContext())
+        {
+            lessonId = (await db.LessonSnapshots.OrderBy(s => s.StartTs).FirstAsync()).UntisLessonId;
+        }
+
+        using (var mock = CreateMockClient())
+        {
+            (await mock.PostAsync($"/mock/cancel-lesson/{lessonId}", null)).EnsureSuccessStatusCode();
+        }
+
+        await RunPollCycleAsync();
+
+        // The kept device proves the cancel did produce a push; only the unlinked one is missing.
+        Assert.Equal("kept", Assert.Single(fixture.PushSender.Sent).PushToken);
+    }
+
     private sealed record QrPayload(string Server, string School, string User, string Key);
 
     private sealed record QrScanResponseWire(string Token);
@@ -187,6 +245,13 @@ public sealed class DeviceRegistrationTests(SeamAFixture fixture) : IAsyncLifeti
     private static async Task<HttpResponseMessage> RegisterAsync(HttpClient api, string bearer, object body)
     {
         using var request = new HttpRequestMessage(HttpMethod.Post, "/devices") { Content = JsonContent.Create(body) };
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", bearer);
+        return await api.SendAsync(request);
+    }
+
+    private static async Task<HttpResponseMessage> SendAsync(HttpClient api, HttpMethod method, string path, string bearer)
+    {
+        using var request = new HttpRequestMessage(method, path);
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", bearer);
         return await api.SendAsync(request);
     }
