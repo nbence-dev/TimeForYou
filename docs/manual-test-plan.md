@@ -202,9 +202,56 @@ each. The second scan gives a second token for the same user.
 - With the device offline, opening a lesson's sheet shows the lesson but says the notes can't be
   shown right now, with **Try again**. Notes are online only until the Week 4 offline queue.
 
+## Changes screen (#71)
+
+Set `POLL_INTERVAL_SECONDS=30` in `.env` (then `docker compose up -d`) so a mock change is picked up
+within a minute instead of ten.
+
+### CH-1 No changes
+
+**Setup:** A linked device; the mock reset (`POST /mock/reset`) and no changes in the last 30 days.
+
+**Steps:**
+
+1. Open the Changes tab.
+
+**Expected:**
+
+- "You're all caught up" with a tick, a "View timetable" button and "Last checked HH:MM".
+- "View timetable" opens the Timetable tab.
+
+### CH-2 Several changes at once
+
+**Setup:** A linked device. Pick three upcoming lessons from `GET /timetable` (their `untis_lesson_id`).
+
+**Steps:**
+
+1. In one go, call `POST /mock/cancel-lesson/{id}` for the first, `POST /mock/change-room/{id}`
+   with `{"room": "Z99"}` for the second, and `POST /mock/move-lesson/{id}` (one hour later) for
+   the third.
+2. Wait for the next poll, then open the Changes tab (or tap ↻).
+
+**Expected:**
+
+- The summary reads "3 changes in your timetable" with 1 cancelled, 1 room, 1 time.
+- All three cards show, newest first: the cancelled lesson struck through on a red card, then
+  "Room: old → Z99", then "Time: old → new" one hour later.
+- Each card names the lesson and when it is.
+
+### CH-3 Opened by route
+
+**Steps:**
+
+1. With the app open on another tab, go to `/changes` directly (type it in the address bar on the
+   web, or tap a change notification).
+
+**Expected:**
+
+- The Changes screen opens and loads the latest changes.
+
 ## Changed-lesson marker (#72)
 
-### CH-1 A changed lesson shows a dot and the Changes tab shows a count
+### CM-1 A changed lesson shows a dot and the Changes tab shows a count
 
 **Setup:** A linked device that has already opened the app once (the first launch marks nothing,
 however much history exists). The lesson to change is on a day the app shows.
@@ -224,7 +271,7 @@ however much history exists). The lesson to change is on a day the app shows.
   Timetable, and the Changes tab shows an orange badge with the number of unseen changes.
 - The lesson that did not change shows no dot.
 
-### CH-2 A marker stays until the student has seen the change
+### CM-2 A marker stays until the student has seen the change
 
 **Steps:**
 
@@ -247,7 +294,7 @@ however much history exists). The lesson to change is on a day the app shows.
 - The very first launch on a device shows no dots even if the student has weeks of change
   history.
 
-### CH-3 Signing out forgets what was seen
+### CM-3 Signing out forgets what was seen
 
 **Steps:**
 
