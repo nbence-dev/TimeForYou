@@ -1,4 +1,5 @@
 import { Tabs } from 'expo-router';
+import { useEffect } from 'react';
 import { View } from 'react-native';
 
 import { ChangeMarkersProvider, useChangeMarkers } from '@/features/timetable/change-markers-context';
@@ -49,6 +50,10 @@ export default function TabsLayout() {
  */
 function NavBar({ active, onSelect }: { active: NavTabKey; onSelect: (key: NavTabKey) => void }) {
   const { unseenCount, markAllSeen } = useChangeMarkers();
+  // Also covers reaching Changes by a notification tap, and a change arriving while it is open.
+  useEffect(() => {
+    if (active === 'changes' && unseenCount > 0) markAllSeen();
+  }, [active, unseenCount, markAllSeen]);
   return (
     <BottomNav
       active={active}

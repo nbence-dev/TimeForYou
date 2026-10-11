@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 
 import { api, onUnauthorized } from '@/shared/api';
 import type { ChangeLogEntry } from '@/shared/api/types';
+import { onPushReceived } from '@/shared/push';
 import { changesStore } from '@/shared/storage';
 
 import {
@@ -49,8 +50,7 @@ export function useChangeMarkers(): ChangeMarkers {
  * app ever runs, whatever history already exists counts as seen, so only later changes mark. The
  * last fetched list and the seen ids are kept on the device, so the markers work offline.
  *
- * The Changes screen (#71) must call `markAllSeen` when it shows the list: only the tab-bar press
- * does so today, so reaching that route another way (a notification tap) would leave the badge up.
+ * The tabs layout calls `markAllSeen` whenever the Changes tab is showing, however it was reached.
  */
 export function ChangeMarkersProvider({ children }: { children: ReactNode }) {
   const [changes, setChanges] = useState<ChangeLogEntry[]>([]);
@@ -69,6 +69,8 @@ export function ChangeMarkersProvider({ children }: { children: ReactNode }) {
   const signedOut = useRef(false);
   // The first read of the saved state. A refresh waits for it, so it cannot race it.
   const initialRead = useRef<Promise<void>>(Promise.resolve());
+  // Counts fetches started, so a slow older response cannot replace a newer list.
+  const latestFetch = useRef(0);
 
   /** Takes this as the seen set and saves it. */
   const remember = useCallback((next: ReadonlySet<string>) => {
@@ -111,16 +113,17 @@ export function ChangeMarkersProvider({ children }: { children: ReactNode }) {
 
   const reload = useCallback(
     () =>
-      initialRead.current.then(() =>
-        api.getChanges().then(
+      initialRead.current.then(() => {
+        const mine = ++latestFetch.current;
+        return api.getChanges().then(
           (list) => {
-            if (mounted.current) show(list, true);
+            if (mounted.current && mine === latestFetch.current) show(list, true);
           },
           () => {
             // Offline or failing: keep the saved list. The markers still work from it.
           },
-        ),
-      ),
+        );
+      }),
     [show],
   );
 
@@ -146,9 +149,26 @@ export function ChangeMarkersProvider({ children }: { children: ReactNode }) {
     );
     void reload();
 
+    // A new change shows up without a pull-to-refresh: when a push arrives while the app is open,
+    // and when the app comes back to the foreground.
+    const stopPush = onPushReceived(() => void reload());
+    const onVisible = () => {
+      if (typeof document === 'undefined' || document.visibilityState === 'visible') void reload();
+    };
+    const canListen = typeof document !== 'undefined' && typeof window !== 'undefined';
+    if (canListen) {
+      document.addEventListener('visibilitychange', onVisible);
+      window.addEventListener('focus', onVisible);
+    }
+
     return () => {
       mounted.current = false;
       stopListening();
+      stopPush();
+      if (canListen) {
+        document.removeEventListener('visibilitychange', onVisible);
+        window.removeEventListener('focus', onVisible);
+      }
     };
   }, [show, reload]);
 

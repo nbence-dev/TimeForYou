@@ -10,3 +10,7 @@ export async function syncPush(): Promise<PushState> {
 export async function enablePush(): Promise<PushState> {
   return 'unsupported';
 }
+
+export function onPushReceived(_listener: () => void): () => void {
+  return () => {};
+}
