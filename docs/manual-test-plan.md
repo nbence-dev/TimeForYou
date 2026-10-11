@@ -135,6 +135,32 @@ the app does not add a second row.
 
 **Expected:** One grouped notification arrives; tapping opens the Changes tab.
 
+## Android native push (#70)
+
+Needs a real Android phone running the Expo build (`npx expo run:android` with the device attached,
+since Expo Go cannot receive FCM), and `app/google-services.json` from the Firebase console
+(Android app `com.timeforyou.app`). The file is gitignored; never commit it.
+
+### AND-1 Grant permission and register
+
+**Steps:** Open the app, tap "Turn on notifications", allow.
+
+**Expected:** The strip disappears and `devices` holds one `android_fcm` row. Reopening the app
+does not add a second row.
+
+### AND-2 Denied permission
+
+**Steps:** Tap "Turn on notifications", refuse (twice if Android asks again).
+
+**Expected:** The app stays fully usable. Once Android will not ask again, the "Notifications are
+off" strip appears.
+
+### AND-3 Delivery with the app closed, and tap
+
+**Steps:** Swipe the app away. Change a lesson in the mock, `POST /nudge`, wait for the push, tap it.
+
+**Expected:** One grouped notification arrives; tapping opens the Changes tab.
+
 ## Notes (#73)
 
 ### NT-1 Add, edit and delete a note
