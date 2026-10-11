@@ -96,7 +96,7 @@ Files that attract collisions, and the rule for each:
 | `package-lock.json`                  | Never hand-merge. `git checkout --theirs` it, run `npm install`, commit.                 |
 | `package.json`                       | Additive only, dependencies sorted alphabetically.                                       |
 | `TimeForYou.slnx`, `*.csproj`        | Only V6 adds projects — a broken solution file blocks all six of us. Framework and warning settings live in `server/Directory.Build.props`; change them there, once. |
-| `TimeForYou.Data/Migrations/`        | Append-only, **one in flight at a time**, announce first. Never edit a merged migration. |
+| `TimeForYou.Data/Migrations/`        | Append-only, **one in flight at a time**, announce first. Never edit a merged migration. **Additive for one release:** the shared instance deploys without downtime, so for a moment the old API keeps serving against the new schema. Add columns and tables first; drop or rename in a later release (`deploy/README.md`). |
 | `Program.cs` / routes                | Each vertical registers itself in one line (`services.AddWorkerModule()`).               |
 | `docker-compose.yml`, `.env.example` | V6 owns. Request changes, don't edit in passing.                                         |
 | `docs/*.md`                          | One owner per document. Markdown conflicts are unmergeable by hand.                      |
