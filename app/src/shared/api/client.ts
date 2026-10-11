@@ -35,7 +35,12 @@ async function forgetSavedTimetable(): Promise<void> {
 
 /** Drops this device's login: the token, then the app's signed-out state, then the saved data. */
 async function signOut(): Promise<void> {
-  await clearToken();
+  try {
+    await clearToken();
+  } catch {
+    // The server already rejected this token (401) or deleted the device (unlink), so a leftover
+    // token is dead; still sign out in the app rather than reporting a failure.
+  }
   // Tell the app before the wipe, so anything still in flight stops saving first and cannot
   // write the signed-out student's data back after it. The wipe is queued behind earlier writes.
   unauthorizedListeners.forEach((l) => l());

@@ -47,9 +47,10 @@ export function SettingsScreen() {
   const signedOut = useRef(false);
 
   // Fetches the timetable and the changes and saves both, as the other screens do. State is only
-  // set after the requests settle. Never rejects.
+  // set after the requests settle. Never rejects. Only a tap on Sync now tells the other screens
+  // to refetch (`announce`); the sync on opening Settings stays quiet so it does not triple the requests.
   const sync = useCallback(
-    () =>
+    (announce: boolean) =>
       Promise.all([api.getTimetable(), api.getChanges()])
         .then(async ([lessons, changes]) => {
           if (signedOut.current) return;
@@ -60,7 +61,7 @@ export function SettingsScreen() {
           if (!mounted.current) return;
           setSyncedAt(new Date());
           setProblem(null);
-          announceSynced();
+          if (announce) announceSynced();
         })
         .catch((error: unknown) => {
           // A 401 has already signed the student out; the app is on its way to the scan screen.
@@ -79,7 +80,7 @@ export function SettingsScreen() {
     const stopListening = onUnauthorized(() => {
       signedOut.current = true;
     });
-    void sync();
+    void sync(false);
     return () => {
       mounted.current = false;
       stopListening();
@@ -100,7 +101,7 @@ export function SettingsScreen() {
 
   function syncNow() {
     setSyncing(true);
-    void sync();
+    void sync(true);
   }
 
   const syncChip = problem === 'offline' ? 'Offline' : problem ? "Couldn't sync" : syncedAt ? 'Synced' : '';
