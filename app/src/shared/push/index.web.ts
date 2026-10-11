@@ -21,6 +21,13 @@ const configured = Object.values(config).every((v) => !!v && !v.startsWith('CHAN
 const SW_URL = `/firebase-messaging-sw.js?${new URLSearchParams(config as Record<string, string>)}`;
 
 let foregroundListening = false;
+const pushListeners = new Set<() => void>();
+
+/** Calls `listener` whenever a push arrives while the app is open. Returns the unsubscribe. */
+export function onPushReceived(listener: () => void): () => void {
+  pushListeners.add(listener);
+  return () => void pushListeners.delete(listener);
+}
 
 /**
  * Whether push works here, worked out once by `syncPush` on launch. `enablePush` reads this instead
@@ -52,6 +59,7 @@ async function register(): Promise<PushState> {
     if (!foregroundListening) {
       foregroundListening = true;
       onMessage(messaging, (payload) => {
+        pushListeners.forEach((listener) => listener());
         const { title, body } = payload.notification ?? {};
         if (title) {
           void serviceWorkerRegistration.showNotification(title, {
