@@ -1,7 +1,7 @@
-import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
-import { useCallback, useEffect, useRef, useState, type ComponentProps, type ReactNode } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useRouter } from 'expo-router';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { api, NetworkError, onUnauthorized, UnauthorizedError } from '@/shared/api';
@@ -13,7 +13,7 @@ import { announceSynced } from '@/shared/sync/synced';
 import { Font } from '@/shared/theme/fonts';
 import { Brand, Colors, MaxContentWidth, Radius, Spacing, Status } from '@/shared/theme/theme';
 
-type IconName = ComponentProps<typeof Ionicons>['name'];
+import { Row, Section } from './settings-rows';
 
 const NOTIFICATION_LABEL: Record<PushState, string> = {
   checking: '',
@@ -37,6 +37,7 @@ function formatSynced(date: Date): string {
  */
 export function SettingsScreen() {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const [push, setPush] = useState<PushState>('checking');
   const [syncing, setSyncing] = useState(true);
   const [syncedAt, setSyncedAt] = useState<Date | null>(null);
@@ -121,7 +122,13 @@ export function SettingsScreen() {
         </Section>
 
         <Section label="Calendar">
-          <Row icon="calendar-outline" title="Calendar subscription" subtitle="Sync feeds with iOS & Google Calendar" soon />
+          <Row
+            icon="calendar-outline"
+            title="Calendar subscription"
+            subtitle="Sync feeds with iOS & Google Calendar"
+            arrow
+            onPress={() => router.push('/calendar')}
+          />
         </Section>
 
         <Section label="Devices">
@@ -202,105 +209,11 @@ function UnlinkDevice() {
   );
 }
 
-function Section({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <View style={styles.section}>
-      <Text style={styles.sectionLabel}>{label.toUpperCase()}</Text>
-      <View style={styles.card}>{children}</View>
-    </View>
-  );
-}
-
-function Row({
-  icon,
-  title,
-  subtitle,
-  value,
-  soon,
-  onPress,
-  disabled,
-}: {
-  icon: IconName;
-  title: string;
-  subtitle?: string;
-  value?: string;
-  /** Not built yet: dimmed, tagged "Soon", and does nothing. */
-  soon?: boolean;
-  onPress?: () => void;
-  disabled?: boolean;
-}) {
-  const inert = soon || disabled;
-  return (
-    <Pressable
-      accessibilityRole={onPress && !soon ? 'button' : undefined}
-      accessibilityState={{ disabled: !!inert }}
-      accessibilityLabel={soon ? `${title}, coming soon` : undefined}
-      disabled={inert || !onPress}
-      onPress={onPress}
-      style={[styles.row, soon && styles.rowSoon, disabled && !soon && styles.rowBusy]}>
-      <View style={styles.rowIcon}>
-        <Ionicons name={icon} size={20} color={Brand.navy} />
-      </View>
-      <View style={styles.rowText}>
-        <Text style={styles.rowTitle}>{title}</Text>
-        {subtitle ? <Text style={styles.rowSubtitle}>{subtitle}</Text> : null}
-      </View>
-      {soon ? (
-        <View style={styles.soon}>
-          <Text style={styles.soonText}>Soon</Text>
-        </View>
-      ) : value ? (
-        <Text style={styles.rowValue}>{value}</Text>
-      ) : null}
-    </Pressable>
-  );
-}
-
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: Colors.light.background },
   content: { paddingHorizontal: Spacing.three, paddingBottom: Spacing.four, alignItems: 'center' },
   column: { width: '100%', maxWidth: MaxContentWidth, gap: Spacing.three },
   title: { fontFamily: Font.textBold, fontSize: 24, color: Brand.navy },
-
-  section: { gap: Spacing.two },
-  sectionLabel: { fontFamily: Font.labelSemiBold, fontSize: 12, letterSpacing: 1, color: Colors.light.textSecondary },
-  card: {
-    borderRadius: Radius.card,
-    borderWidth: 1,
-    borderColor: Brand.border,
-    backgroundColor: Brand.white,
-    overflow: 'hidden',
-  },
-
-  row: {
-    minHeight: 60,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.three,
-    padding: Spacing.three,
-  },
-  rowSoon: { opacity: 0.55 },
-  rowBusy: { opacity: 0.6 },
-  rowIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: Radius.base,
-    backgroundColor: Colors.light.backgroundElement,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  rowText: { flex: 1, gap: Spacing.half },
-  rowTitle: { fontFamily: Font.textSemiBold, fontSize: 16, color: Brand.navy },
-  rowSubtitle: { fontFamily: Font.text, fontSize: 13, color: Colors.light.textSecondary },
-  rowValue: { fontFamily: Font.label, fontSize: 13, color: Colors.light.textSecondary },
-  soon: {
-    paddingHorizontal: Spacing.two,
-    paddingVertical: Spacing.half,
-    borderRadius: Radius.pill,
-    borderWidth: 1,
-    borderColor: Brand.borderStrong,
-  },
-  soonText: { fontFamily: Font.labelSemiBold, fontSize: 11, color: Colors.light.textSecondary },
 
   unlink: { backgroundColor: Status.cancelled.surface, borderColor: Status.cancelled.border },
   confirm: {

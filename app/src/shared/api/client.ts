@@ -3,6 +3,7 @@ import { clearToken, getToken, setToken } from '@/shared/storage/token-store';
 
 import { ApiError, NetworkError, UnauthorizedError } from './errors';
 import type {
+  CalendarFeed,
   ChangeLogEntry,
   Device,
   DeviceRegisterRequest,
@@ -127,6 +128,8 @@ export const api = {
 
   /** `since` is an ISO-8601 timestamp; the API defaults to 30 days ago. */
   getChanges: (since?: string) => request<ChangeLogEntry[]>('/changes', { query: { since } }),
+
+  getCalendar: () => request<CalendarFeed>('/calendar'),
 
   registerDevice: (payload: DeviceRegisterRequest) =>
     request<Device>('/devices', { method: 'POST', body: payload }),
