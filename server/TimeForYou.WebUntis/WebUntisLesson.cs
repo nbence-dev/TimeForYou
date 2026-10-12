@@ -16,4 +16,6 @@ public sealed record WebUntisLesson(
     string Room,
     LessonStatus Status,
     DateTimeOffset StartTs,
-    DateTimeOffset EndTs);
+    DateTimeOffset EndTs,
+    string? Group = null,
+    string? Mode = null);

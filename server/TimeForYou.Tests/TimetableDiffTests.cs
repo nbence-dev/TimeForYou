@@ -63,6 +63,15 @@ public class TimetableDiffTests
     }
 
     [Fact]
+    public void Group_and_mode_changes_return_none()
+    {
+        var before = MakeLesson("1") with { Group = "Group A", Mode = "in_person" };
+        var now = before with { Group = "Group B", Mode = "online" };
+
+        Assert.Empty(TimetableDiff.Compute([before], [now]));
+    }
+
+    [Fact]
     public void Cancellation_returns_one_with_status_diff()
     {
         var before = MakeLesson("1");

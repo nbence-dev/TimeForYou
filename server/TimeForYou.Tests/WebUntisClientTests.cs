@@ -45,7 +45,7 @@ public sealed class WebUntisClientTests(SeamAFixture fixture)
     }
 
     [Fact]
-    public async Task Timetable_round_trip_returns_lessons_with_unique_ids_and_no_lecturer()
+    public async Task Timetable_round_trip_returns_lessons_with_unique_ids_and_display_fields()
     {
         using var httpClient = new HttpClient { BaseAddress = new Uri(fixture.MockBaseUrl) };
         var client = new WebUntisClient(httpClient);
@@ -60,7 +60,9 @@ public sealed class WebUntisClientTests(SeamAFixture fixture)
         Assert.All(lessons, lesson =>
         {
             Assert.False(string.IsNullOrWhiteSpace(lesson.SubjectName));
-            Assert.Null(lesson.Lecturer);
+            Assert.False(string.IsNullOrWhiteSpace(lesson.Lecturer));
+            Assert.False(string.IsNullOrWhiteSpace(lesson.Group));
+            Assert.Contains(lesson.Mode, new[] { "online", "in_person" });
         });
     }
 

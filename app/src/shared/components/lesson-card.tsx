@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import type { LessonMode } from '@/shared/types/lesson';
 import { Brand, Colors, Radius, Spacing, Status, type CardStatus } from '@/shared/theme/theme';
 import { Font } from '@/shared/theme/fonts';
 
@@ -15,6 +16,9 @@ export type LessonCardProps = {
   title: string;
   room?: string | null;
   teacher?: string | null;
+  /** Display-only extras; neither is ever a notification trigger. */
+  group?: string | null;
+  mode?: LessonMode | null;
   hasNote?: boolean;
   /** A change the student has not looked at yet: shows the orange dot. */
   unseen?: boolean;
@@ -29,6 +33,8 @@ export function LessonCard({
   title,
   room,
   teacher,
+  group,
+  mode,
   hasNote,
   unseen,
   onPress,
@@ -74,12 +80,26 @@ export function LessonCard({
           {room ? <Meta icon="location-outline" text={room} color={metaColor} /> : null}
           {teacher ? <Meta icon="person-outline" text={teacher} color={metaColor} /> : null}
         </View>
+        {group || mode ? (
+          <View style={styles.row}>
+            {group ? <Meta icon="people-outline" text={group} color={metaColor} /> : null}
+            {mode === 'online' || mode === 'in_person' ? (
+              <Meta
+                icon={mode === 'online' ? 'videocam-outline' : 'business-outline'}
+                text={mode === 'online' ? 'Online' : 'In person'}
+                color={metaColor}
+              />
+            ) : null}
+          </View>
+        ) : null}
       </View>
     </Pressable>
   );
 }
 
-function Meta({ icon, text, color }: { icon: 'location-outline' | 'person-outline'; text: string; color: string }) {
+type MetaIcon = 'location-outline' | 'person-outline' | 'people-outline' | 'videocam-outline' | 'business-outline';
+
+function Meta({ icon, text, color }: { icon: MetaIcon; text: string; color: string }) {
   return (
     <View style={styles.meta}>
       <Ionicons name={icon} size={14} color={color} />

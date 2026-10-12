@@ -16,6 +16,8 @@ public sealed record LessonResponse(
     [property: JsonPropertyName("subject")] string Subject,
     [property: JsonPropertyName("lecturer")] string? Lecturer,
     [property: JsonPropertyName("room")] string? Room,
+    [property: JsonPropertyName("group")] string? Group,
+    [property: JsonPropertyName("mode")] string? Mode,
     [property: JsonPropertyName("start_ts")] DateTimeOffset StartTs,
     [property: JsonPropertyName("end_ts")] DateTimeOffset EndTs,
     [property: JsonPropertyName("status")] string Status);
@@ -105,7 +107,7 @@ public static class TimetableEndpoints
         Guid.Parse(caller.FindFirstValue(DeviceBearerAuthenticationHandler.UserIdClaimType)!);
 
     private static LessonResponse ToResponse(LessonSnapshot l) => new(
-        l.Id, l.UntisLessonId, l.Subject, l.Lecturer, l.Room, l.StartTs, l.EndTs, l.Status.ToWireValue());
+        l.Id, l.UntisLessonId, l.Subject, l.Lecturer, l.Room, l.Group, l.Mode, l.StartTs, l.EndTs, l.Status.ToWireValue());
 
     private static ChangeLogEntryResponse ToResponse(ChangeLogEntry c) => new(
         c.Id, c.LessonId, c.ChangeType.ToWireValue(), c.OldValue, c.NewValue, c.DetectedAt);

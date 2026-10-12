@@ -76,7 +76,12 @@ export const lessonCache: LessonCache = {
     try {
       store.clear();
       for (const lesson of lessons) {
-        store.put({ ...lesson, lecturer: lesson.lecturer ?? null });
+        store.put({
+          ...lesson,
+          lecturer: lesson.lecturer ?? null,
+          group: lesson.group ?? null,
+          mode: lesson.mode ?? null,
+        });
       }
     } catch (error) {
       // put() throws synchronously for a bad lesson (e.g. no `id`), and IndexedDB does not roll back

@@ -1,4 +1,4 @@
-LESSON_FIELDS = {"untis_lesson_id", "subject_code", "subject_name", "room", "status", "start_ts", "end_ts"}
+LESSON_FIELDS = {"untis_lesson_id", "subject_code", "subject_name", "room", "lecturer", "group", "mode", "status", "start_ts", "end_ts"}
 
 
 def test_timetable_requires_auth(client):
@@ -34,3 +34,12 @@ def test_timetable_filters_by_date_range(client, auth_headers):
     assert response.status_code == 200
     for lesson in response.json():
         assert lesson["start_ts"].startswith(target_date)
+
+
+def test_timetable_lessons_carry_lecturer_group_and_mode(client, auth_headers):
+    lessons = client.get("/timetable", headers=auth_headers).json()
+
+    for lesson in lessons:
+        assert lesson["lecturer"]
+        assert lesson["group"]
+        assert lesson["mode"] in {"online", "in_person"}

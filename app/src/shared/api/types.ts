@@ -1,5 +1,9 @@
 // Mirrors docs/openapi.yaml. Field names match the wire format (snake_case).
 
+import type { LessonMode } from '@/shared/types/lesson';
+
+export type { LessonMode };
+
 export type LessonStatus = 'scheduled' | 'cancelled' | 'irregular';
 export type ChangeType = 'cancelled' | 'room' | 'time' | 'added' | 'removed';
 export type DevicePlatform = 'android_fcm' | 'web_push';
@@ -22,6 +26,8 @@ export interface Lesson {
   subject: string;
   lecturer?: string | null;
   room: string | null;
+  group?: string | null;
+  mode?: LessonMode | null;
   start_ts: string;
   end_ts: string;
   status: LessonStatus;

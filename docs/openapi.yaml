@@ -508,6 +508,16 @@ components:
             Display-only. Teacher-name changes are not material and never appear in `change_log`.
         room:
           type: [string, "null"]
+        group:
+          type: [string, "null"]
+          description: >-
+            Display-only. A group change is not material and never appears in `change_log` or a push.
+        mode:
+          type: [string, "null"]
+          enum: [online, in_person, null]
+          description: >-
+            Display-only. A switch between online and in-person is not material and never appears in
+            `change_log` or a push.
         start_ts:
           type: string
           format: date-time

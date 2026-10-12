@@ -162,7 +162,7 @@ public sealed class TimetableChangesTests(SeamAFixture fixture) : IAsyncLifetime
         var lesson = (await client.GetFromJsonAsync<JsonElement[]>("/timetable"))!.Single();
 
         Assert.Equal(
-            ["end_ts", "id", "lecturer", "room", "start_ts", "status", "subject", "untis_lesson_id"],
+            ["end_ts", "group", "id", "lecturer", "mode", "room", "start_ts", "status", "subject", "untis_lesson_id"],
             lesson.EnumerateObject().Select(p => p.Name).Order().ToArray());
         Assert.Equal("cancelled", lesson.GetProperty("status").GetString());
         Assert.Equal(JsonValueKind.Null, lesson.GetProperty("room").ValueKind);

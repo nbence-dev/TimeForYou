@@ -1,6 +1,6 @@
 import * as SQLite from "expo-sqlite";
 
-import type { Lesson, LessonStatus } from "@/shared/types/lesson";
+import type { Lesson, LessonMode, LessonStatus } from "@/shared/types/lesson";
 
 import type { LessonCache } from "./lesson-cache.types";
 import { sortLessonsByStart } from "./sort-lessons";
@@ -18,6 +18,8 @@ type LessonRow = {
   subject: string;
   lecturer: string | null;
   room: string | null;
+  group_name: string | null;
+  mode: LessonMode | null;
   start_ts: string;
   end_ts: string;
   status: LessonStatus;
@@ -32,12 +34,22 @@ function openDatabase(): Promise<SQLite.SQLiteDatabase> {
     // connection; without it that read can fail with "database is locked".
     await db.execAsync(`
       PRAGMA journal_mode = WAL;
+    `);
+    // The cache is disposable (the next sync refills it), so a schema bump drops the table
+    // rather than migrating it. user_version 2 added group_name and mode (#49).
+    const version = await db.getFirstAsync<{ user_version: number }>("PRAGMA user_version");
+    if ((version?.user_version ?? 0) < 2) {
+      await db.execAsync("DROP TABLE IF EXISTS lessons; PRAGMA user_version = 2;");
+    }
+    await db.execAsync(`
       CREATE TABLE IF NOT EXISTS lessons (
         id TEXT PRIMARY KEY NOT NULL,
         untis_lesson_id TEXT NOT NULL,
         subject TEXT NOT NULL,
         lecturer TEXT,
         room TEXT,
+        group_name TEXT,
+        mode TEXT,
         start_ts TEXT NOT NULL,
         end_ts TEXT NOT NULL,
         status TEXT NOT NULL
@@ -55,9 +67,11 @@ export const lessonCache: LessonCache = {
   async readLessons() {
     const db = await openDatabase();
     const rows = await db.getAllAsync<LessonRow>(
-      "SELECT id, untis_lesson_id, subject, lecturer, room, start_ts, end_ts, status FROM lessons",
+      "SELECT id, untis_lesson_id, subject, lecturer, room, group_name, mode, start_ts, end_ts, status FROM lessons",
     );
-    return sortLessonsByStart(rows);
+    return sortLessonsByStart(
+      rows.map(({ group_name, ...rest }): Lesson => ({ ...rest, group: group_name })),
+    );
   },
 
   async replaceLessons(lessons: readonly Lesson[]) {
@@ -68,13 +82,15 @@ export const lessonCache: LessonCache = {
       for (const lesson of lessons) {
         await txn.runAsync(
           `INSERT OR REPLACE INTO lessons
-             (id, untis_lesson_id, subject, lecturer, room, start_ts, end_ts, status)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+             (id, untis_lesson_id, subject, lecturer, room, group_name, mode, start_ts, end_ts, status)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           lesson.id,
           lesson.untis_lesson_id,
           lesson.subject,
           lesson.lecturer ?? null,
           lesson.room,
+          lesson.group ?? null,
+          lesson.mode ?? null,
           lesson.start_ts,
           lesson.end_ts,
           lesson.status,
