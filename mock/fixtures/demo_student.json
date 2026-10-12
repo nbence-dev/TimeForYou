@@ -4,6 +4,7 @@
   "user": "demo.student",
   "key": "MOCK-QR-SECRET-0001",
   "display_name": "Demo Student",
+  "class_name": "ITMDA3-B34",
   "subjects": [
     { "id": 1, "code": "ITMDA3", "name": "IT Major Design & Analysis 3" },
     { "id": 2, "code": "PROG300", "name": "Programming 300" },
