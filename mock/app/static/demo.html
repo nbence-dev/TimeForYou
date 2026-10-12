@@ -166,6 +166,8 @@ const searchEl = $("search"), optionsEl = $("options"), detailEl = $("detail"), 
 
 let lessons = [];
 let selectedId = null;
+// The label `choose` wrote into the search box. While the box still holds it, it is not a search.
+let chosenLabel = "";
 let activeIndex = -1;
 let filtered = [];
 let toastTimer;
@@ -255,7 +257,8 @@ function haystack(l) {
 }
 
 function renderOptions() {
-  const terms = searchEl.value.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  const query = searchEl.value === chosenLabel ? "" : searchEl.value;
+  const terms = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
   filtered = lessons.filter((l) => terms.every((t) => haystack(l).includes(t)));
   if (activeIndex >= filtered.length) activeIndex = filtered.length - 1;
   optionsEl.innerHTML = "";
@@ -282,7 +285,8 @@ function closeOptions() { optionsEl.classList.remove("open"); }
 function choose(id) {
   selectedId = id;
   const l = lessons.find((x) => x.untis_lesson_id === id);
-  searchEl.value = l ? l.subject_code + " · " + dayLabel(l.start_ts) + " · " + timeRange(l) : "";
+  chosenLabel = l ? l.subject_code + " · " + dayLabel(l.start_ts) + " · " + timeRange(l) : "";
+  searchEl.value = chosenLabel;
   closeOptions();
   searchEl.blur();
   renderDetail();
@@ -364,6 +368,8 @@ function renderDetail() {
   mf.append(date, start, end);
   moveTile.append(mf, btn("btn-brand", "Move lesson", () => {
     if (!date.value || !start.value || !end.value) return toast("Pick a date, start and end time.", false);
+    // "HH:MM" strings compare correctly. A lesson that ends before it starts would be pushed as a real change.
+    if (end.value <= start.value) return toast("End time must be after the start time.", false);
     // The mock works in SAST (UTC+2, no DST).
     act("Moved " + l.subject_code + " to " + start.value + "–" + end.value, "/mock/move-lesson/" + id, {
       start_ts: date.value + "T" + start.value + ":00+02:00",
