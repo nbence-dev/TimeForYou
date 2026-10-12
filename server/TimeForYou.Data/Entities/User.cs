@@ -13,6 +13,12 @@ public class User
     public required string CredentialsProtected { get; set; }
 
     /// <summary>
+    /// "Send me change alerts" (#110). Off still detects and logs changes; the worker just doesn't
+    /// push them. Stored on the user, not the device, so all of a student's devices share it.
+    /// </summary>
+    public bool ChangeAlertsEnabled { get; set; } = true;
+
+    /// <summary>
     /// SHA-256 of the normalised `(school, user)` pair. <see cref="CredentialsProtected"/> is
     /// non-deterministic ciphertext and can't be searched, so a second device scanning the same
     /// QR code needs this to find the existing user instead of creating a duplicate (issue #31).

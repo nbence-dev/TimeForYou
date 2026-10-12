@@ -35,5 +35,13 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
 
         builder.Property(u => u.SeededThrough)
             .HasColumnName("seeded_through");
+
+        // Existing users start with alerts on. The sentinel is `true` (matching the default in
+        // User.cs) so EF still writes an explicit `false`: with EF's usual `false` sentinel it would
+        // skip sending `false` and the database default would switch alerts back on.
+        builder.Property(u => u.ChangeAlertsEnabled)
+            .HasColumnName("change_alerts_enabled")
+            .HasDefaultValue(true)
+            .HasSentinel(true);
     }
 }

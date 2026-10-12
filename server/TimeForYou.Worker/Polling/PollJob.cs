@@ -169,6 +169,17 @@ public sealed class PollJob(IServiceScopeFactory scopeFactory, ILogger<PollJob> 
             return;
         }
 
+        // Alerts off (#110): the changes are already saved above, so they still show in the app;
+        // only the push is skipped.
+        if (!user.ChangeAlertsEnabled)
+        {
+            logger.LogInformation(
+                "Change alerts are off for user {UserId}; logged {ChangeCount} change(s) without pushing",
+                userId,
+                changes.Count);
+            return;
+        }
+
         var devices = await db.Devices.Where(d => d.UserId == userId).ToListAsync(cancellationToken);
         foreach (var device in devices)
         {

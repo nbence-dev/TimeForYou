@@ -59,3 +59,7 @@ export interface DeviceRegisterRequest {
   platform: DevicePlatform;
   push_token: string;
 }
+
+export interface UserSettings {
+  change_alerts_enabled: boolean;
+}
