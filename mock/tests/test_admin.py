@@ -140,3 +140,80 @@ def test_timetable_multi_week_range_has_no_duplicate_ids(client, auth_headers):
     assert len(lessons) == 16  # 8 lessons/week * 2 weeks
     ids = [lesson["untis_lesson_id"] for lesson in lessons]
     assert len(ids) == len(set(ids))
+
+
+def test_lessons_lists_upcoming_with_overrides(client):
+    lessons = client.get("/mock/lessons").json()
+    assert lessons
+    assert lessons == sorted(lessons, key=lambda lesson: lesson["start_ts"])
+
+    lesson_id = lessons[0]["untis_lesson_id"]
+    client.post(f"/mock/cancel-lesson/{lesson_id}")
+
+    after = client.get("/mock/lessons").json()
+    assert next(l for l in after if l["untis_lesson_id"] == lesson_id)["status"] == "cancelled"
+
+
+def test_restore_lesson_clears_only_that_override(client):
+    first, second = (l["untis_lesson_id"] for l in client.get("/mock/lessons").json()[:2])
+    client.post(f"/mock/cancel-lesson/{first}")
+    client.post(f"/mock/cancel-lesson/{second}")
+
+    response = client.post(f"/mock/restore-lesson/{first}")
+
+    assert response.status_code == 200
+    assert response.json()["status"] != "cancelled"
+    statuses = {l["untis_lesson_id"]: l["status"] for l in client.get("/mock/lessons").json()}
+    assert statuses[first] != "cancelled"
+    assert statuses[second] == "cancelled"
+    assert client.post("/mock/restore-lesson/9999-2026-09-28").status_code == 404
+
+
+def test_nudge_forwards_to_worker(client, monkeypatch):
+    class FakeResponse:
+        status = 202
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def read(self):
+            return b'{"job_id":"abc"}'
+
+    seen = {}
+
+    def fake_urlopen(request, timeout):
+        seen["url"] = request.full_url
+        seen["method"] = request.get_method()
+        return FakeResponse()
+
+    monkeypatch.setattr("app.main.urllib.request.urlopen", fake_urlopen)
+
+    response = client.post("/mock/nudge")
+
+    assert response.status_code == 202
+    assert response.json() == {"job_id": "abc"}
+    assert seen["method"] == "POST"
+    assert seen["url"].endswith(":8081/nudge")
+
+
+def test_nudge_reports_unreachable_worker(client, monkeypatch):
+    import urllib.error
+
+    def refuse(request, timeout):
+        raise urllib.error.URLError("connection refused")
+
+    monkeypatch.setattr("app.main.urllib.request.urlopen", refuse)
+
+    response = client.post("/mock/nudge")
+
+    assert response.status_code == 502
+    assert "unreachable" in response.json()["detail"]
+
+
+def test_demo_page_is_served(client):
+    response = client.get("/demo")
+    assert response.status_code == 200
+    assert "Nudge now" in response.text
