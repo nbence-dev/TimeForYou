@@ -13,7 +13,7 @@ import { announceSynced } from '@/shared/sync/synced';
 import { Font } from '@/shared/theme/fonts';
 import { Brand, Colors, MaxContentWidth, Radius, Spacing, Status } from '@/shared/theme/theme';
 
-import { Row, Section } from './settings-rows';
+import { Row, Section, ToggleRow } from './settings-rows';
 
 const NOTIFICATION_LABEL: Record<PushState, string> = {
   checking: '',
@@ -42,6 +42,10 @@ export function SettingsScreen() {
   const [syncing, setSyncing] = useState(true);
   const [syncedAt, setSyncedAt] = useState<Date | null>(null);
   const [problem, setProblem] = useState<'offline' | 'failed' | null>(null);
+  // "Change alerts" (#110): null until the server says. Saved on the user, so it covers every device.
+  const [alerts, setAlerts] = useState<boolean | null>(null);
+  const [savingAlerts, setSavingAlerts] = useState(false);
+  const [alertsError, setAlertsError] = useState<string | null>(null);
   const mounted = useRef(true);
   // Set the moment a 401 or an unlink signs the student out, so a fetch still in flight cannot save
   // their data back after the wipe.
@@ -100,6 +104,47 @@ export function SettingsScreen() {
     };
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+    api.getSettings().then(
+      (settings) => !cancelled && setAlerts(settings.change_alerts_enabled),
+      (error: unknown) => {
+        // A 401 has already signed the student out.
+        if (cancelled || error instanceof UnauthorizedError) return;
+        setAlertsError(
+          error instanceof NetworkError
+            ? "You're offline, so change alerts can't be changed right now."
+            : "Couldn't load your change alerts setting.",
+        );
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Shows the new position at once, then saves it; if saving fails it flips back and says why.
+  async function toggleAlerts(next: boolean) {
+    const before = alerts;
+    setAlerts(next);
+    setSavingAlerts(true);
+    setAlertsError(null);
+    try {
+      const saved = await api.updateSettings({ change_alerts_enabled: next });
+      if (mounted.current) setAlerts(saved.change_alerts_enabled);
+    } catch (error) {
+      if (!mounted.current || error instanceof UnauthorizedError) return;
+      setAlerts(before);
+      setAlertsError(
+        error instanceof NetworkError
+          ? "You're offline. Your change alerts setting wasn't changed."
+          : "Couldn't save your change alerts setting. Try again.",
+      );
+    } finally {
+      if (mounted.current) setSavingAlerts(false);
+    }
+  }
+
   function syncNow() {
     setSyncing(true);
     void sync(true);
@@ -117,7 +162,23 @@ export function SettingsScreen() {
         </Text>
 
         <Section label="Notifications">
-          <Row icon="notifications-outline" title="Change alerts" subtitle="Class relocations & cancellations" soon />
+          <ToggleRow
+            icon="notifications-outline"
+            title="Change alerts"
+            subtitle={
+              alerts === false
+                ? 'Off on all your devices. Changes still show in the app.'
+                : 'Class relocations & cancellations'
+            }
+            value={alerts}
+            onChange={toggleAlerts}
+            disabled={savingAlerts}
+          />
+          {alertsError ? (
+            <Text style={styles.alertsError} accessibilityRole="alert">
+              {alertsError}
+            </Text>
+          ) : null}
           <Row icon="checkmark-circle-outline" title="Notification status" value={NOTIFICATION_LABEL[push]} />
         </Section>
 
@@ -214,6 +275,14 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: Spacing.three, paddingBottom: Spacing.four, alignItems: 'center' },
   column: { width: '100%', maxWidth: MaxContentWidth, gap: Spacing.three },
   title: { fontFamily: Font.textBold, fontSize: 24, color: Brand.navy },
+
+  alertsError: {
+    fontFamily: Font.textSemiBold,
+    fontSize: 13,
+    color: Status.cancelled.text,
+    paddingHorizontal: Spacing.three,
+    paddingBottom: Spacing.three,
+  },
 
   unlink: { backgroundColor: Status.cancelled.surface, borderColor: Status.cancelled.border },
   confirm: {

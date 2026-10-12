@@ -38,6 +38,8 @@ tags:
     description: FCM registration per device.
   - name: calendar
     description: The unauthenticated iCalendar subscription feed.
+  - name: settings
+    description: Per-user preferences, shared by all of a student's devices.
 
 paths:
   /qr-scan:
@@ -305,6 +307,52 @@ paths:
           $ref: "#/components/responses/Unauthorized"
 
   /ics/{token}.ics:
+    /settings:
+    get:
+      operationId: getSettings
+      tags: [settings]
+      summary: Get the caller's settings
+      description: |
+        Settings live on the `users` row, so every device the student has linked reads and writes
+        the same values.
+      responses:
+        "200":
+          description: The caller's settings.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserSettings"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    patch:
+      operationId: updateSettings
+      tags: [settings]
+      summary: Change the caller's settings
+      description: |
+        With `change_alerts_enabled` false, the worker still detects and logs changes (they show
+        in the app and in `GET /changes`) but sends no push to any of the user's devices. Setting
+        it back to true resumes pushes from the next poll.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserSettingsUpdate"
+      responses:
+        "200":
+          description: Settings saved. Returns the full settings.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserSettings"
+        "400":
+          description: "`change_alerts_enabled` is missing."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
     get:
       operationId: getIcsFeed
       tags: [calendar]
@@ -532,3 +580,19 @@ components:
           enum: [android_fcm, web_push]
         push_token:
           type: string
+
+        UserSettings:
+      type: object
+      description: The settings stored on the caller's `users` row.
+      required: [change_alerts_enabled]
+      properties:
+        change_alerts_enabled:
+          type: boolean
+          description: Send push notifications for timetable changes. Defaults to true.
+
+    UserSettingsUpdate:
+      type: object
+      required: [change_alerts_enabled]
+      properties:
+        change_alerts_enabled:
+          type: boolean

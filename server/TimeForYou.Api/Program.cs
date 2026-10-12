@@ -2,6 +2,7 @@ using TimeForYou.Api.Features.Auth;
 using TimeForYou.Api.Features.Calendar;
 using TimeForYou.Api.Features.Devices;
 using TimeForYou.Api.Features.Notes;
+using TimeForYou.Api.Features.Settings;
 using TimeForYou.Api.Features.Timetable;
 using TimeForYou.Data;
 using TimeForYou.WebUntis;
@@ -45,6 +46,7 @@ app.MapTimetableEndpoints();
 app.MapDeviceEndpoints();
 app.MapCalendarEndpoints();
 app.MapNoteEndpoints();
+app.MapSettingsEndpoints();
 
 app.Run();
 

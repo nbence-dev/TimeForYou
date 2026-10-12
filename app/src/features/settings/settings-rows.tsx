@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import type { ComponentProps, ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 
 import { Font } from '@/shared/theme/fonts';
 import { Brand, Colors, Radius, Spacing } from '@/shared/theme/theme';
@@ -61,6 +61,47 @@ export function Row({
         <Ionicons name="chevron-forward" size={18} color={Colors.light.textSecondary} />
       ) : null}
     </Pressable>
+  );
+}
+
+/**
+ * A row with an on/off switch. `value` is null while it is still loading: the switch shows off and
+ * can't be used until the real value arrives.
+ */
+export function ToggleRow({
+  icon,
+  title,
+  subtitle,
+  value,
+  onChange,
+  disabled,
+}: {
+  icon: IconName;
+  title: string;
+  subtitle?: string;
+  value: boolean | null;
+  onChange: (next: boolean) => void;
+  disabled?: boolean;
+}) {
+  const inert = disabled || value === null;
+  return (
+    <View style={[styles.row, inert && styles.rowBusy]}>
+      <View style={styles.rowIcon}>
+        <Ionicons name={icon} size={20} color={Brand.navy} />
+      </View>
+      <View style={styles.rowText}>
+        <Text style={styles.rowTitle}>{title}</Text>
+        {subtitle ? <Text style={styles.rowSubtitle}>{subtitle}</Text> : null}
+      </View>
+      <Switch
+        accessibilityLabel={title}
+        value={value ?? false}
+        onValueChange={onChange}
+        disabled={inert}
+        trackColor={{ false: Brand.borderStrong, true: Brand.navy }}
+        thumbColor={Brand.white}
+      />
+    </View>
   );
 }
 

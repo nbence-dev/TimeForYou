@@ -11,6 +11,7 @@ import type {
   Note,
   QrScanRequest,
   QrScanResponse,
+  UserSettings,
 } from './types';
 
 const BASE_URL = (process.env.EXPO_PUBLIC_API_URL ?? '').replace(/\/+$/, '');
@@ -130,6 +131,12 @@ export const api = {
   getChanges: (since?: string) => request<ChangeLogEntry[]>('/changes', { query: { since } }),
 
   getCalendar: () => request<CalendarFeed>('/calendar'),
+  
+  getSettings: () => request<UserSettings>('/settings'),
+
+  /** Saves the given settings for the user (every device they have linked) and returns them all. */
+  updateSettings: (changes: UserSettings) =>
+    request<UserSettings>('/settings', { method: 'PATCH', body: changes }),
 
   registerDevice: (payload: DeviceRegisterRequest) =>
     request<Device>('/devices', { method: 'POST', body: payload }),
