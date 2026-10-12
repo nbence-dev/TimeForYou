@@ -4,7 +4,11 @@ from app.fixtures import FIXTURES_DIR
 
 
 def _first_lesson_id(client, auth_headers):
-    lessons = client.get("/timetable", headers=auth_headers).json()
+    lessons = client.get(
+        "/timetable",
+        headers=auth_headers,
+        params={"start": "2026-09-28", "end": "2026-10-04"},
+    ).json()
     return lessons[0]["untis_lesson_id"]
 
 
@@ -95,7 +99,11 @@ def test_reset_restores_fixture_state(client, auth_headers):
     response = client.post("/mock/reset")
 
     assert response.status_code == 204
-    lessons = client.get("/timetable", headers=auth_headers).json()
+    lessons = client.get(
+        "/timetable",
+        headers=auth_headers,
+        params={"start": "2026-09-28", "end": "2026-10-04"},
+    ).json()
     matching = next(lesson for lesson in lessons if lesson["untis_lesson_id"] == lesson_id)
     assert matching["status"] == "scheduled"
 
