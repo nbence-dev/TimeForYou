@@ -1,0 +1,394 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TimeForYou demo controller</title>
+<style>
+  /* Tokens mirror app/src/shared/theme/theme.ts (Brand, Status, Radius). */
+  :root {
+    --navy: #15315D;
+    --orange: #CC5A01;
+    --ink: #0F172A;
+    --muted: #64748B;
+    --bg: #F8FAFC;
+    --el: #F1F5F9;
+    --border: #E2E8F0;
+    --border-strong: #CBD5E1;
+    --ok-strip: #059669; --ok-bg: #ECFDF5; --ok-text: #065F46; --ok-border: #A7F3D0;
+    --chg-strip: #A16207; --chg-bg: #FEF9C3; --chg-text: #854D0E; --chg-border: #FDE68A;
+    --bad-strip: #DC2626; --bad-bg: #FEE2E2; --bad-text: #991B1B; --bad-border: #FECACA; --bad-surface: #FEF2F2;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font: 16px/1.45 "Hanken Grotesk", "Public Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    color: var(--ink);
+    background: var(--bg);
+    min-height: 100vh;
+  }
+  header { background: var(--navy); color: #fff; padding: 24px 20px; }
+  .wrap { max-width: 920px; margin: 0 auto; }
+  .top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; }
+  h1 { margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -0.01em; }
+  .sub { margin: 4px 0 0; opacity: .78; font-size: 15px; }
+  .top-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+
+  button {
+    font: inherit; font-weight: 600; border: 2px solid transparent; border-radius: 8px; padding: 10px 16px;
+    cursor: pointer; transition: opacity .15s, background .15s;
+  }
+  button:hover { opacity: .9; }
+  button:focus-visible, input:focus-visible { outline: 3px solid var(--orange); outline-offset: 2px; }
+  button:disabled { opacity: .5; cursor: default; }
+  .btn-nudge { background: var(--orange); color: #fff; font-size: 17px; padding: 11px 22px; }
+  .btn-ghost { background: transparent; color: #fff; border-color: rgba(255,255,255,.45); }
+  .btn-bad { background: var(--bad-strip); color: #fff; }
+  .btn-ok { background: var(--ok-strip); color: #fff; }
+  .btn-brand { background: var(--navy); color: #fff; }
+
+  main { max-width: 920px; margin: 24px auto 40px; padding: 0 20px; }
+  .card { background: #fff; border: 1px solid var(--border); border-radius: 16px; padding: 20px; margin-bottom: 18px; }
+  label.lbl { display: block; font-size: 13px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 8px; }
+
+  /* searchable lesson picker */
+  .picker { position: relative; }
+  .picker input {
+    width: 100%; font: inherit; padding: 13px 16px; border-radius: 8px;
+    border: 2px solid var(--border-strong); background: #fff; color: var(--ink);
+  }
+  .picker input:focus { border-color: var(--navy); outline: none; }
+  .options {
+    position: absolute; z-index: 10; left: 0; right: 0; top: calc(100% + 6px);
+    max-height: 360px; overflow-y: auto; background: #fff; border: 1px solid var(--border-strong);
+    border-radius: 8px; box-shadow: 0 12px 28px rgba(15,23,42,.16); display: none;
+  }
+  .options.open { display: block; }
+  .opt { display: flex; align-items: center; gap: 12px; padding: 10px 14px 10px 10px; cursor: pointer; border-bottom: 1px solid var(--el); }
+  .opt:last-child { border-bottom: 0; }
+  .opt:hover, .opt.active { background: var(--el); }
+  .opt .strip { width: 4px; align-self: stretch; border-radius: 4px; flex: none; }
+  .opt .main { flex: 1; min-width: 0; }
+  .opt .name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .opt .meta { font-size: 13px; color: var(--muted); }
+  .none { padding: 16px; color: var(--muted); text-align: center; }
+
+  .chip { font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 9999px; text-transform: uppercase; letter-spacing: .04em; border: 1px solid; }
+  .chip.scheduled { background: var(--ok-bg); color: var(--ok-text); border-color: var(--ok-border); }
+  .chip.cancelled { background: var(--bad-bg); color: var(--bad-text); border-color: var(--bad-border); }
+  .chip.other { background: var(--chg-bg); color: var(--chg-text); border-color: var(--chg-border); }
+
+  /* selected lesson, styled like the app's lesson card */
+  .empty { text-align: center; color: var(--muted); padding: 30px 10px; }
+  .hero {
+    display: flex; border: 1px solid var(--border); border-radius: 16px; overflow: hidden; margin-bottom: 18px; background: #fff;
+  }
+  .hero .edge { width: 6px; flex: none; }
+  .hero .body { padding: 16px 20px; flex: 1; }
+  .hero .time { font-size: 15px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .hero h2 { margin: 2px 0 8px; font-size: 24px; color: var(--navy); letter-spacing: -0.01em; }
+  .hero .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .hero .pill { background: var(--el); color: var(--ink); border-radius: 9999px; padding: 3px 12px; font-weight: 600; font-size: 14px; }
+  .hero.cancelled { background: var(--bad-surface); border-color: var(--bad-border); }
+  .hero.cancelled h2 { text-decoration: line-through; color: var(--bad-text); }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+  .tile { border: 1px solid var(--border); border-radius: 16px; padding: 14px; background: #fff; }
+  .tile h3 { margin: 0 0 10px; font-size: 16px; color: var(--navy); }
+  .tile .fields { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+  .tile input {
+    font: inherit; padding: 9px 10px; border-radius: 8px; border: 2px solid var(--border-strong);
+    background: #fff; flex: 1; min-width: 90px; color: var(--ink);
+  }
+  .tile input:focus { border-color: var(--navy); outline: none; }
+  .tile button { width: 100%; }
+  .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+  /* log */
+  .log { list-style: none; margin: 0; padding: 0; }
+  .log li { display: flex; gap: 10px; align-items: flex-start; padding: 9px 0; border-bottom: 1px solid var(--el); font-size: 14px; }
+  .log li:last-child { border-bottom: 0; }
+  .log .dot { flex: none; width: 8px; height: 8px; border-radius: 50%; margin-top: 7px; background: var(--ok-strip); }
+  .log .dot.bad { background: var(--bad-strip); }
+  .log .time { color: var(--muted); font-size: 12px; margin-left: auto; white-space: nowrap; }
+  .log .err { color: var(--bad-text); }
+  .log .idle { color: var(--muted); }
+
+  #toast {
+    position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 140%);
+    background: var(--navy); color: #fff; padding: 12px 18px; border-radius: 8px; max-width: min(92vw, 560px);
+    box-shadow: 0 10px 28px rgba(15,23,42,.3); transition: transform .25s, opacity .25s; font-weight: 600; z-index: 20;
+    opacity: 0; pointer-events: none;
+  }
+  #toast.show { transform: translate(-50%, 0); opacity: 1; }
+  #toast.ok { background: var(--ok-text); }
+  #toast.err { background: var(--bad-text); }
+
+  @media (max-width: 560px) { .pair { grid-template-columns: 1fr; } h1 { font-size: 21px; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap top">
+    <div>
+      <h1>TimeForYou demo controller</h1>
+      <p class="sub">Pick a lesson, change it, then press Nudge to send the push.</p>
+    </div>
+    <div class="top-actions">
+      <button class="btn-nudge" id="nudge">Nudge now</button>
+      <button class="btn-ghost" id="reset">Reset mock</button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <section class="card">
+    <label class="lbl" for="search">Lesson</label>
+    <div class="picker">
+      <input id="search" type="text" autocomplete="off" placeholder="Search by subject, room, day or id…">
+      <div class="options" id="options" role="listbox"></div>
+    </div>
+  </section>
+
+  <section class="card" id="detail"></section>
+
+  <section class="card">
+    <label class="lbl">Recent activity</label>
+    <ul class="log" id="log"><li><span class="idle">Nothing yet.</span></li></ul>
+  </section>
+</main>
+
+<div id="toast"></div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const searchEl = $("search"), optionsEl = $("options"), detailEl = $("detail"), logEl = $("log"), toastEl = $("toast");
+
+let lessons = [];
+let selectedId = null;
+// The label `choose` wrote into the search box. While the box still holds it, it is not a search.
+let chosenLabel = "";
+let activeIndex = -1;
+let filtered = [];
+let toastTimer;
+
+// Card-edge colours match Status.* in the app theme.
+function stripFor(status) {
+  if (status === "scheduled") return "#059669";
+  if (status === "cancelled") return "#DC2626";
+  return "#A16207";
+}
+
+const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+function dayLabel(iso) {
+  const d = new Date(iso.slice(0, 10) + "T12:00:00");
+  return DAYS[d.getDay()] + " " + iso.slice(8, 10) + "/" + iso.slice(5, 7);
+}
+function timeRange(l) { return l.start_ts.slice(11, 16) + "–" + l.end_ts.slice(11, 16); }
+function el(tag, cls, text) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text !== undefined) e.textContent = text;
+  return e;
+}
+function chip(status) {
+  return el("span", "chip " + (status === "scheduled" || status === "cancelled" ? status : "other"), status);
+}
+
+function toast(message, ok) {
+  toastEl.textContent = message;
+  toastEl.className = "show " + (ok ? "ok" : "err");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => (toastEl.className = ""), ok ? 3000 : 7000);
+}
+
+function addLog(message, ok) {
+  if (logEl.firstChild && logEl.firstChild.dataset && logEl.firstChild.dataset.placeholder) logEl.innerHTML = "";
+  const li = el("li");
+  li.append(el("span", "dot" + (ok ? "" : " bad")), el("span", ok ? "" : "err", message), el("span", "time", new Date().toLocaleTimeString()));
+  logEl.prepend(li);
+  while (logEl.children.length > 6) logEl.lastChild.remove();
+}
+
+async function call(label, path, body) {
+  try {
+    const response = await fetch(path, {
+      method: "POST",
+      headers: body ? { "Content-Type": "application/json" } : {},
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    const text = await response.text();
+    if (!response.ok) {
+      const msg = label + " failed (" + response.status + "): " + text;
+      toast(msg, false); addLog(msg, false);
+      return false;
+    }
+    toast(label, true); addLog(label, true);
+    return true;
+  } catch (error) {
+    const msg = label + " failed: " + error.message;
+    toast(msg, false); addLog(msg, false);
+    return false;
+  }
+}
+
+async function act(label, path, body) {
+  await call(label, path, body);
+  await load();
+}
+
+async function load() {
+  try {
+    const response = await fetch("/mock/lessons");
+    if (!response.ok) throw new Error(response.status + " " + await response.text());
+    lessons = await response.json();
+    if (selectedId && !lessons.some((l) => l.untis_lesson_id === selectedId)) selectedId = null;
+    renderDetail();
+    renderOptions();
+  } catch (error) {
+    toast("Could not load lessons: " + error.message, false);
+    addLog("Could not load lessons: " + error.message, false);
+  }
+}
+
+/* ---------- searchable picker ---------- */
+function haystack(l) {
+  return [l.subject_code, l.subject_name, l.room, l.status, l.untis_lesson_id, dayLabel(l.start_ts), timeRange(l)].join(" ").toLowerCase();
+}
+
+function renderOptions() {
+  const query = searchEl.value === chosenLabel ? "" : searchEl.value;
+  const terms = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  filtered = lessons.filter((l) => terms.every((t) => haystack(l).includes(t)));
+  if (activeIndex >= filtered.length) activeIndex = filtered.length - 1;
+  optionsEl.innerHTML = "";
+  if (!filtered.length) {
+    optionsEl.append(el("div", "none", "No lessons match."));
+    return;
+  }
+  filtered.forEach((l, i) => {
+    const row = el("div", "opt" + (i === activeIndex ? " active" : ""));
+    row.setAttribute("role", "option");
+    const strip = el("span", "strip");
+    strip.style.background = stripFor(l.status);
+    const main = el("div", "main");
+    main.append(el("div", "name", l.subject_name), el("div", "meta", dayLabel(l.start_ts) + " · " + timeRange(l) + " · " + l.room));
+    row.append(strip, main, chip(l.status));
+    row.addEventListener("mousedown", (e) => { e.preventDefault(); choose(l.untis_lesson_id); });
+    optionsEl.append(row);
+  });
+}
+
+function openOptions() { optionsEl.classList.add("open"); renderOptions(); }
+function closeOptions() { optionsEl.classList.remove("open"); }
+
+function choose(id) {
+  selectedId = id;
+  const l = lessons.find((x) => x.untis_lesson_id === id);
+  chosenLabel = l ? l.subject_code + " · " + dayLabel(l.start_ts) + " · " + timeRange(l) : "";
+  searchEl.value = chosenLabel;
+  closeOptions();
+  searchEl.blur();
+  renderDetail();
+}
+
+searchEl.addEventListener("focus", () => { searchEl.select(); openOptions(); });
+searchEl.addEventListener("blur", closeOptions);
+searchEl.addEventListener("input", () => { activeIndex = -1; openOptions(); });
+searchEl.addEventListener("keydown", (e) => {
+  if (e.key === "ArrowDown") { e.preventDefault(); activeIndex = Math.min(activeIndex + 1, filtered.length - 1); renderOptions(); }
+  else if (e.key === "ArrowUp") { e.preventDefault(); activeIndex = Math.max(activeIndex - 1, 0); renderOptions(); }
+  else if (e.key === "Enter" && filtered[activeIndex >= 0 ? activeIndex : 0]) { choose(filtered[activeIndex >= 0 ? activeIndex : 0].untis_lesson_id); }
+  else if (e.key === "Escape") { searchEl.blur(); }
+});
+
+/* ---------- selected lesson ---------- */
+function tile(title) {
+  const t = el("div", "tile");
+  t.append(el("h3", "", title));
+  return t;
+}
+function input(type, value, placeholder) {
+  const i = document.createElement("input");
+  i.type = type;
+  if (value) i.value = value;
+  if (placeholder) i.placeholder = placeholder;
+  return i;
+}
+function btn(cls, label, onClick) {
+  const b = el("button", cls, label);
+  b.addEventListener("click", onClick);
+  return b;
+}
+
+function renderDetail() {
+  detailEl.innerHTML = "";
+  const l = lessons.find((x) => x.untis_lesson_id === selectedId);
+  if (!l) {
+    detailEl.append(el("div", "empty", "Search and pick a lesson to change it."));
+    return;
+  }
+  const id = l.untis_lesson_id;
+
+  const hero = el("div", "hero" + (l.status === "cancelled" ? " cancelled" : ""));
+  const edge = el("div", "edge");
+  edge.style.background = stripFor(l.status);
+  const body = el("div", "body");
+  const row = el("div", "row");
+  row.append(el("span", "pill", "Room " + l.room), el("span", "pill", l.subject_code), chip(l.status));
+  body.append(el("div", "time", dayLabel(l.start_ts) + " · " + timeRange(l)), el("h2", "", l.subject_name), row);
+  hero.append(edge, body);
+  detailEl.append(hero);
+
+  const quick = el("div", "pair");
+  const cancelTile = tile("Cancel lesson");
+  cancelTile.append(btn("btn-bad", "Cancel this lesson", () => act("Cancelled " + l.subject_code, "/mock/cancel-lesson/" + id)));
+  const restoreTile = tile("Restore lesson");
+  restoreTile.append(btn("btn-ok", "Restore original", () => act("Restored " + l.subject_code, "/mock/restore-lesson/" + id)));
+  quick.append(cancelTile, restoreTile);
+
+  const grid = el("div", "grid");
+  grid.style.marginTop = "14px";
+
+  const roomTile = tile("Change room");
+  const fields = el("div", "fields");
+  const roomIn = input("text", "", "e.g. Z99");
+  fields.append(roomIn);
+  roomTile.append(fields, btn("btn-brand", "Change room", () => {
+    const room = roomIn.value.trim();
+    if (!room) return toast("Enter a room first.", false);
+    act("Room changed to " + room + " (" + l.subject_code + ")", "/mock/change-room/" + id, { room });
+  }));
+
+  const moveTile = tile("Move / change time");
+  const mf = el("div", "fields");
+  const date = input("date", l.start_ts.slice(0, 10));
+  const start = input("time", l.start_ts.slice(11, 16));
+  const end = input("time", l.end_ts.slice(11, 16));
+  mf.append(date, start, end);
+  moveTile.append(mf, btn("btn-brand", "Move lesson", () => {
+    if (!date.value || !start.value || !end.value) return toast("Pick a date, start and end time.", false);
+    // "HH:MM" strings compare correctly. A lesson that ends before it starts would be pushed as a real change.
+    if (end.value <= start.value) return toast("End time must be after the start time.", false);
+    // The mock works in SAST (UTC+2, no DST).
+    act("Moved " + l.subject_code + " to " + start.value + "–" + end.value, "/mock/move-lesson/" + id, {
+      start_ts: date.value + "T" + start.value + ":00+02:00",
+      end_ts: date.value + "T" + end.value + ":00+02:00",
+    });
+  }));
+
+  grid.append(roomTile, moveTile);
+  detailEl.append(quick, grid);
+}
+
+$("nudge").addEventListener("click", () => call("Nudge sent, polling now", "/mock/nudge"));
+$("reset").addEventListener("click", async () => {
+  if (!confirm("Reset every lesson to its original state?")) return;
+  await act("Mock reset", "/mock/reset");
+});
+
+logEl.firstChild.dataset.placeholder = "1";
+load();
+</script>
+</body>
+</html>
