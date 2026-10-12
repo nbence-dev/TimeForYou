@@ -98,6 +98,70 @@ public sealed class IcsFeedTests(SeamAFixture fixture) : IAsyncLifetime
     private static Calendar ParseCalendar(string ics) => Calendar.Load(ics)!;
 
     [Fact]
+    public async Task Reset_gives_a_new_url_the_old_one_is_404_and_the_new_one_serves_the_feed()
+    {
+        var (userId, token) = await SeedUserAsync("a");
+        await SeedLessonAsync(userId, Now.AddDays(1));
+
+        using var factory = CreateFactory();
+        using var authed = Authed(factory, token);
+        using var anonymous = factory.CreateClient();
+        var oldPath = await GetFeedPathAsync(authed);
+
+        var reset = await authed.PostAsync("/calendar/reset", null);
+
+        Assert.Equal(HttpStatusCode.OK, reset.StatusCode);
+        var newPath = new Uri((await reset.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("url").GetString()!).AbsolutePath;
+        Assert.NotEqual(oldPath, newPath);
+        Assert.Equal(HttpStatusCode.NotFound, (await anonymous.GetAsync(oldPath)).StatusCode);
+        var feed = await anonymous.GetAsync(newPath);
+        Assert.Equal(HttpStatusCode.OK, feed.StatusCode);
+        Assert.Single(ParseCalendar(await feed.Content.ReadAsStringAsync()).Events);
+        Assert.Equal(newPath, await GetFeedPathAsync(authed));
+    }
+
+    [Fact]
+    public async Task Reset_before_the_feed_was_ever_requested_still_creates_one()
+    {
+        var (_, token) = await SeedUserAsync("a");
+
+        using var factory = CreateFactory();
+        using var authed = Authed(factory, token);
+        var reset = await authed.PostAsync("/calendar/reset", null);
+
+        Assert.Equal(HttpStatusCode.OK, reset.StatusCode);
+        var newPath = new Uri((await reset.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("url").GetString()!).AbsolutePath;
+        Assert.Equal(newPath, await GetFeedPathAsync(authed));
+    }
+
+    [Fact]
+    public async Task Reset_for_one_user_leaves_another_users_feed_alone()
+    {
+        var (_, tokenA) = await SeedUserAsync("a");
+        var (_, tokenB) = await SeedUserAsync("b");
+
+        using var factory = CreateFactory();
+        using var a = Authed(factory, tokenA);
+        using var b = Authed(factory, tokenB);
+        var bPath = await GetFeedPathAsync(b);
+
+        await a.PostAsync("/calendar/reset", null);
+
+        Assert.Equal(bPath, await GetFeedPathAsync(b));
+    }
+
+    [Fact]
+    public async Task Reset_without_a_bearer_token_returns_401()
+    {
+        using var factory = CreateFactory();
+        using var anonymous = factory.CreateClient();
+
+        var response = await anonymous.PostAsync("/calendar/reset", null);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
     public async Task Calendar_url_leads_to_a_valid_text_calendar_feed()
     {
         var (userId, token) = await SeedUserAsync("a");

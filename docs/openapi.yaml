@@ -306,6 +306,27 @@ paths:
         "401":
           $ref: "#/components/responses/Unauthorized"
 
+  /calendar/reset:
+    post:
+      operationId: resetCalendar
+      tags: [calendar]
+      summary: Replace the caller's calendar-feed link
+      description: |
+        Replaces the user's `ics_tokens` value with a new one. The old `GET /ics/{token}.ics` URL
+        stops working at once (404), so anyone who had it, and any calendar app subscribed to it, is
+        cut off. Every device of the user sees the new URL from `GET /calendar`. If the user never
+        asked for a feed, this simply creates one. Returns the new URL, built the same way as
+        `GET /calendar`.
+      responses:
+        "200":
+          description: The new feed URL.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CalendarFeed"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
   /ics/{token}.ics:
     /settings:
     get:

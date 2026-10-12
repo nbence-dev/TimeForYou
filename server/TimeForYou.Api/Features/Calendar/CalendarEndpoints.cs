@@ -18,7 +18,7 @@ namespace TimeForYou.Api.Features.Calendar;
 /// <summary>docs/openapi.yaml `#/components/schemas/CalendarFeed` — where the caller's feed lives.</summary>
 public sealed record CalendarFeedResponse([property: JsonPropertyName("url")] string Url);
 
-/// <summary>GET /calendar (bearer) and GET /ics/{token}.ics (opaque token) — the iCalendar feed (#37).</summary>
+/// <summary>GET /calendar and POST /calendar/reset (bearer), and GET /ics/{token}.ics (opaque token) — the iCalendar feed (#37, #112).</summary>
 public static class CalendarEndpoints
 {
     /// <summary>Optional config key: the externally reachable origin of the API, e.g. the tunnel's
@@ -31,6 +31,10 @@ public static class CalendarEndpoints
     {
         endpoints.MapGet("/calendar", GetCalendarAsync)
             .WithName("GetCalendar")
+            .RequireAuthorization();
+
+        endpoints.MapPost("/calendar/reset", ResetCalendarAsync)
+            .WithName("ResetCalendar")
             .RequireAuthorization();
 
         endpoints.MapGet("/ics/{token}.ics", GetIcsFeedAsync)
@@ -82,11 +86,49 @@ public static class CalendarEndpoints
                 .SingleAsync(cancellationToken);
         }
 
+        return Results.Ok(FeedFor(token, request, configuration));
+    }
+
+    /// <summary>
+    /// POST /calendar/reset (#112): swaps the caller's feed token for a new one, so the old URL stops
+    /// working (404) and every device of the user gets the new one from `GET /calendar`. The token is
+    /// the table's primary key, so this is a plain SQL update, not an EF change on a tracked key.
+    /// </summary>
+    private static async Task<IResult> ResetCalendarAsync(
+        ClaimsPrincipal caller,
+        HttpRequest request,
+        IConfiguration configuration,
+        TimeForYouDbContext db,
+        TimeProvider clock,
+        CancellationToken cancellationToken)
+    {
+        var userId = Guid.Parse(caller.FindFirstValue(DeviceBearerAuthenticationHandler.UserIdClaimType)!);
+        var token = GenerateIcsToken();
+        var now = clock.GetUtcNow();
+
+        var replaced = await db.IcsTokens
+            .Where(t => t.UserId == userId)
+            .ExecuteUpdateAsync(
+                s => s.SetProperty(t => t.Token, token).SetProperty(t => t.CreatedAt, now),
+                cancellationToken);
+
+        if (replaced == 0)
+        {
+            // The student never opened the feed, so there is nothing to replace yet.
+            db.IcsTokens.Add(new IcsToken { Token = token, UserId = userId, CreatedAt = now });
+            await db.SaveChangesAsync(cancellationToken);
+        }
+
+        return Results.Ok(FeedFor(token, request, configuration));
+    }
+
+    private static CalendarFeedResponse FeedFor(string token, HttpRequest request, IConfiguration configuration)
+    {
         var configured = configuration[PublicBaseUrlKey];
         var origin = string.IsNullOrWhiteSpace(configured)
             ? $"{request.Scheme}://{request.Host}"
             : configured.TrimEnd('/');
-        return Results.Ok(new CalendarFeedResponse($"{origin}/ics/{token}.ics"));
+        return new CalendarFeedResponse($"{origin}/ics/{token}.ics");
     }
 
     private static async Task<IResult> GetIcsFeedAsync(
