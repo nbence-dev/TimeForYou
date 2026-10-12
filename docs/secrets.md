@@ -189,3 +189,9 @@ leaked one is worthless:
   the temptation is constant. Use a mock-generated QR for anything anyone else will see.
 - Commit a `.env` "temporarily so the others can run it". Send the values another way.
 - Put a real value in `.env.example`.
+
+## `google-services.json` (Android push, issue #70)
+
+Firebase console → Project settings → Your apps → Android (`com.timeforyou.app`) → download
+`google-services.json` and save it as `app/google-services.json`. It is gitignored; never commit
+it. Without it `expo prebuild` / `expo run:android` fail.

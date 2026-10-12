@@ -98,3 +98,8 @@ export async function enablePush(): Promise<PushState> {
   if (permission === 'granted') return register();
   return permission === 'denied' ? 'denied' : 'default';
 }
+
+/** Web taps are handled by the service worker and `notification-intent.ts`. */
+export function onNotificationTapped(_listener: () => void): () => void {
+  return () => {};
+}

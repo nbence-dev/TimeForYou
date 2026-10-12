@@ -155,6 +155,32 @@ the app does not add a second row.
 grouped push to the device. Step 6 shows an error in the banner, not a silent failure. Over the public
 hostnames, `/demo` does not return the page.
 
+## Android native push (#70)
+
+Needs a real Android phone running the Expo build (`npx expo run:android` with the device attached,
+since Expo Go cannot receive FCM), and `app/google-services.json` from the Firebase console
+(Android app `com.timeforyou.app`). The file is gitignored; never commit it.
+
+### AND-1 Grant permission and register
+
+**Steps:** Open the app, tap "Turn on notifications", allow.
+
+**Expected:** The strip disappears and `devices` holds one `android_fcm` row. Reopening the app
+does not add a second row.
+
+### AND-2 Denied permission
+
+**Steps:** Tap "Turn on notifications", refuse (twice if Android asks again).
+
+**Expected:** The app stays fully usable. Once Android will not ask again, the "Notifications are
+off" strip appears.
+
+### AND-3 Delivery with the app closed, and tap
+
+**Steps:** Swipe the app away. Change a lesson in the mock, `POST /nudge`, wait for the push, tap it.
+
+**Expected:** One grouped notification arrives; tapping opens the Changes tab.
+
 ## Notes (#73)
 
 ### NT-1 Add, edit and delete a note
@@ -384,3 +410,36 @@ however much history exists). The lesson to change is on a day the app shows.
 
 - A message says the student is offline and still signed in. They stay on Settings, and the
   timetable and notes are untouched. With the connection back, **Unlink** works.
+
+## Calendar subscription (#109)
+
+### CS-1 Show and copy the feed link
+
+**Steps:**
+
+1. Open **Settings** and tap **Calendar subscription**.
+2. Tap **Copy link**, then paste somewhere (the address bar will do).
+3. Open the pasted address in a browser.
+4. Sign in on a second device (or scan the same QR again) and open the same screen.
+
+**Expected:**
+
+- The screen shows a long `.../ics/<token>.ics` address, and the button says **Copied** for a moment
+  after the tap.
+- What you paste is exactly that address, and the browser gets a calendar file (it downloads or
+  opens as `text/calendar`).
+- The second device shows the same address.
+- Add to Apple Calendar, Add to Google Calendar and Reset link are dimmed with a "Soon" tag and do
+  nothing. The note says anyone with the link can see the timetable.
+
+### CS-2 Offline
+
+**Steps:**
+
+1. Stop the `api` container, then open **Calendar subscription**.
+2. Start the container again and tap **Try again**.
+
+**Expected:**
+
+- Step 1 shows "You're offline…" with a **Try again** button, not a blank screen.
+- Step 2 shows the address.

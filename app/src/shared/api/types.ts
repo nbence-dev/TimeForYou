@@ -36,6 +36,10 @@ export interface ChangeLogEntry {
   detected_at: string;
 }
 
+export interface CalendarFeed {
+  url: string;
+}
+
 export interface Note {
   id: string;
   lesson_id: string;

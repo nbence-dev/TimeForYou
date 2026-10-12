@@ -9,7 +9,7 @@ import { Button } from '@/shared/components/button';
 import { Font } from '@/shared/theme/fonts';
 import { Brand, Radius, Spacing } from '@/shared/theme/theme';
 
-import { enablePush, syncPush, type PushState } from './index';
+import { enablePush, onNotificationTapped, syncPush, type PushState } from './index';
 import { takeOpenChangesNote } from './notification-intent';
 
 /**
@@ -33,6 +33,9 @@ export function PushPrompt() {
       cancelled = true;
     };
   }, []);
+
+  // Native: a tapped notification opens Changes, whether the app was closed or already running.
+  useEffect(() => onNotificationTapped(() => router.navigate('/changes')), [router]);
 
   // The service worker asks an already-open tab to go to Changes when a notification is tapped.
   useEffect(() => {
