@@ -443,3 +443,34 @@ however much history exists). The lesson to change is on a day the app shows.
 
 - Step 1 shows "You're offline…" with a **Try again** button, not a blank screen.
 - Step 2 shows the address.
+
+### CS-3 One-tap add to Apple or Google Calendar (#112)
+
+**Steps:**
+
+1. Open **Calendar subscription** on a phone and tap **Add to Apple Calendar** (iPhone) or **Add to
+   Google Calendar**.
+
+**Expected:**
+
+- The Calendar app (iPhone) offers to subscribe to the feed, or Google Calendar opens in the browser
+  with the feed address filled in. Accept, and the timetable shows in the calendar.
+- On a device with no calendar app to handle it, a message says to copy the link and add it by hand.
+- Google Calendar can only reach a public address, so on a local stack (`localhost`) it will not
+  load the feed. Check this against the live server (#126).
+
+### CS-4 Reset link (#112)
+
+**Steps:**
+
+1. Open **Calendar subscription**, copy the link, and open it in a browser (a calendar file).
+2. Tap **Reset link**, then **Cancel**. Then tap **Reset link** and confirm.
+3. Open the old link again, then copy the new one and open that.
+4. With the API stopped, tap **Reset link** and confirm.
+
+**Expected:**
+
+- Cancel changes nothing. Confirming shows a new link and the note "New link ready…".
+- The old link now gives a "not found" page and the new link gives the calendar file. Another device
+  of the same student shows the new link too.
+- Offline, a message says so and that the current link still works. The link does not change.
