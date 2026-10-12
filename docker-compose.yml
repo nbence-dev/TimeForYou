@@ -84,6 +84,9 @@ services:
   mock:
     build:
       context: ./mock
+    environment:
+      # Target of the /demo page's "Nudge now" button (the mock proxies to the worker).
+      WORKER_NUDGE_URL: ${WORKER_NUDGE_URL:-http://worker:8081/nudge}
     ports:
       - "8000:8000"
     # Admin endpoints are unauthenticated on purpose — the mock is never

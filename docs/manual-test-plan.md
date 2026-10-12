@@ -135,6 +135,26 @@ the app does not add a second row.
 
 **Expected:** One grouped notification arrives; tapping opens the Changes tab.
 
+## Demo controller (#103)
+
+### DEMO-1 Change lessons and nudge from the page
+
+**Setup:** Stack up, one linked device with notifications on. Open `http://localhost:8000/demo`
+(on tfy-prod: `ssh -L 8000:localhost:8000 nick@192.168.3.61` first).
+
+**Steps:**
+
+1. Confirm the page lists the seeded lessons with id, subject, time, room and status.
+2. Press **Cancel** on one lesson, then **Nudge now**.
+3. Type a room on another lesson and press **Change room**; press **Move** on a third with a new time.
+4. Press **Restore** on the cancelled lesson.
+5. Press **Reset mock** and confirm the prompt.
+6. Stop the worker (`docker compose stop worker`) and press **Nudge now**.
+
+**Expected:** Each action updates the table and the status banner shows success. Step 2 delivers one
+grouped push to the device. Step 6 shows an error in the banner, not a silent failure. Over the public
+hostnames, `/demo` does not return the page.
+
 ## Android native push (#70)
 
 Needs a real Android phone running the Expo build (`npx expo run:android` with the device attached,
