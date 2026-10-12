@@ -151,11 +151,11 @@ def test_lessons_lists_upcoming_with_overrides(client):
     client.post(f"/mock/cancel-lesson/{lesson_id}")
 
     after = client.get("/mock/lessons").json()
-    assert next(l for l in after if l["untis_lesson_id"] == lesson_id)["status"] == "cancelled"
+    assert next(lesson for lesson in after if lesson["untis_lesson_id"] == lesson_id)["status"] == "cancelled"
 
 
 def test_restore_lesson_clears_only_that_override(client):
-    first, second = (l["untis_lesson_id"] for l in client.get("/mock/lessons").json()[:2])
+    first, second = (lesson["untis_lesson_id"] for lesson in client.get("/mock/lessons").json()[:2])
     client.post(f"/mock/cancel-lesson/{first}")
     client.post(f"/mock/cancel-lesson/{second}")
 
@@ -163,7 +163,7 @@ def test_restore_lesson_clears_only_that_override(client):
 
     assert response.status_code == 200
     assert response.json()["status"] != "cancelled"
-    statuses = {l["untis_lesson_id"]: l["status"] for l in client.get("/mock/lessons").json()}
+    statuses = {lesson["untis_lesson_id"]: lesson["status"] for lesson in client.get("/mock/lessons").json()}
     assert statuses[first] != "cancelled"
     assert statuses[second] == "cancelled"
     assert client.post("/mock/restore-lesson/9999-2026-09-28").status_code == 404
