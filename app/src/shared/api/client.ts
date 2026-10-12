@@ -131,6 +131,9 @@ export const api = {
 
   getCalendar: () => request<CalendarFeed>('/calendar'),
 
+  /** Replaces the calendar link: the old one stops working at once. Returns the new one. */
+  resetCalendar: () => request<CalendarFeed>('/calendar/reset', { method: 'POST' }),
+
   registerDevice: (payload: DeviceRegisterRequest) =>
     request<Device>('/devices', { method: 'POST', body: payload }),
 

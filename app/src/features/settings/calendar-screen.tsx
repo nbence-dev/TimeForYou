@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { api, NetworkError, UnauthorizedError } from '@/shared/api';
@@ -10,15 +10,14 @@ import { Button } from '@/shared/components/button';
 import { Font } from '@/shared/theme/fonts';
 import { Brand, Colors, MaxContentWidth, Radius, Spacing, Status } from '@/shared/theme/theme';
 
-import { Row, Section, SoonTag } from './settings-rows';
+import { Row, Section } from './settings-rows';
 
 /** How long "Copied" stays on the button before it says "Copy link" again. */
 const COPIED_MS = 2000;
 
 /**
- * The calendar subscription screen (#109): the student's own feed URL from `GET /calendar`, with
- * Copy link. Reset link and the one-tap buttons have no backing yet (#112), so they are disabled and
- * tagged "Soon".
+ * The calendar subscription screen (#109, #112): the student's own feed URL from `GET /calendar`,
+ * Copy link, one-tap add to Apple or Google Calendar, and Reset link (the old URL stops working).
  */
 export function CalendarScreen() {
   const insets = useSafeAreaInsets();
@@ -28,6 +27,8 @@ export function CalendarScreen() {
   const [problem, setProblem] = useState<'offline' | 'failed' | null>(null);
   const [copied, setCopied] = useState(false);
   const [copyFailed, setCopyFailed] = useState(false);
+  const [openFailed, setOpenFailed] = useState(false);
+  const [wasReset, setWasReset] = useState(false);
   const mounted = useRef(true);
   // A 401 signed the student out: keep showing "Loading" instead of a misleading error.
   const signedOut = useRef(false);
@@ -86,6 +87,27 @@ export function CalendarScreen() {
     copiedTimer.current = setTimeout(() => setCopied(false), COPIED_MS);
   }
 
+  // `webcal://` makes Apple Calendar offer to subscribe; Google Calendar adds a feed by URL.
+  async function addToCalendar(app: 'apple' | 'google') {
+    if (!url) return;
+    const webcal = url.replace(/^https?:/, 'webcal:');
+    const target =
+      app === 'apple' ? webcal : `https://calendar.google.com/calendar/r?cid=${encodeURIComponent(webcal)}`;
+    setOpenFailed(false);
+    try {
+      await Linking.openURL(target);
+    } catch {
+      if (mounted.current) setOpenFailed(true);
+    }
+  }
+
+  function applyNewLink(newUrl: string) {
+    setUrl(newUrl);
+    setCopied(false);
+    setCopyFailed(false);
+    setWasReset(true);
+  }
+
   const close = () => (router.canGoBack() ? router.back() : router.replace('/settings'));
 
   return (
@@ -122,6 +144,11 @@ export function CalendarScreen() {
                 </Text>
               </View>
               <Button label={copied ? 'Copied' : 'Copy link'} onPress={copy} />
+              {wasReset ? (
+                <Text style={styles.body}>
+                  New link ready. The old one no longer works, so subscribe again with this one.
+                </Text>
+              ) : null}
               {copyFailed ? (
                 <Text style={styles.error} accessibilityRole="alert">
                   Couldn&apos;t copy. Select the link above and copy it by hand.
@@ -141,24 +168,78 @@ export function CalendarScreen() {
         </View>
 
         <Section label="Quick one-tap subscription">
-          <Row icon="logo-apple" title="Add to Apple Calendar" soon />
-          <Row icon="logo-google" title="Add to Google Calendar" soon />
+          <Row icon="logo-apple" title="Add to Apple Calendar" arrow disabled={!url} onPress={() => addToCalendar('apple')} />
+          <Row icon="logo-google" title="Add to Google Calendar" arrow disabled={!url} onPress={() => addToCalendar('google')} />
         </Section>
+        {openFailed ? (
+          <Text style={styles.error} accessibilityRole="alert">
+            Couldn&apos;t open a calendar app. Copy the link and add it in your calendar by hand.
+          </Text>
+        ) : null}
 
         <View style={styles.warning}>
           <Ionicons name="lock-closed-outline" size={20} color={Brand.navy} />
           <Text style={styles.warningText}>Anyone with this link can see your timetable. Don&apos;t share it.</Text>
         </View>
 
-        <View style={styles.reset}>
-          <View style={styles.soonRow}>
-            <Text style={styles.resetTitle}>Reset link</Text>
-            <SoonTag />
-          </View>
-          <Text style={styles.muted}>Resetting will revoke the current URL and stop existing calendar sync.</Text>
-        </View>
+        {url ? <ResetLink onNewUrl={applyNewLink} /> : null}
       </View>
     </ScrollView>
+  );
+}
+
+/** Reset link: asks first, then replaces the link on the server. A failure leaves the old link working. */
+function ResetLink({ onNewUrl }: { onNewUrl: (url: string) => void }) {
+  const [confirming, setConfirming] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function reset() {
+    setBusy(true);
+    setError(null);
+    try {
+      onNewUrl((await api.resetCalendar()).url);
+      setConfirming(false);
+    } catch (e) {
+      // A 401 has already signed the student out; the app is on its way to the scan screen.
+      if (e instanceof UnauthorizedError) return;
+      setError(
+        e instanceof NetworkError
+          ? "You're offline. Connect to the internet to reset your link. Your current link still works."
+          : "Couldn't reset your link. Your current link still works. Try again in a moment.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (!confirming) {
+    return (
+      <Pressable accessibilityRole="button" onPress={() => setConfirming(true)} style={styles.reset}>
+        <View style={styles.resetRow}>
+          <Ionicons name="refresh" size={18} color={Status.cancelled.text} />
+          <Text style={styles.resetTitle}>Reset link</Text>
+        </View>
+        <Text style={styles.muted}>Resetting will revoke the current URL and stop existing calendar sync.</Text>
+      </Pressable>
+    );
+  }
+
+  return (
+    <View style={styles.confirm}>
+      <Text style={styles.confirmTitle}>Reset your calendar link?</Text>
+      <Text style={styles.body}>
+        The current link stops working at once. Any calendar already subscribed to it stops updating until
+        you subscribe again with the new link.
+      </Text>
+      {error ? (
+        <Text style={styles.error} accessibilityRole="alert">
+          {error}
+        </Text>
+      ) : null}
+      <Button label="Reset link" variant="destructive" disabled={busy} onPress={reset} />
+      <Button label="Cancel" variant="secondary" disabled={busy} onPress={() => setConfirming(false)} />
+    </View>
   );
 }
 
@@ -209,8 +290,17 @@ const styles = StyleSheet.create({
   },
   warningText: { flex: 1, fontFamily: Font.text, fontSize: 14, color: Brand.navy },
 
-  reset: { alignItems: 'center', gap: Spacing.two, opacity: 0.55 },
-  soonRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
+  reset: { alignItems: 'center', gap: Spacing.two },
+  resetRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
+  confirm: {
+    gap: Spacing.three,
+    padding: Spacing.three,
+    borderRadius: Radius.card,
+    borderWidth: 1,
+    borderColor: Status.cancelled.border,
+    backgroundColor: Status.cancelled.surface,
+  },
+  confirmTitle: { fontFamily: Font.textBold, fontSize: 18, color: Status.cancelled.text },
   resetTitle: { fontFamily: Font.textSemiBold, fontSize: 16, color: Status.cancelled.text },
   muted: { fontFamily: Font.text, fontSize: 13, color: Colors.light.textSecondary, textAlign: 'center' },
 });
