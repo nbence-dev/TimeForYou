@@ -50,9 +50,17 @@ async function send(change: QueuedNoteChange): Promise<void> {
   else await api.deleteNote(change.id);
 }
 
-/** A change the server refused for good (e.g. 404: the lesson or note is gone). Retrying won't help. */
+/** A change the server refused for good (e.g. 404: the lesson or note is gone). Retrying won't help.
+ *  408 (timeout) and 429 (rate limited) are transient, so those keep the change queued. */
 function isPermanentFailure(error: unknown): boolean {
-  return error instanceof ApiError && !(error instanceof UnauthorizedError) && error.status >= 400 && error.status < 500;
+  return (
+    error instanceof ApiError &&
+    !(error instanceof UnauthorizedError) &&
+    error.status >= 400 &&
+    error.status < 500 &&
+    error.status !== 408 &&
+    error.status !== 429
+  );
 }
 
 let flushing: Promise<void> | null = null;
