@@ -135,6 +135,26 @@ the app does not add a second row.
 
 **Expected:** One grouped notification arrives; tapping opens the Changes tab.
 
+## Demo controller (#103)
+
+### DEMO-1 Change lessons and nudge from the page
+
+**Setup:** Stack up, one linked device with notifications on. Open `http://localhost:8000/demo`
+(on tfy-prod: `ssh -L 8000:localhost:8000 nick@192.168.3.61` first).
+
+**Steps:**
+
+1. Confirm the page lists the seeded lessons with id, subject, time, room and status.
+2. Press **Cancel** on one lesson, then **Nudge now**.
+3. Type a room on another lesson and press **Change room**; press **Move** on a third with a new time.
+4. Press **Restore** on the cancelled lesson.
+5. Press **Reset mock** and confirm the prompt.
+6. Stop the worker (`docker compose stop worker`) and press **Nudge now**.
+
+**Expected:** Each action updates the table and the status banner shows success. Step 2 delivers one
+grouped push to the device. Step 6 shows an error in the banner, not a silent failure. Over the public
+hostnames, `/demo` does not return the page.
+
 ## Android native push (#70)
 
 Needs a real Android phone running the Expo build (`npx expo run:android` with the device attached,
@@ -426,7 +446,7 @@ however much history exists). The lesson to change is on a day the app shows.
 
 ## Profile card and Help (#113)
 
-### PF-1 The profile card shows the student's name and class
+### PF-1 The profile card shows the student's name
 
 **Setup:** A linked device; the worker has polled at least once since linking.
 
@@ -436,8 +456,8 @@ however much history exists). The lesson to change is on a day the app shows.
 
 **Expected:**
 
-- The card at the top shows the student's initials in a circle, their name and their class from WebUntis
-  (for the mock's demo student: "DS", "Demo Student", "ITMDA3-B34").
+- The card at the top shows the student's initials in a circle, and their name from WebUntis
+  (for the mock's demo student: "DS", "Demo Student").
 - "Sync status" shows a green "Synced HH:MM" pill, a red "Offline" or "Couldn't sync" pill, or a grey
   "Syncing…" pill while a sync runs.
 
@@ -448,7 +468,7 @@ however much history exists). The lesson to change is on a day the app shows.
 
 **Expected:**
 
-- The card shows a person icon, "Your profile" and "Your name and class appear after the first sync",
+- The card shows a person icon, "Your profile" and "Your name appears after the first sync",
   and fills in after the next poll and a reload.
 
 ### HF-1 Help and FAQ
@@ -461,3 +481,74 @@ however much history exists). The lesson to change is on a day the app shows.
 **Expected:**
 
 - A Help and FAQ screen opens with the questions and answers; the back arrow returns to Settings.
+
+### CS-3 One-tap add to Apple or Google Calendar (#112)
+
+**Steps:**
+
+1. Open **Calendar subscription** on a phone and tap **Add to Apple Calendar** (iPhone) or **Add to
+   Google Calendar**.
+
+**Expected:**
+
+- The Calendar app (iPhone) offers to subscribe to the feed, or Google Calendar opens in the browser
+  with the feed address filled in. Accept, and the timetable shows in the calendar.
+- On a device with no calendar app to handle it, a message says to copy the link and add it by hand.
+- Google Calendar can only reach a public address, so on a local stack (`localhost`) it will not
+  load the feed. Check this against the live server (#126).
+
+### CS-4 Reset link (#112)
+
+**Steps:**
+
+1. Open **Calendar subscription**, copy the link, and open it in a browser (a calendar file).
+2. Tap **Reset link**, then **Cancel**. Then tap **Reset link** and confirm.
+3. Open the old link again, then copy the new one and open that.
+4. With the API stopped, tap **Reset link** and confirm.
+
+**Expected:**
+
+- Cancel changes nothing. Confirming shows a new link and the note "New link ready…".
+- The old link now gives a "not found" page and the new link gives the calendar file. Another device
+  of the same student shows the new link too.
+- Offline, a message says so and that the current link still works. The link does not change.
+
+### CS-5 The feed on the live server, in real calendar apps (#126)
+
+Run against the shared instance (the installed Android app, or the web app at
+`https://app.timeforyou.co.za`), not a local stack: Google Calendar and Apple Calendar can only reach a
+public address, so `localhost` proves nothing.
+
+**Steps:**
+
+1. In the app, open **Settings → Calendar subscription** and note the address shown.
+2. Open that address in a browser on a device that is **not** on the team's network (mobile data).
+3. On an iPhone, tap **Add to Apple Calendar**, accept the subscription, and open the Calendar app.
+4. In Google Calendar, tap **Add to Google Calendar** (or **Other calendars → From URL** with the same
+   address) and let it add the feed.
+5. In the mock demo page (`/demo`, LAN only), cancel one lesson that is still in the future and press
+   **Nudge now**. Wait for the calendar app's next refresh (Apple: Settings → Calendar → Accounts →
+   Fetch New Data; Google: it refreshes on its own, which can take hours).
+
+**Expected:**
+
+- The address starts with `https://api.timeforyou.co.za/ics/` and ends with `.ics` (not `localhost`, not
+  `http://`, not an internal host name).
+- Step 2 downloads or shows a calendar file (`BEGIN:VCALENDAR`), not a sign-in or "not found" page.
+- After steps 3 and 4 the student's future lessons show in both calendars, with the room as the event
+  location and any note in the description.
+- After step 5 the cancelled lesson shows as cancelled (struck through or marked) once the calendar app
+  refreshes. Google's refresh delay is not a bug.
+
+**Last checked (2026-10-13), the parts that need no phone:**
+
+- `GET /calendar` on the live server returned an `https://api.timeforyou.co.za/ics/…` address, so
+  `PUBLIC_BASE_URL` is set correctly there. `deploy/release.compose.yml` passes it through from the VM's
+  `.env`.
+- A made-up feed token on `https://api.timeforyou.co.za/ics/…` gets the API's own JSON "No calendar feed
+  matches this token" (404) over valid HTTPS through Cloudflare, so the route is reachable publicly.
+  (On `app.timeforyou.co.za` the same path returns the web app, which is fine: the app's link uses the
+  `api.` host.)
+
+**Still to run by hand:** steps 2 to 5 (a real feed over mobile data, Apple Calendar, Google Calendar and
+the cancelled-lesson refresh).

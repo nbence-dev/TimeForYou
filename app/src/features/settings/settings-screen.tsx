@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -140,17 +140,21 @@ export function SettingsScreen() {
     };
   }, []);
 
-  useEffect(() => {
-    let cancelled = false;
-    // A failure leaves the card on its "after the first sync" text; the rest of Settings still works.
-    api.getProfile().then(
-      (loaded) => !cancelled && setProfile(loaded),
-      () => undefined,
-    );
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  // On every visit, not just the first mount: the worker fills the name in on its own schedule, so a
+  // student who just linked sees it on their next look at Settings. A failure leaves the card as it
+  // was; the rest of Settings still works.
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+      api.getProfile().then(
+        (loaded) => !cancelled && setProfile(loaded),
+        () => undefined,
+      );
+      return () => {
+        cancelled = true;
+      };
+    }, []),
+  );
 
   useEffect(() => {
     let cancelled = false;

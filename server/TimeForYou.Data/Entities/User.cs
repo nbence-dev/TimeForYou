@@ -18,7 +18,7 @@ public class User
     /// </summary>
     public bool ChangeAlertsEnabled { get; set; } = true;
 
-        /// <summary>The student's name as WebUntis shows it (#113). Null until a poll has fetched it.</summary>
+    /// <summary>The student's name as WebUntis shows it (#113). Null until a poll has fetched it.</summary>
     public string? DisplayName { get; set; }
 
     /// <summary>The student's class or group in WebUntis (#113). Null when WebUntis has none.</summary>

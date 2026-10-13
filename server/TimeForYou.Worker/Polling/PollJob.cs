@@ -99,12 +99,20 @@ public sealed class PollJob(IServiceScopeFactory scopeFactory, ILogger<PollJob> 
         var fetched = await webUntis.GetTimetableAsync(session, from, to, cancellationToken);
         var incoming = fetched.Select(FromWebUntis).ToList();
 
-                // Name and class for the profile card (#113), saved with the lessons below. Fetched every
+        // Name and class for the profile card (#113), saved with the lessons below. Fetched every
         // poll so a change in WebUntis shows up; a WebUntis without a profile leaves what is stored.
-        if (await webUntis.GetProfileAsync(session, cancellationToken) is { } profile)
+        // The card is cosmetic, so a failed fetch is logged and must not stop the timetable sync.
+        try
         {
-            user.DisplayName = Fit(profile.DisplayName, 200);
-            user.ClassName = Fit(profile.ClassName, 100);
+            if (await webUntis.GetProfileAsync(session, cancellationToken) is { } profile)
+            {
+                user.DisplayName = Fit(profile.DisplayName, 200);
+                user.ClassName = Fit(profile.ClassName, 100);
+            }
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            logger.LogWarning(exception, "Could not fetch the profile for user {UserId}; polling continues without it.", userId);
         }
 
         var snapshots = await db.LessonSnapshots

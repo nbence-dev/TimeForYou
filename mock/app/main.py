@@ -4,19 +4,25 @@ Plain REST, not WebUntis's own protocol: there is no real WebUntis tenant reacha
 sidecar translating for one, so `IWebUntisClient` (server/TimeForYou.WebUntis) will call this
 service directly. Serves the read surface — auth, timetable, subjects, and QR-code generation for
 the onboarding demo — plus the unauthenticated admin mutation endpoints (`/mock/cancel-lesson/{id}`,
-`/mock/move-lesson/{id}`, `/mock/change-room/{id}`, `/mock/reset`) that drive change detection in
-tests and on stage. LAN is the boundary for those; do not add a token.
+`/mock/move-lesson/{id}`, `/mock/change-room/{id}`, `/mock/restore-lesson/{id}`, `/mock/reset`) that
+drive change detection in tests and on stage. `/demo` is the button-driven page over those, with
+`/mock/lessons` listing lessons and `/mock/nudge` proxying the worker's `POST /nudge` (the browser
+cannot call the worker cross-origin). LAN is the boundary for all of it; do not add a token.
 """
 
 import io
 import json
+import os
 import re
+import urllib.error
+import urllib.request
 import uuid
 from datetime import date, datetime, time, timedelta, timezone
+from pathlib import Path
 
 import qrcode
 from fastapi import FastAPI, Header, HTTPException, Query
-from fastapi.responses import StreamingResponse
+from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 
 from app.fixtures import load_students, student_key
 from app.schemas import (
@@ -41,6 +47,9 @@ _sessions: dict[str, str] = {}  # session_id -> student key
 # Occurrence id -> field overrides. This is the mutable state layer: fixtures on disk are the
 # template and are never written to, so `/mock/reset` is just clearing this dict.
 _overrides: dict[str, dict] = {}
+
+_DEMO_PAGE = Path(__file__).parent / "static" / "demo.html"
+_WORKER_NUDGE_URL = os.environ.get("WORKER_NUDGE_URL", "http://worker:8081/nudge")
 
 _OCCURRENCE_ID_RE = re.compile(r"(\d+)-(\d{4}-\d{2}-\d{2})")
 
@@ -210,3 +219,36 @@ def change_room(lesson_id: str, body: ChangeRoomRequest) -> LessonOut:
 @app.post("/mock/reset", status_code=204)
 def reset() -> None:
     _overrides.clear()
+
+
+@app.post("/mock/restore-lesson/{lesson_id}", response_model=LessonOut)
+def restore_lesson(lesson_id: str) -> LessonOut:
+    student, lesson, occurrence_date = _require_occurrence(lesson_id)
+    _overrides.pop(lesson_id, None)
+    return _lesson_out(student, lesson, occurrence_date)
+
+
+@app.get("/mock/lessons", response_model=list[LessonOut])
+def list_lessons() -> list[LessonOut]:
+    """Upcoming lessons for the demo student, so the /demo page needs no login."""
+    today = datetime.now(SAST).date()
+    lessons = _materialize(_demo_student(), today, today + timedelta(days=14))
+    return sorted(lessons, key=lambda lesson: lesson.start_ts)
+
+
+@app.post("/mock/nudge")
+def nudge() -> JSONResponse:
+    """Forwards to the worker's POST /nudge. The worker's own LAN check still applies."""
+    request = urllib.request.Request(_WORKER_NUDGE_URL, method="POST")
+    try:
+        with urllib.request.urlopen(request, timeout=5) as response:
+            return JSONResponse(json.loads(response.read() or "null"), status_code=response.status)
+    except urllib.error.HTTPError as error:
+        raise HTTPException(status_code=error.code, detail=f"worker answered {error.code}") from error
+    except (urllib.error.URLError, OSError, ValueError) as error:
+        raise HTTPException(status_code=502, detail=f"worker unreachable: {error}") from error
+
+
+@app.get("/demo", include_in_schema=False)
+def demo_page() -> FileResponse:
+    return FileResponse(_DEMO_PAGE, media_type="text/html")

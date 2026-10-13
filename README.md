@@ -67,15 +67,13 @@ The demo path — the whole point of the mock — is:
 
 1. Scan the demo QR code from the mock's seeded fixtures, using the app.
 2. A seeded timetable appears.
-3. Trigger a change against the mock from any machine on the same network:
+3. Open **http://localhost:8000/demo** (from another machine on the LAN, use the host's IP).
+   Press **Cancel** next to a lesson, then **Nudge now** to poll immediately. **Change room**,
+   **Move**, **Restore** and **Reset mock** are on the same page. To do it by hand instead, see
+   [`docs/triggering-a-push.md`](docs/triggering-a-push.md).
 
-   ```bash
-   curl -X POST http://localhost:8000/mock/cancel-lesson/42
-   curl -X POST http://localhost:8000/nudge     # skip the wait, poll now
-   ```
-
-4. Within one poll cycle a real push notification arrives. `/nudge` bounds that to a few seconds
-   rather than up to ten minutes.
+4. Within one poll cycle a real push notification arrives. **Nudge now** bounds that to a few
+   seconds rather than up to ten minutes.
 
 These endpoints are deliberately **unauthenticated**. They are never exposed through the tunnel;
 the LAN is the security boundary.

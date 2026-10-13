@@ -99,7 +99,10 @@ export function ToggleRow({
         onValueChange={onChange}
         disabled={inert}
         trackColor={{ false: Brand.borderStrong, true: Brand.navy }}
-        thumbColor={Brand.white}
+        thumbColor={value ? Brand.orange : Brand.white}
+        // react-native-web ignores thumbColor for the "on" state and falls back to teal.
+        // Not in the native SwitchProps typings, so it goes in via a spread.
+        {...{ activeThumbColor: Brand.orange }}
       />
     </View>
   );

@@ -5,6 +5,11 @@ for manual test PUSH-3 and for rehearsing the showcase demo.
 
 Run everything from the repo root.
 
+**Easiest:** open `http://localhost:8000/demo` (on the tfy-prod VM, tunnel first:
+`ssh -L 8000:localhost:8000 nick@192.168.3.61`). It lists upcoming lessons with Cancel, Restore,
+Change room and Move buttons, plus **Nudge now** and **Reset mock**. The steps below are the `curl`
+equivalent, and `restore-lesson` is also available: `curl -X POST localhost:8000/mock/restore-lesson/<id>`.
+
 ## Before you start
 
 - Stack is up: `docker compose --profile tunnel up -d`

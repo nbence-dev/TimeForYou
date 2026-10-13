@@ -141,6 +141,9 @@ export const api = {
   updateSettings: (changes: UserSettings) =>
     request<UserSettings>('/settings', { method: 'PATCH', body: changes }),
 
+  /** Replaces the calendar link: the old one stops working at once. Returns the new one. */
+  resetCalendar: () => request<CalendarFeed>('/calendar/reset', { method: 'POST' }),
+
   registerDevice: (payload: DeviceRegisterRequest) =>
     request<Device>('/devices', { method: 'POST', body: payload }),
 

@@ -21,6 +21,9 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+    environment:
+      # The /demo page's "Nudge now" proxies to this release's worker.
+      WORKER_NUDGE_URL: http://worker-${SHA}:8081/nudge
     mem_limit: 256m
     networks:
       tfy-edge:
