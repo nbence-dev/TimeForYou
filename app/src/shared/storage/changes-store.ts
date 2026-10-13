@@ -4,12 +4,14 @@ import { kvStore } from "./kv-store";
 
 /**
  * What the app remembers about changes between launches (#72): the last list it fetched, so the
- * markers work offline, and the ids of the changes the student has seen. Both belong to whoever is
- * signed in, so `clear()` runs when that changes hands.
+ * markers work offline, the ids of the changes the student has seen, and the ids they have archived
+ * with "Mark all as read" (#138). All of it belongs to whoever is signed in, so `clear()` runs when
+ * that changes hands.
  */
 
 const CACHE_KEY = "changes.cache";
 const SEEN_KEY = "changes.seenIds";
+const ARCHIVED_KEY = "changes.archivedIds";
 
 /**
  * Every write and the wipe go through one queue, in the order they were asked for. Without it a slow
@@ -64,10 +66,25 @@ export const changesStore = {
     return enqueue(() => kvStore.set(SEEN_KEY, JSON.stringify(ids)));
   },
 
-  /** Forgets everything. Each key is removed on its own, so one failing cannot leave the other. */
+  /** The ids of the archived changes; empty if there are none or they cannot be read. */
+  async readArchivedIds(): Promise<string[]> {
+    try {
+      const raw = await kvStore.get(ARCHIVED_KEY);
+      const parsed: unknown = raw === null ? [] : JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed.filter((id): id is string => typeof id === "string") : [];
+    } catch {
+      return [];
+    }
+  },
+
+  writeArchivedIds(ids: readonly string[]): Promise<void> {
+    return enqueue(() => kvStore.set(ARCHIVED_KEY, JSON.stringify(ids)));
+  },
+
+  /** Forgets everything. Each key is removed on its own, so one failing cannot leave the others. */
   clear(): Promise<void> {
     return enqueue(async () => {
-      await Promise.allSettled([kvStore.remove(CACHE_KEY), kvStore.remove(SEEN_KEY)]);
+      await Promise.allSettled([kvStore.remove(CACHE_KEY), kvStore.remove(SEEN_KEY), kvStore.remove(ARCHIVED_KEY)]);
     });
   },
 };

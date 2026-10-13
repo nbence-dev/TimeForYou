@@ -9,27 +9,38 @@ import { Font } from '@/shared/theme/fonts';
 import { Brand, Colors, MaxContentWidth, Radius, Spacing, Status } from '@/shared/theme/theme';
 
 import { ChangeCard } from './change-card';
+import { splitByArchive } from './change-archive';
 import { countByType, formatTime, sortChanges, type ShownChangeType } from './change-format';
+import { useArchive } from './use-archive';
 import { useChanges, type ChangesProblem } from './use-changes';
 
 /**
- * Where a notification tap lands (#71): every recent change, newest first, so a grouped alert
- * expands into the full picture. Reached at `/changes`, the Changes tab.
+ * Where a notification tap lands (#71): the recent changes, newest first, so a grouped alert
+ * expands into the full picture. Reached at `/changes`, the Changes tab. "Mark all as read" moves
+ * what is shown into the Archive, kept on this device (#138); only new changes are listed by default.
  */
 export function ChangesScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { changes, lessons, loaded, refreshing, problem, checkedAt, refresh } = useChanges();
+  const { archived, ready, archiveAll } = useArchive();
+  const [view, setView] = useState<'new' | 'archive'>('new');
   const [pulling, setPulling] = useState(false);
 
   // Load each time the tab is shown: a notification tap can land here while it is already open.
+  // It also lands on New, so a tap never opens on the Archive the student left it on.
   useFocusEffect(
     useCallback(() => {
+      setView('new');
       void refresh();
     }, [refresh]),
   );
 
-  const shown = useMemo(() => sortChanges(changes), [changes]);
+  const sorted = useMemo(() => sortChanges(changes), [changes]);
+  const { fresh: shown, archived: archivedChanges } = useMemo(
+    () => splitByArchive(sorted, archived),
+    [sorted, archived],
+  );
   const counts = useMemo(() => countByType(shown), [shown]);
 
   async function onPullToRefresh() {
@@ -49,10 +60,22 @@ export function ChangesScreen() {
       <View style={styles.column}>
         <Header />
 
+        <ViewToggle view={view} onChange={setView} newCount={shown.length} archivedCount={archivedChanges.length} />
+
         {problem ? <ProblemNotice problem={problem} onRetry={refresh} /> : null}
 
-        {!loaded ? (
+        {!loaded || !ready ? (
           <Text style={styles.muted}>Loading changes…</Text>
+        ) : view === 'archive' ? (
+          archivedChanges.length === 0 ? (
+            problem ? null : <ArchiveEmpty />
+          ) : (
+            <View style={styles.list}>
+              {archivedChanges.map((change) => (
+                <ChangeCard key={change.id} change={change} lesson={lessons.get(change.lesson_id)} />
+              ))}
+            </View>
+          )
         ) : shown.length === 0 ? (
           problem ? null : (
             <EmptyState checkedAt={checkedAt} onViewTimetable={() => router.navigate('/timetable')} />
@@ -66,6 +89,7 @@ export function ChangesScreen() {
               refreshing={refreshing}
               onRefresh={refresh}
             />
+            <Button label="Mark all as read" variant="secondary" onPress={() => archiveAll(shown)} />
             <View style={styles.list}>
               {shown.map((change) => (
                 <ChangeCard key={change.id} change={change} lesson={lessons.get(change.lesson_id)} />
@@ -87,6 +111,41 @@ function Header() {
       <Text style={styles.headerTitle} accessibilityRole="header">
         Changes
       </Text>
+    </View>
+  );
+}
+
+/** New and Archive: two views of the same screen, each with how many changes it holds. */
+function ViewToggle({
+  view,
+  onChange,
+  newCount,
+  archivedCount,
+}: {
+  view: 'new' | 'archive';
+  onChange: (view: 'new' | 'archive') => void;
+  newCount: number;
+  archivedCount: number;
+}) {
+  const tabs = [
+    { key: 'new' as const, label: `New (${newCount})` },
+    { key: 'archive' as const, label: `Archive (${archivedCount})` },
+  ];
+  return (
+    <View style={styles.toggle} accessibilityRole="tablist">
+      {tabs.map(({ key, label }) => {
+        const active = view === key;
+        return (
+          <Pressable
+            key={key}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: active }}
+            onPress={() => onChange(key)}
+            style={[styles.tab, active && styles.tabActive]}>
+            <Text style={[styles.tabText, active && styles.tabTextActive]}>{label}</Text>
+          </Pressable>
+        );
+      })}
     </View>
   );
 }
@@ -164,6 +223,15 @@ function EmptyState({ checkedAt, onViewTimetable }: { checkedAt: Date | null; on
   );
 }
 
+function ArchiveEmpty() {
+  return (
+    <View style={styles.empty}>
+      <Text style={styles.emptyTitle}>Nothing archived yet</Text>
+      <Text style={styles.emptyBody}>Changes you mark as read are kept here.</Text>
+    </View>
+  );
+}
+
 function ProblemNotice({
   problem,
   onRetry,
@@ -202,6 +270,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   headerTitle: { fontFamily: Font.textBold, fontSize: 24, color: Brand.navy },
+
+  toggle: {
+    flexDirection: 'row',
+    padding: Spacing.one,
+    gap: Spacing.one,
+    borderRadius: Radius.base,
+    backgroundColor: Colors.light.backgroundElement,
+  },
+  tab: { flex: 1, minHeight: 40, alignItems: 'center', justifyContent: 'center', borderRadius: Radius.base },
+  tabActive: { backgroundColor: Brand.white },
+  tabText: { fontFamily: Font.textSemiBold, fontSize: 14, color: Colors.light.textSecondary },
+  tabTextActive: { color: Brand.navy },
 
   summary: {
     gap: Spacing.three,
