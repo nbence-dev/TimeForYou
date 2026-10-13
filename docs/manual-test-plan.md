@@ -571,3 +571,50 @@ public address, so `localhost` proves nothing.
 
 **Still to run by hand:** steps 2 to 5 (a real feed over mobile data, Apple Calendar, Google Calendar and
 the cancelled-lesson refresh).
+
+## Changes archive (#138)
+
+### ARC-1 Mark all as read, and the Archive
+
+**Steps:**
+
+1. Make a few changes (for example cancel three lessons on the demo page, then **Nudge now**) and open
+   the **Changes** tab.
+2. Note the **New** and **Archive** counts at the top, then tap **Mark all as read**.
+3. Tap **Archive**.
+4. Cancel one more lesson, **Nudge now**, and come back to the Changes tab (switch tab and back, or
+   pull down).
+
+**Expected:**
+
+- After step 2 **New** shows 0 with "You're all caught up", and **Archive** holds all the changes that
+  were on screen. The button is not shown when there is nothing new.
+- Step 3 lists the archived changes newest first, as the same cards (lesson, change type, old and new
+  value). With nothing archived it says "Nothing archived yet".
+- After step 4 the new change is under **New** and the archive is unchanged.
+
+### ARC-2 The archive stays on this device, and goes on sign-out
+
+**Steps:**
+
+1. With some changes archived, close and reopen the app (a reload on the web).
+2. Sign out (Settings → **Unlink this device**) and link again.
+
+**Expected:**
+
+- After step 1 the same changes are still in **Archive**.
+- After step 2 **Archive** is empty: the next student sees none of it (on the web the
+  `timeforyou.kv.changes.archivedIds` entry in Local Storage is gone).
+
+### ARC-3 Archiving does not touch the orange dots
+
+**Steps:**
+
+1. Change a lesson, **Nudge now**, and look at Today or Timetable: the lesson has an orange dot and the
+   Changes tab has a badge.
+2. Without opening the Changes tab, note the dots. Then open Changes and tap **Mark all as read**.
+
+**Expected:**
+
+- Opening the Changes tab clears the dots and the badge, exactly as before (#72). **Mark all as read**
+  changes nothing about them.
