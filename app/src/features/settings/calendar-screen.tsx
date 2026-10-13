@@ -7,8 +7,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { api, NetworkError, UnauthorizedError } from '@/shared/api';
 import { Button } from '@/shared/components/button';
+import { Card } from '@/shared/components/card';
+import { ScreenHeader } from '@/shared/components/screen-header';
 import { Font } from '@/shared/theme/fonts';
-import { Brand, Colors, MaxContentWidth, Radius, Spacing, Status } from '@/shared/theme/theme';
+import { Brand, Colors, MaxContentWidth, Radius, Spacing, Status, TitleSize } from '@/shared/theme/theme';
 
 import { Row, Section } from './settings-rows';
 
@@ -113,26 +115,19 @@ export function CalendarScreen() {
   return (
     <ScrollView
       style={styles.screen}
-      contentContainerStyle={[styles.content, { paddingTop: insets.top + Spacing.three }]}>
+      contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + Spacing.four }]}>
       <View style={styles.column}>
-        <View style={styles.header}>
-          <Pressable accessibilityRole="button" accessibilityLabel="Back" hitSlop={8} onPress={close} style={styles.back}>
-            <Ionicons name="arrow-back" size={22} color={Brand.navy} />
-          </Pressable>
-          <Text style={styles.title} accessibilityRole="header">
-            Calendar subscription
-          </Text>
-        </View>
+        <ScreenHeader title="Calendar subscription" onBack={close} />
 
-        <View style={styles.card}>
+        <Card>
           <Text style={styles.cardTitle}>Live calendar sync</Text>
           <Text style={styles.body}>
             See your timetable next to your other events. Future lessons only, with your notes in the event
             description.
           </Text>
-        </View>
+        </Card>
 
-        <View style={styles.card}>
+        <Card>
           <Text style={styles.label}>YOUR PRIVATE FEED</Text>
           {loading ? (
             <Text style={styles.body}>Loading your link…</Text>
@@ -165,7 +160,7 @@ export function CalendarScreen() {
               <Button label="Try again" variant="secondary" onPress={retry} />
             </View>
           )}
-        </View>
+        </Card>
 
         <Section label="Quick one-tap subscription">
           <Row icon="logo-apple" title="Add to Apple Calendar" arrow disabled={!url} onPress={() => addToCalendar('apple')} />
@@ -226,7 +221,7 @@ function ResetLink({ onNewUrl }: { onNewUrl: (url: string) => void }) {
   }
 
   return (
-    <View style={styles.confirm}>
+    <Card tone="danger">
       <Text style={styles.confirmTitle}>Reset your calendar link?</Text>
       <Text style={styles.body}>
         The current link stops working at once. Any calendar already subscribed to it stops updating until
@@ -239,7 +234,7 @@ function ResetLink({ onNewUrl }: { onNewUrl: (url: string) => void }) {
       ) : null}
       <Button label="Reset link" variant="destructive" disabled={busy} onPress={reset} />
       <Button label="Cancel" variant="secondary" disabled={busy} onPress={() => setConfirming(false)} />
-    </View>
+    </Card>
   );
 }
 
@@ -248,26 +243,7 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: Spacing.three, paddingBottom: Spacing.four, alignItems: 'center' },
   column: { width: '100%', maxWidth: MaxContentWidth, gap: Spacing.three },
 
-  header: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
-  back: {
-    width: 44,
-    height: 44,
-    borderRadius: Radius.base,
-    backgroundColor: Colors.light.backgroundElement,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  title: { flex: 1, fontFamily: Font.textBold, fontSize: 22, color: Brand.navy },
-
-  card: {
-    gap: Spacing.three,
-    padding: Spacing.three,
-    borderRadius: Radius.card,
-    borderWidth: 1,
-    borderColor: Brand.border,
-    backgroundColor: Brand.white,
-  },
-  cardTitle: { fontFamily: Font.textBold, fontSize: 18, color: Brand.navy },
+  cardTitle: { fontFamily: Font.textBold, fontSize: TitleSize.card, color: Brand.navy },
   label: { fontFamily: Font.labelSemiBold, fontSize: 12, letterSpacing: 1, color: Colors.light.textSecondary },
   body: { fontFamily: Font.text, fontSize: 14, lineHeight: 20, color: Colors.light.text },
   urlBox: {
@@ -292,15 +268,7 @@ const styles = StyleSheet.create({
 
   reset: { alignItems: 'center', gap: Spacing.two },
   resetRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
-  confirm: {
-    gap: Spacing.three,
-    padding: Spacing.three,
-    borderRadius: Radius.card,
-    borderWidth: 1,
-    borderColor: Status.cancelled.border,
-    backgroundColor: Status.cancelled.surface,
-  },
-  confirmTitle: { fontFamily: Font.textBold, fontSize: 18, color: Status.cancelled.text },
+  confirmTitle: { fontFamily: Font.textBold, fontSize: TitleSize.card, color: Status.cancelled.text },
   resetTitle: { fontFamily: Font.textSemiBold, fontSize: 16, color: Status.cancelled.text },
   muted: { fontFamily: Font.text, fontSize: 13, color: Colors.light.textSecondary, textAlign: 'center' },
 });

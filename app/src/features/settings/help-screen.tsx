@@ -1,10 +1,11 @@
-import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Card } from '@/shared/components/card';
+import { ScreenHeader } from '@/shared/components/screen-header';
 import { Font } from '@/shared/theme/fonts';
-import { Brand, Colors, MaxContentWidth, Radius, Spacing } from '@/shared/theme/theme';
+import { Brand, Colors, MaxContentWidth, Spacing } from '@/shared/theme/theme';
 
 /** What the Help and FAQ screen says (#113). Plain text, so the team can change the wording here. */
 const FAQ: readonly { question: string; answer: string }[] = [
@@ -63,22 +64,15 @@ export function HelpScreen() {
   return (
     <ScrollView
       style={styles.screen}
-      contentContainerStyle={[styles.content, { paddingTop: insets.top + Spacing.three }]}>
+      contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + Spacing.four }]}>
       <View style={styles.column}>
-        <View style={styles.header}>
-          <Pressable accessibilityRole="button" accessibilityLabel="Back" hitSlop={8} onPress={close} style={styles.back}>
-            <Ionicons name="arrow-back" size={22} color={Brand.navy} />
-          </Pressable>
-          <Text style={styles.title} accessibilityRole="header">
-            Help and FAQ
-          </Text>
-        </View>
+        <ScreenHeader title="Help and FAQ" onBack={close} />
 
         {FAQ.map(({ question, answer }) => (
-          <View key={question} style={styles.card}>
+          <Card key={question} style={styles.card}>
             <Text style={styles.question}>{question}</Text>
             <Text style={styles.answer}>{answer}</Text>
-          </View>
+          </Card>
         ))}
       </View>
     </ScrollView>
@@ -90,25 +84,7 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: Spacing.three, paddingBottom: Spacing.four, alignItems: 'center' },
   column: { width: '100%', maxWidth: MaxContentWidth, gap: Spacing.three },
 
-  header: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
-  back: {
-    width: 44,
-    height: 44,
-    borderRadius: Radius.base,
-    backgroundColor: Colors.light.backgroundElement,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  title: { flex: 1, fontFamily: Font.textBold, fontSize: 22, color: Brand.navy },
-
-  card: {
-    gap: Spacing.two,
-    padding: Spacing.three,
-    borderRadius: Radius.card,
-    borderWidth: 1,
-    borderColor: Brand.border,
-    backgroundColor: Brand.white,
-  },
+  card: { gap: Spacing.two },
   question: { fontFamily: Font.textSemiBold, fontSize: 16, color: Brand.navy },
   answer: { fontFamily: Font.text, fontSize: 14, lineHeight: 20, color: Colors.light.text },
 });

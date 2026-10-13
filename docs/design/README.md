@@ -37,7 +37,7 @@ All values live in `app/src/shared/theme/theme.ts`. **Never write a hex colour i
 | `Status.live` | strip `#CC5A01` | Lesson happening now |
 | `Colors.light.*` | slate neutrals | Text, canvas, surfaces |
 | `Spacing` | 4px base unit | 16px (`three`) outer margin on every screen |
-| `Radius` | `base` 8, `card` 16, `pill` full | Inputs and tags, cards and sheets, chips and day selectors |
+| `Radius` | `base` 8, `banner` 12, `card` 16, `pill` full | Inputs and tags, banners, cards and sheets, chips and day selectors |
 
 Orange and the "changed" gold are deliberately different. Orange means "this is the thing to
 tap". Gold means "this lesson moved". Never use orange for a change, or gold for an action.
@@ -61,7 +61,32 @@ Built once in `app/src/shared/components/` (#81). Do not build your own.
 - **`BottomNav`** — inset white pill with a recessed track. Four tabs: Today, Timetable, Changes,
   Settings. The active tab is a navy capsule with a white icon and label. The Changes tab shows
   an orange count badge when there are unseen changes.
-- **Banners** — 12px radius, dismissable. Built by the ticket that needs them (#67 first).
+- **`ScreenHeader`, `NavArrow`, `Card`, `Banner`, `EmptyState`** — the screen chrome. See
+  [Screen chrome](#screen-chrome) below. Ticket: #140.
+
+## Screen chrome
+
+The parts around the content are the same on every screen. Use the shared component; never write
+your own. The mockups differ from each other here, so this section is the standard, not the pictures.
+
+| Element | Rule | Component |
+| --- | --- | --- |
+| Screen title | One size, `TitleSize.screen` (24), navy, bold. Sits at `insets.top + 16`. Every screen, including the four tabs | `ScreenHeader` |
+| Heading inside a screen | `TitleSize.section` (20): the day or week being shown, an empty-state title | |
+| Card heading | `TitleSize.card` (18) | |
+| Back | Pushed screens (Help, Calendar, Linked devices): `arrow-back`, 44px rounded square, **left** of the title | `ScreenHeader onBack` |
+| Close | Modal-style screens (Lesson, Note, Add to Home Screen): `close`, same 44px rounded square, **right** of the title | `ScreenHeader onClose` |
+| Right action or status | Small, right of the title and left of any close: the sync status, the offline chip, "go to today" | `ScreenHeader right` |
+| Previous / next | `chevron-back` / `chevron-forward` in a 40px white circle with a 1px `borderStrong` border; disabled is 35% opacity. Days on Today, weeks on Timetable | `NavArrow` |
+| Banner | 12px radius, optional icon on the left, dismiss `close` on the right. `info` is white, `alert` is the red surface. Buttons go inside, under the text | `Banner` |
+| Empty, loading, offline | A 96px circle with an icon (a spinner while loading), a 20px title, 15px grey text, then any buttons | `EmptyState` |
+| Card | White, 1px `Brand.border`, `Radius.card`, 16px padding. `tone="danger"` for a destructive confirmation | `Card` |
+| Bottom padding | Tabs: `Spacing.four` (the bottom nav handles the inset). Pushed and modal screens: `insets.bottom + Spacing.four` | |
+
+Tab headers scroll with the content, except Timetable, whose week strip stays fixed under its header.
+The header is the same either way.
+
+If you need something these do not cover, extend the component and this table in the same PR.
 
 ## Screens and the tickets that build them
 

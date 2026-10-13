@@ -1,10 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/shared/components/button';
+import { ScreenHeader } from '@/shared/components/screen-header';
 import { loadLessonNotes, saveNoteChange } from '@/shared/sync/notes-outbox';
 import { announceSynced } from '@/shared/sync/synced';
 import { Font } from '@/shared/theme/fonts';
@@ -124,17 +125,9 @@ export function NoteEditScreen({ lessonId, noteId }: { lessonId: string; noteId?
       keyboardShouldPersistTaps="handled"
       // iOS: lift the buttons above the keyboard instead of leaving them underneath it.
       automaticallyAdjustKeyboardInsets
-      contentContainerStyle={[styles.content, { paddingTop: insets.top + Spacing.three, paddingBottom: insets.bottom + Spacing.four }]}>
+      contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + Spacing.four }]}>
       <View style={styles.column}>
-        <View style={styles.headerRow}>
-          <Pressable accessibilityRole="button" accessibilityLabel="Close" hitSlop={8} onPress={close} style={styles.closeButton}>
-            <Ionicons name="close" size={22} color={Brand.navy} />
-          </Pressable>
-          <Text style={styles.heading} accessibilityRole="header">
-            {noteId ? 'Edit note' : 'New note'}
-          </Text>
-          <View style={styles.closeButton} />
-        </View>
+        <ScreenHeader title={noteId ? 'Edit note' : 'New note'} onClose={close} />
 
         {lesson ? (
           <View style={styles.lessonCard}>
@@ -227,16 +220,6 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: Colors.light.background },
   content: { paddingHorizontal: Spacing.three, alignItems: 'center' },
   column: { width: '100%', maxWidth: MaxContentWidth, gap: Spacing.three },
-  headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  heading: { fontFamily: Font.textBold, fontSize: 20, color: Brand.navy },
-  closeButton: {
-    width: 40,
-    height: 40,
-    borderRadius: Radius.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: Colors.light.backgroundElement,
-  },
   lessonCard: {
     gap: Spacing.one,
     padding: Spacing.three,

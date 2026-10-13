@@ -7,7 +7,7 @@ import { api, ApiError, NetworkError } from '@/shared/api';
 import { Button } from '@/shared/components/button';
 import { useSession } from '@/shared/session/session';
 import { Font } from '@/shared/theme/fonts';
-import { Brand, MaxContentWidth, Radius, Spacing } from '@/shared/theme/theme';
+import { Brand, Colors, MaxContentWidth, Radius, Spacing, TitleSize } from '@/shared/theme/theme';
 
 import { parseQrPayload } from './parse-qr';
 
@@ -131,10 +131,10 @@ export function ScanScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#0B1220' },
+  screen: { flex: 1, backgroundColor: Brand.scanBackdrop },
   centered: { justifyContent: 'center', padding: Spacing.three },
   overlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', gap: Spacing.four },
-  heading: { fontFamily: Font.textBold, fontSize: 20, color: Brand.white },
+  heading: { fontFamily: Font.textBold, fontSize: TitleSize.screen, color: Brand.white },
   frame: {
     width: 260,
     height: 260,
@@ -160,6 +160,6 @@ const styles = StyleSheet.create({
     backgroundColor: Brand.white,
   },
   row: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
-  title: { fontFamily: Font.textBold, fontSize: 18, color: Brand.navy },
-  body: { fontFamily: Font.text, fontSize: 14, color: '#0F172A' },
+  title: { fontFamily: Font.textBold, fontSize: TitleSize.card, color: Brand.navy },
+  body: { fontFamily: Font.text, fontSize: 14, color: Colors.light.text },
 });

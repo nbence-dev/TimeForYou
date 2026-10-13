@@ -748,3 +748,18 @@ the cancelled-lesson refresh).
 
 - Opening the Changes tab clears the dots and the badge, exactly as before (#72). **Mark all as read**
   changes nothing about them.
+
+## Screen consistency (#140)
+
+Walk every screen on a narrow phone width, then on the Home Screen app on an iPhone (with a notch).
+Compare each against the first one you open. Nothing here changes behaviour; it is only how the app looks.
+
+| # | Check | Pass when |
+| --- | --- | --- |
+| SC-1 | Open Today, Timetable, Changes and Settings in turn | The title sits at the same height and is the same size on all four. Timetable's is not higher or lower |
+| SC-2 | On Today press the day arrows, on Timetable press the week arrows | Same white circle with a border. Disabled arrows (first and last day or week) look the same too |
+| SC-3 | Open Help and FAQ, Calendar subscription and Linked devices from Settings | Each has the same back button, left of the title. Title size matches the tabs |
+| SC-4 | Open a lesson, then Add note. Open the Add to Home Screen guide if you can | Each has the same close button, right of the title. Title size matches the tabs |
+| SC-5 | Switch off notifications for the app (or open it in Safari, not from the Home Screen) | The notifications prompt and the Home Screen banner have the same corner radius and the dismiss X in the same place |
+| SC-6 | Turn on airplane mode and open Today, Timetable and Changes | The Offline chip sits in the header on all three, and the empty or loading state looks the same: circle, title, text |
+| SC-7 | Scroll to the bottom of every screen above | The last card is not hidden behind the bottom nav or the home indicator, and the gap is the same |

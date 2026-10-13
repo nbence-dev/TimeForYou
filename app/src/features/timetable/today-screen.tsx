@@ -1,15 +1,17 @@
-import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Banner } from '@/shared/components/banner';
 import { Button } from '@/shared/components/button';
+import { EmptyState } from '@/shared/components/empty-state';
 import { LessonCard } from '@/shared/components/lesson-card';
+import { NavArrow } from '@/shared/components/nav-arrow';
+import { ScreenHeader } from '@/shared/components/screen-header';
 import { StatusChip } from '@/shared/components/status-chip';
 import { HomeScreenBanner } from '@/shared/pwa/home-screen-banner';
 import { Font } from '@/shared/theme/fonts';
-import { Brand, Colors, MaxContentWidth, Radius, Spacing, Status } from '@/shared/theme/theme';
+import { Brand, Colors, MaxContentWidth, Radius, Spacing, Status, TitleSize } from '@/shared/theme/theme';
 import type { Lesson } from '@/shared/types/lesson';
 
 import {
@@ -38,7 +40,6 @@ function useNow(intervalMs: number): Date {
 
 /** The landing screen: today's lessons in time order, from the cache first. */
 export function TodayScreen() {
-  const insets = useSafeAreaInsets();
   const { lessons, cacheRead, refreshing, problem, syncedAt, refresh } = useTimetable();
   const { reload: reloadChanges } = useChangeMarkers();
   const now = useNow(30_000);
@@ -73,28 +74,28 @@ export function TodayScreen() {
   return (
     <ScrollView
       style={styles.screen}
-      contentContainerStyle={[styles.content, { paddingTop: insets.top + Spacing.three }]}
+      contentContainerStyle={styles.content}
       refreshControl={<RefreshControl refreshing={pulling} onRefresh={onPullToRefresh} />}>
       <View style={styles.column}>
-        <Header offline={problem === 'offline'} syncedAt={syncedAt} />
-                <HomeScreenBanner />
+        <ScreenHeader title="Today" right={<SyncStatus offline={problem === 'offline'} syncedAt={syncedAt} />} />
+        <HomeScreenBanner />
 
         <View style={styles.dayRow}>
-          <DayArrow
+          <NavArrow
             direction="back"
+            label="Previous day"
             disabled={day <= range.first}
             onPress={() => goToDay(shiftDay(day, -1))}
           />
           <View style={styles.dayTitleBlock}>
-            <Text style={styles.dayTitle} accessibilityRole="header">
-              {formatDayTitle(day)}
-            </Text>
+            <Text style={styles.dayTitle}>{formatDayTitle(day)}</Text>
             <Text style={styles.daySubtitle}>
               {summary(dayLessons.length, remaining, isToday)}
             </Text>
           </View>
-          <DayArrow
+          <NavArrow
             direction="forward"
+            label="Next day"
             disabled={day >= range.last}
             onPress={() => goToDay(shiftDay(day, 1))}
           />
@@ -115,7 +116,7 @@ export function TodayScreen() {
             ))}
           </View>
         ) : (
-          <Text style={styles.empty}>{emptyText(cacheRead, refreshing, lessons.length === 0)}</Text>
+          <EmptyDay loading={lessons.length === 0 && (!cacheRead || refreshing)} />
         )}
       </View>
     </ScrollView>
@@ -128,51 +129,22 @@ function summary(total: number, remaining: number, isToday: boolean): string {
   return isToday ? `${remaining} of ${noun(total)} still to come` : noun(total);
 }
 
-function emptyText(cacheRead: boolean, refreshing: boolean, nothingCached: boolean): string {
-  if (nothingCached && (!cacheRead || refreshing)) return 'Loading your timetable…';
-  return 'No lessons on this day.';
-}
-
-function Header({ offline, syncedAt }: { offline: boolean; syncedAt: Date | null }) {
-  return (
-    <View style={styles.header}>
-      <Text style={styles.appName}>TimeForYou</Text>
-      {offline ? (
-        <StatusChip kind="offline" />
-      ) : syncedAt ? (
-        <View style={styles.synced}>
-          <View style={styles.syncedDot} />
-          <Text style={styles.syncedText}>Updated {formatTime(syncedAt)}</Text>
-        </View>
-      ) : null}
-    </View>
+function EmptyDay({ loading }: { loading: boolean }) {
+  return loading ? (
+    <EmptyState loading title="Loading your timetable" />
+  ) : (
+    <EmptyState icon="cafe-outline" title="No lessons on this day" />
   );
 }
 
-function DayArrow({
-  direction,
-  disabled,
-  onPress,
-}: {
-  direction: 'back' | 'forward';
-  disabled: boolean;
-  onPress: () => void;
-}) {
+function SyncStatus({ offline, syncedAt }: { offline: boolean; syncedAt: Date | null }) {
+  if (offline) return <StatusChip kind="offline" />;
+  if (!syncedAt) return null;
   return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={direction === 'back' ? 'Previous day' : 'Next day'}
-      accessibilityState={{ disabled }}
-      disabled={disabled}
-      onPress={onPress}
-      hitSlop={8}
-      style={[styles.arrow, disabled && styles.arrowDisabled]}>
-      <Ionicons
-        name={direction === 'back' ? 'chevron-back' : 'chevron-forward'}
-        size={22}
-        color={Brand.navy}
-      />
-    </Pressable>
+    <View style={styles.synced}>
+      <View style={styles.syncedDot} />
+      <Text style={styles.syncedText}>Updated {formatTime(syncedAt)}</Text>
+    </View>
   );
 }
 
@@ -195,10 +167,10 @@ function ProblemNotice({
         : "Couldn't refresh your timetable. Showing what was saved.";
 
   return (
-    <View style={styles.notice} accessibilityRole="alert">
+    <Banner>
       <Text style={styles.noticeText}>{text}</Text>
       {problem !== 'session' ? <Button label="Try again" variant="secondary" onPress={onRetry} /> : null}
-    </View>
+    </Banner>
   );
 }
 
@@ -236,50 +208,22 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: Colors.light.background },
   content: { paddingHorizontal: Spacing.three, paddingBottom: Spacing.four, alignItems: 'center' },
   column: { width: '100%', maxWidth: MaxContentWidth, gap: Spacing.three },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  appName: { fontFamily: Font.textBold, fontSize: 20, color: Brand.navy },
   synced: { flexDirection: 'row', alignItems: 'center', gap: Spacing.one },
   syncedDot: { width: 8, height: 8, borderRadius: Radius.pill, backgroundColor: Status.onTime.strip },
   syncedText: { fontFamily: Font.label, fontSize: 13, color: Colors.light.textSecondary },
   dayRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
-  dayTitleBlock: { flex: 1, gap: Spacing.half },
-  dayTitle: { fontFamily: Font.textBold, fontSize: 28, color: Brand.navy },
+  dayTitleBlock: { flex: 1, alignItems: 'center', gap: Spacing.half },
+  dayTitle: { fontFamily: Font.textBold, fontSize: TitleSize.section, color: Brand.navy },
   daySubtitle: { fontFamily: Font.label, fontSize: 14, color: Colors.light.textSecondary },
-  arrow: {
-    width: 40,
-    height: 40,
-    borderRadius: Radius.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: Brand.white,
-    borderWidth: 1,
-    borderColor: Brand.borderStrong,
-  },
-  arrowDisabled: { opacity: 0.35 },
-  backToToday: { alignSelf: 'flex-start', paddingVertical: Spacing.one },
+  backToToday: { alignSelf: 'center', paddingVertical: Spacing.one },
   backToTodayText: {
     fontFamily: Font.textSemiBold,
     fontSize: 14,
     color: Brand.navy,
     textDecorationLine: 'underline',
   },
-  notice: {
-    gap: Spacing.three,
-    padding: Spacing.three,
-    borderRadius: Radius.card,
-    borderWidth: 1,
-    borderColor: Brand.border,
-    backgroundColor: Brand.white,
-  },
   noticeText: { fontFamily: Font.text, fontSize: 14, color: Colors.light.text },
   list: { gap: Spacing.three },
   lessonRow: { gap: Spacing.two },
   past: { opacity: 0.55 },
-  empty: {
-    fontFamily: Font.text,
-    fontSize: 16,
-    color: Colors.light.textSecondary,
-    textAlign: 'center',
-    paddingVertical: Spacing.five,
-  },
 });

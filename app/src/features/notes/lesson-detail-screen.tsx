@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ApiError } from '@/shared/api';
 import { Button } from '@/shared/components/button';
+import { ScreenHeader } from '@/shared/components/screen-header';
 import { StatusChip } from '@/shared/components/status-chip';
 import { saveNoteChange, type ShownNote } from '@/shared/sync/notes-outbox';
 import { announceSynced } from '@/shared/sync/synced';
@@ -68,15 +69,14 @@ export function LessonDetailScreen({ lessonId }: { lessonId: string }) {
   return (
     <ScrollView
       style={styles.screen}
-      contentContainerStyle={[styles.content, { paddingTop: insets.top + Spacing.three, paddingBottom: insets.bottom + Spacing.four }]}>
+      contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + Spacing.four }]}>
       <View style={styles.column}>
-        <View style={styles.headerRow}>
-          <View style={styles.titleBlock}>
-            {lesson?.status === 'cancelled' ? <StatusChip kind="cancelled" /> : null}
-            <Text style={styles.title} accessibilityRole="header">
-              {lesson ? lesson.subject : 'Lesson'}
-            </Text>
-            {lesson ? (
+        <ScreenHeader
+          title={lesson ? lesson.subject : 'Lesson'}
+          onClose={close}
+          above={lesson?.status === 'cancelled' ? <StatusChip kind="cancelled" /> : undefined}
+          below={
+            lesson ? (
               <Text style={styles.meta}>
                 {formatLessonWhen(lesson.start_ts, lesson.end_ts)}
                 {lesson.room ? ` · ${lesson.room}` : ''}
@@ -85,12 +85,9 @@ export function LessonDetailScreen({ lessonId }: { lessonId: string }) {
             ) : lesson === null ? (
               // Looked up and not there (the timetable moved on since this sheet was opened).
               <Text style={styles.meta}>This lesson is no longer on your timetable.</Text>
-            ) : null}
-          </View>
-          <Pressable accessibilityRole="button" accessibilityLabel="Close" hitSlop={8} onPress={close} style={styles.closeButton}>
-            <Ionicons name="close" size={22} color={Brand.navy} />
-          </Pressable>
-        </View>
+            ) : undefined
+          }
+        />
 
         <View style={styles.sectionHeading}>
           <Ionicons name="document-text-outline" size={18} color={Brand.navy} />
@@ -212,18 +209,7 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: Colors.light.background },
   content: { paddingHorizontal: Spacing.three, alignItems: 'center' },
   column: { width: '100%', maxWidth: MaxContentWidth, gap: Spacing.three },
-  headerRow: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.three },
-  titleBlock: { flex: 1, gap: Spacing.two, alignItems: 'flex-start' },
-  title: { fontFamily: Font.textBold, fontSize: 26, color: Brand.navy },
   meta: { fontFamily: Font.label, fontSize: 14, color: Colors.light.textSecondary },
-  closeButton: {
-    width: 40,
-    height: 40,
-    borderRadius: Radius.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: Colors.light.backgroundElement,
-  },
   sectionHeading: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two, marginTop: Spacing.two },
   sectionLabel: { fontFamily: Font.textBold, fontSize: 14, letterSpacing: 0.5, color: Brand.navy },
   offlineText: { fontFamily: Font.text, fontSize: 13, color: Colors.light.textSecondary },

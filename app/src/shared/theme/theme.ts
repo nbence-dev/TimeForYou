@@ -38,6 +38,8 @@ export const Brand = {
   borderStrong: '#CBD5E1',
   /** Backdrop for the bottom-nav shadow. */
   shadow: '#0F172A',
+  /** Behind the camera view on the scan screen. */
+  scanBackdrop: '#0B1220',
 } as const;
 
 /** Lesson status colours. `strip` is the 4px card edge; `bg`/`text`/`border` style the chip. */
@@ -63,8 +65,20 @@ export type CardStatus = keyof typeof Status;
 
 export const Radius = {
   base: 8,
+  /** Banners and notices. */
+  banner: 12,
   card: 16,
   pill: 9999,
+} as const;
+
+/** Title sizes: one per level, so the same kind of title is the same size on every screen. */
+export const TitleSize = {
+  /** The title of a screen: in `ScreenHeader`, on every screen. */
+  screen: 24,
+  /** A heading inside a screen: the day or week being shown, an empty-state title. */
+  section: 20,
+  /** A card's heading. */
+  card: 18,
 } as const;
 
 /** Font family names. The font files are loaded by the shared UI components ticket (#81). */

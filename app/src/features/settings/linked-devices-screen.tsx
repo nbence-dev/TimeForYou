@@ -1,11 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState, type ComponentProps } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { api, NetworkError, UnauthorizedError, type LinkedDevice } from '@/shared/api';
+import { Banner } from '@/shared/components/banner';
 import { Button } from '@/shared/components/button';
+import { ScreenHeader } from '@/shared/components/screen-header';
 import { Font } from '@/shared/theme/fonts';
 import { Brand, Colors, MaxContentWidth, Radius, Spacing, Status } from '@/shared/theme/theme';
 
@@ -88,16 +90,9 @@ export function LinkedDevicesScreen() {
   return (
     <ScrollView
       style={styles.screen}
-      contentContainerStyle={[styles.content, { paddingTop: insets.top + Spacing.three }]}>
+      contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + Spacing.four }]}>
       <View style={styles.column}>
-        <View style={styles.header}>
-          <Pressable accessibilityRole="button" accessibilityLabel="Back" hitSlop={8} onPress={close} style={styles.back}>
-            <Ionicons name="arrow-back" size={22} color={Brand.navy} />
-          </Pressable>
-          <Text style={styles.title} accessibilityRole="header">
-            Linked devices
-          </Text>
-        </View>
+        <ScreenHeader title="Linked devices" onBack={close} />
 
         <View style={styles.intro}>
           <Ionicons name="sync-outline" size={22} color={Brand.navy} />
@@ -114,14 +109,14 @@ export function LinkedDevicesScreen() {
         ) : devices ? (
           devices.map((device) => <DeviceCard key={device.id} device={device} now={now} />)
         ) : (
-          <View style={styles.notice} accessibilityRole="alert">
+          <Banner>
             <Text style={styles.noticeText}>
               {problem === 'offline'
                 ? "You're offline. Connect to the internet to see your devices."
                 : "Couldn't load your devices. Try again in a moment."}
             </Text>
             <Button label="Try again" variant="secondary" onPress={retry} />
-          </View>
+          </Banner>
         )}
 
         <View style={styles.link}>
@@ -177,17 +172,6 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: Colors.light.background },
   content: { paddingHorizontal: Spacing.three, paddingBottom: Spacing.four, alignItems: 'center' },
   column: { width: '100%', maxWidth: MaxContentWidth, gap: Spacing.three },
-
-  header: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
-  back: {
-    width: 44,
-    height: 44,
-    borderRadius: Radius.base,
-    backgroundColor: Colors.light.backgroundElement,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  title: { flex: 1, fontFamily: Font.textBold, fontSize: 22, color: Brand.navy },
 
   intro: {
     flexDirection: 'row',
