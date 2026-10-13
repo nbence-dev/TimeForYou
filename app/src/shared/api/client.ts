@@ -1,4 +1,4 @@
-import { changesStore, lessonCache } from '@/shared/storage';
+import { changesStore, lessonCache, notesStore } from '@/shared/storage';
 import { clearToken, getToken, setToken } from '@/shared/storage/token-store';
 
 import { ApiError, NetworkError, UnauthorizedError } from './errors';
@@ -27,6 +27,18 @@ export function onUnauthorized(listener: UnauthorizedListener): () => void {
   return () => unauthorizedListeners.delete(listener);
 }
 
+type ReachedServerListener = () => void;
+const reachedServerListeners = new Set<ReachedServerListener>();
+
+/**
+ * Called after any request gets a successful answer, i.e. the app is online again: the moment to
+ * send notes written offline (#124). Returns an unsubscribe function.
+ */
+export function onReachedServer(listener: ReachedServerListener): () => void {
+  reachedServerListeners.add(listener);
+  return () => reachedServerListeners.delete(listener);
+}
+
 /**
  * The saved timetable, and the saved changes with the point the student has seen them up to (#72),
  * belong to whoever was signed in. When that changes hands (a 401 signs the student out, or a new
@@ -34,7 +46,7 @@ export function onUnauthorized(listener: UnauthorizedListener): () => void {
  * effort, each on its own: if a wipe fails the next successful fetch replaces what is saved anyway.
  */
 async function forgetSavedTimetable(): Promise<void> {
-  await Promise.allSettled([lessonCache.replaceLessons([]), changesStore.clear()]);
+    await Promise.allSettled([lessonCache.replaceLessons([]), changesStore.clear(), notesStore.clear()]);
 }
 
 /** Drops this device's login: the token, then the app's signed-out state, then the saved data. */
@@ -95,6 +107,8 @@ async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
     }
     throw new ApiError(res.status, message);
   }
+  
+  reachedServerListeners.forEach((l) => l());
 
   if (res.status === 204) return undefined as T;
   return (await res.json()) as T;
@@ -159,8 +173,9 @@ export const api = {
 
   listNotes: (lessonId: string) => request<Note[]>(noteBase(lessonId)),
 
-  createNote: (lessonId: string, body: string) =>
-    request<Note>(noteBase(lessonId), { method: 'POST', body: { body } }),
+    /** `id` lets the app choose the note's id, so a retried create can't save it twice (#124). */
+  createNote: (lessonId: string, body: string, id?: string) =>
+    request<Note>(noteBase(lessonId), { method: 'POST', body: id ? { body, id } : { body } }),
 
   updateNote: (noteId: string, body: string) =>
     request<Note>(noteUrl(noteId), { method: 'PATCH', body: { body } }),

@@ -4,8 +4,8 @@ import { useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { api } from '@/shared/api';
 import { Button } from '@/shared/components/button';
+import { loadLessonNotes, saveNoteChange } from '@/shared/sync/notes-outbox';
 import { announceSynced } from '@/shared/sync/synced';
 import { Font } from '@/shared/theme/fonts';
 import { Brand, Colors, MaxContentWidth, Radius, Spacing, Status } from '@/shared/theme/theme';
@@ -21,8 +21,9 @@ import {
 import { useCachedLesson } from './use-cached-lesson';
 
 /**
- * Write a new note on a lesson, or edit or delete an existing one (#73). Online only: a failed
- * request keeps what the student typed and says what went wrong, so no text is lost.
+ * Write a new note on a lesson, or edit or delete an existing one (#73). With no connection the
+ * change is kept on the device and sent later (#124), so the screen still closes and no text is lost.
+ * A failure that is not about the connection keeps what the student typed and says what went wrong.
  */
 export function NoteEditScreen({ lessonId, noteId }: { lessonId: string; noteId?: string }) {
   const insets = useSafeAreaInsets();
@@ -30,7 +31,7 @@ export function NoteEditScreen({ lessonId, noteId }: { lessonId: string; noteId?
   const lesson = useCachedLesson(lessonId);
 
   const [text, setText] = useState('');
-  // A new note has nothing to load; an existing one is fetched so the text is the server's copy.
+  // A new note has nothing to load; an existing one is loaded (server copy, or the saved copy offline).
   const [loaded, setLoaded] = useState(noteId === undefined);
   const [missing, setMissing] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -49,10 +50,10 @@ export function NoteEditScreen({ lessonId, noteId }: { lessonId: string; noteId?
   useEffect(() => {
     if (noteId === undefined) return;
     let active = true;
-    api.listNotes(lessonId).then(
-      (all) => {
+    loadLessonNotes(lessonId).then(
+      ({ notes }) => {
         if (!active) return;
-        const found = all.find((n) => n.id === noteId);
+        const found = notes.find((n) => n.id === noteId);
         if (found) setText(found.body);
         else setMissing(true);
         setLoadError(null);
@@ -81,9 +82,11 @@ export function NoteEditScreen({ lessonId, noteId }: { lessonId: string; noteId?
     setError(null);
     try {
       const body = noteBodyToSend(text);
-      if (noteId) await api.updateNote(noteId, body);
-      else await api.createNote(lessonId, body);
-      announceSynced(); // the card's note icon comes from the timetable, so refetch it
+      const result = noteId
+        ? await saveNoteChange({ kind: 'update', id: noteId, lessonId, body })
+        : await saveNoteChange({ kind: 'create', lessonId, body });
+      // Only refetch the timetable when the server really has it; a queued change syncs later.
+      if (result === 'sent') announceSynced();
       close();
     } catch (failure) {
       // Stay on this screen with the text intact, and let the student try again.
@@ -99,8 +102,8 @@ export function NoteEditScreen({ lessonId, noteId }: { lessonId: string; noteId?
     setSaving(true);
     setError(null);
     try {
-      await api.deleteNote(noteId);
-      announceSynced();
+      const result = await saveNoteChange({ kind: 'delete', id: noteId, lessonId });
+      if (result === 'sent') announceSynced();
       close();
     } catch (failure) {
       setError(noteErrorMessage(failure));

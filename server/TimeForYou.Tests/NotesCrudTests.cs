@@ -238,4 +238,43 @@ public sealed class NotesCrudTests(SeamAFixture fixture) : IAsyncLifetime
         var notes = await client.GetFromJsonAsync<JsonElement[]>($"/lessons/{lesson.Id}/notes");
         Assert.Equal("sticky", Assert.Single(notes!).GetProperty("body").GetString());
     }
+
+        [Fact]
+    public async Task Creating_twice_with_the_same_client_id_keeps_one_note()
+    {
+        var (userId, tokens) = await SeedUserAsync("a");
+        var lesson = await SeedLessonAsync(userId);
+        using var factory = fixture.CreateApiFactory();
+        using var client = Authed(factory, tokens[0]);
+        var id = Guid.NewGuid();
+
+        var first = await client.PostAsJsonAsync($"/lessons/{lesson.Id}/notes", new { body = "written offline", id });
+        // The retry after a lost reply (#124): same id, so the note that was already saved comes back.
+        var retry = await client.PostAsJsonAsync($"/lessons/{lesson.Id}/notes", new { body = "written offline", id });
+
+        Assert.Equal(HttpStatusCode.Created, first.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, retry.StatusCode);
+        Assert.Equal(id, (await retry.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetGuid());
+        var notes = await client.GetFromJsonAsync<JsonElement[]>($"/lessons/{lesson.Id}/notes");
+        Assert.Equal(id, Assert.Single(notes!).GetProperty("id").GetGuid());
+    }
+
+    [Fact]
+    public async Task A_client_id_already_used_by_another_user_is_a_409()
+    {
+        var (ownerId, ownerTokens) = await SeedUserAsync("owner");
+        var (intruderId, intruderTokens) = await SeedUserAsync("intruder");
+        var ownerLesson = await SeedLessonAsync(ownerId);
+        var intruderLesson = await SeedLessonAsync(intruderId);
+        using var factory = fixture.CreateApiFactory();
+        using var owner = Authed(factory, ownerTokens[0]);
+        using var intruder = Authed(factory, intruderTokens[0]);
+        var id = Guid.NewGuid();
+        await owner.PostAsJsonAsync($"/lessons/{ownerLesson.Id}/notes", new { body = "private", id });
+
+        var response = await intruder.PostAsJsonAsync($"/lessons/{intruderLesson.Id}/notes", new { body = "x", id });
+
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        Assert.DoesNotContain("private", await response.Content.ReadAsStringAsync());
+    }
 }
