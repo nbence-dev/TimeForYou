@@ -130,9 +130,9 @@ public sealed class WebUntisClient(HttpClient httpClient) : IWebUntisClient
             wire.Room,
             status,
             wire.StartTs,
-            wire.EndTs);
-        
-        
+            wire.EndTs,
+            wire.Group,
+            wire.Mode);
     }
 
     private sealed record LoginRequestWire(
