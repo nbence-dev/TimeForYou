@@ -36,6 +36,28 @@ public sealed class WebUntisClient(HttpClient httpClient) : IWebUntisClient
         return body.ConvertAll(ToDomain);
     }
 
+        public async Task<WebUntisProfile?> GetProfileAsync(WebUntisSession session, CancellationToken cancellationToken = default)
+    {
+        var response = await GetAsync("/profile", session, cancellationToken);
+        // A WebUntis without /profile means no profile, not a failed poll.
+        if (response.StatusCode == HttpStatusCode.NotFound)
+        {
+            return null;
+        }
+
+        await EnsureSuccessAsync(response);
+
+        var body = await response.Content.ReadFromJsonAsync<ProfileWire>(cancellationToken)
+            ?? throw new WebUntisUnavailableException("WebUntis returned an empty profile response.");
+        if (string.IsNullOrWhiteSpace(body.DisplayName))
+        {
+            return null;
+        }
+
+        var className = string.IsNullOrWhiteSpace(body.ClassName) ? null : body.ClassName.Trim();
+        return new WebUntisProfile(body.DisplayName.Trim(), className);
+    }
+
     private async Task<HttpResponseMessage> PostAsync<TBody>(string requestUri, TBody body, CancellationToken cancellationToken)
     {
         try
@@ -109,6 +131,8 @@ public sealed class WebUntisClient(HttpClient httpClient) : IWebUntisClient
             status,
             wire.StartTs,
             wire.EndTs);
+        
+        
     }
 
     private sealed record LoginRequestWire(
@@ -128,4 +152,7 @@ public sealed class WebUntisClient(HttpClient httpClient) : IWebUntisClient
         [property: JsonPropertyName("status")] string Status,
         [property: JsonPropertyName("start_ts")] DateTimeOffset StartTs,
         [property: JsonPropertyName("end_ts")] DateTimeOffset EndTs);
+        private sealed record ProfileWire(
+            [property: JsonPropertyName("display_name")] string? DisplayName,
+            [property: JsonPropertyName("class_name")] string? ClassName);
 }

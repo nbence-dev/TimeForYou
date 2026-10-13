@@ -63,3 +63,10 @@ export interface DeviceRegisterRequest {
 export interface UserSettings {
   change_alerts_enabled: boolean;
 }
+
+export interface Profile {
+  /** Null until the server's first poll has fetched it. */
+  display_name: string | null;
+  /** Null when WebUntis has no class for the student. */
+  class_name: string | null;
+}

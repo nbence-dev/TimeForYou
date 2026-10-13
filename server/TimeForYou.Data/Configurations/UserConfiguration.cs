@@ -43,5 +43,15 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
             .HasColumnName("change_alerts_enabled")
             .HasDefaultValue(true)
             .HasSentinel(true);
+
+        builder.Property(u => u.DisplayName)
+            .HasColumnName("display_name")
+            .HasMaxLength(200);
+
+        builder.Property(u => u.ClassName)
+            .HasColumnName("class_name")
+            .HasMaxLength(100);
     }
+
+    
 }

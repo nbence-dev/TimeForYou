@@ -362,13 +362,13 @@ however much history exists). The lesson to change is on a day the app shows.
 **Steps:**
 
 1. Sign in and open the **Settings** tab.
-2. Tap Change alerts, Calendar subscription, Linked devices and Help and FAQ.
+2. Tap Linked devices.
 
 **Expected:**
 
-- The screen shows Notifications, Calendar, Devices, Data and About sections and an **Unlink this
-  device** button. There is no profile card.
-- The four rows above are dimmed with a "Soon" tag, and tapping them does nothing.
+- The screen shows the profile card, then Notifications, Calendar, Devices, Data and About sections and an
+  **Unlink this device** button.
+- Linked devices is dimmed with a "Soon" tag, and tapping it does nothing.
 - Notification status shows On, Off, Not set up, Unavailable or Error to match this device. Version shows
   the app version.
 
@@ -443,6 +443,44 @@ however much history exists). The lesson to change is on a day the app shows.
 
 - Step 1 shows "You're offline…" with a **Try again** button, not a blank screen.
 - Step 2 shows the address.
+
+## Profile card and Help (#113)
+
+### PF-1 The profile card shows the student's name
+
+**Setup:** A linked device; the worker has polled at least once since linking.
+
+**Steps:**
+
+1. Open the **Settings** tab.
+
+**Expected:**
+
+- The card at the top shows the student's initials in a circle, and their name from WebUntis
+  (for the mock's demo student: "DS", "Demo Student").
+- "Sync status" shows a green "Synced HH:MM" pill, a red "Offline" or "Couldn't sync" pill, or a grey
+  "Syncing…" pill while a sync runs.
+
+### PF-2 Before the first poll
+
+**Setup:** Link a new device and open Settings straight away, before the worker has polled (or stop the
+`worker` container first).
+
+**Expected:**
+
+- The card shows a person icon, "Your profile" and "Your name appears after the first sync",
+  and fills in after the next poll and a reload.
+
+### HF-1 Help and FAQ
+
+**Steps:**
+
+1. In **Settings**, tap **Help and FAQ**.
+2. Tap the back arrow.
+
+**Expected:**
+
+- A Help and FAQ screen opens with the questions and answers; the back arrow returns to Settings.
 
 ### CS-3 One-tap add to Apple or Google Calendar (#112)
 

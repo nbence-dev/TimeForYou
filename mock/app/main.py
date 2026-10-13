@@ -31,6 +31,7 @@ from app.schemas import (
     LoginRequest,
     LoginResponse,
     MoveLessonRequest,
+    ProfileOut,
     QrPayload,
     SubjectOut,
 )
@@ -156,11 +157,17 @@ def get_timetable(
     range_end = end or (range_start + timedelta(days=6))
     return _materialize(student, range_start, range_end)
 
-
 @app.get("/subjects", response_model=list[SubjectOut])
 def get_subjects(authorization: str | None = Header(default=None)) -> list[SubjectOut]:
     student = _authenticate(authorization)
     return [SubjectOut(**subject) for subject in student["subjects"]]
+
+
+@app.get("/profile", response_model=ProfileOut)
+def get_profile(authorization: str | None = Header(default=None)) -> ProfileOut:
+    """The signed-in student's display name and class, as WebUntis shows them (#113)."""
+    student = _authenticate(authorization)
+    return ProfileOut(display_name=student["display_name"], class_name=student.get("class_name"))
 
 
 @app.get("/qr-payload", response_model=QrPayload)

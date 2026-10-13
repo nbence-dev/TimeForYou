@@ -328,6 +328,26 @@ paths:
           $ref: "#/components/responses/Unauthorized"
 
   /ics/{token}.ics:
+
+    /profile:
+    get:
+      operationId: getProfile
+      tags: [settings]
+      summary: Get the caller's name and class
+      description: |
+        The student's display name and class as WebUntis shows them, saved by the worker on each
+        poll. Both are null until the first poll has run, and `class_name` stays null when
+        WebUntis has no class for the student. Read-only: the profile comes from WebUntis.
+      responses:
+        "200":
+          description: The caller's profile.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Profile"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
     /settings:
     get:
       operationId: getSettings
@@ -617,3 +637,14 @@ components:
       properties:
         change_alerts_enabled:
           type: boolean
+
+    Profile:
+      type: object
+      required: [display_name, class_name]
+      properties:
+        display_name:
+          type: [string, "null"]
+          description: The student's name from WebUntis. Null before the first poll.
+        class_name:
+          type: [string, "null"]
+          description: The student's class or group from WebUntis. Null when there is none.

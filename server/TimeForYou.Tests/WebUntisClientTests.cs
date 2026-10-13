@@ -75,4 +75,18 @@ public sealed class WebUntisClientTests(SeamAFixture fixture)
         await Assert.ThrowsAsync<WebUntisCredentialsRejectedException>(() =>
             client.GetTimetableAsync(bogusSession, today, today.AddDays(7)));
     }
+
+        [Fact]
+    public async Task Profile_returns_the_students_name_and_class()
+    {
+        using var httpClient = new HttpClient { BaseAddress = new Uri(fixture.MockBaseUrl) };
+        var client = new WebUntisClient(httpClient);
+        var session = await client.LoginAsync(ValidCredentials);
+
+        var profile = await client.GetProfileAsync(session);
+
+        Assert.NotNull(profile);
+        Assert.Equal("Demo Student", profile.DisplayName);
+        Assert.Equal("ITMDA3-B34", profile.ClassName);
+    }
 }
