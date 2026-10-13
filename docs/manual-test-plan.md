@@ -250,22 +250,90 @@ each. The second scan gives a second token for the same user.
 - The input stops accepting characters at 500 and the counter reads "500 / 500". If a longer text
   somehow gets in, saving shows "A note can be at most 500 characters."
 
-### NT-4 A failed save keeps the text
+### NT-4 Saving offline keeps the note
 
 **Steps:**
 
-1. Open **Add note** and type "This text must survive a failed save".
-2. Take the device offline (airplane mode, or stop the `api` container when testing on the web).
-3. Tap **Save note**.
-4. Go back online and tap **Save note** again.
+1. Take the device offline (airplane mode, or stop the `api` container when testing on the web).
+2. Open **Add note**, type "This text must survive", tap **Save note**.
 
 **Expected:**
 
-- Step 3 shows "Couldn't reach the server. Your note is still here: try again when you're
-  online." and the typed text is still in the box.
-- Step 4 saves the note and returns to the lesson sheet, where it is listed.
-- With the device offline, opening a lesson's sheet shows the lesson but says the notes can't be
-  shown right now, with **Try again**. Notes are online only until the Week 4 offline queue.
+- The editor closes with no error and the note is listed straight away, marked "Waiting to sync".
+  The offline cases are in [Offline notes (#124)](#offline-notes-124).
+
+## Offline notes (#124)
+
+On the web, "offline" means `docker compose stop api` and "back online" means
+`docker compose start api`. Leave the app open in between.
+
+### NQ-1 Add, edit and delete offline
+
+**Setup:** A lesson with one note ("A") that was saved while online.
+
+**Steps:**
+
+1. Go offline and open the lesson's sheet.
+2. Tap **Add note**, type "B", tap **Save note**.
+3. Tap the pencil on "B", change it to "B edited", tap **Save note**.
+4. Tap the trash icon on "A", then **Delete**.
+
+**Expected:**
+
+- The sheet says "You're offline. Showing the notes saved on this device; changes sync when you're
+  back online."
+- After step 2, "B" is listed straight away with a cloud icon and "Waiting to sync".
+- After step 3 there is still one note "B edited" (not two), still "Waiting to sync".
+- After step 4, "A" is gone from the list.
+
+### NQ-2 Queued changes sync when back online, with no duplicates
+
+**Setup:** NQ-1 done, still offline.
+
+**Steps:**
+
+1. Go back online.
+2. Do any of: go back to the timetable and reopen the lesson, pull to refresh, switch to another
+   app or tab and come back, or reload.
+3. Repeat step 2 a few times.
+4. Open the same lesson on a second device (or a second browser profile) linked to the same student.
+
+**Expected:**
+
+- The offline line is gone and "Waiting to sync" disappears; "B edited" shows "Created just now".
+- "A" stays deleted, and there is exactly one "B edited" however many times step 2 is repeated.
+- The second device shows the same: one "B edited", no "A".
+
+### NQ-3 Signing out clears the queue
+
+**Steps:**
+
+1. Go offline and add a note "C". It shows "Waiting to sync".
+2. Sign out: on the web, run `localStorage.setItem('timeforyou.token', 'bad-token')` in the console
+   (the next request gets a 401), or tap **Unlink** in Settings.
+3. Go back online, reload, and link the same student again.
+4. Open the lesson.
+
+**Expected:**
+
+- After step 3 the scan screen shows.
+- After step 4 there is no "C" and nothing shows "Waiting to sync". "C" never reaches the server.
+
+### NQ-4 Last write wins
+
+**Setup:** Two devices linked to the same student, with a lesson note "D" visible on both.
+
+**Steps:**
+
+1. Take device B offline and change "D" to "from B".
+2. On device A (online) change "D" to "from A".
+3. Bring device B back online and let it sync, then reopen the sheet on both devices.
+
+**Expected:**
+
+- Both devices show "from B", the change that reached the server last.
+- If device A deletes "D" instead in step 2, B's queued edit is dropped when it syncs and the note
+  stays deleted on both devices. Nothing is stuck on "Waiting to sync".
 
 ## Changes screen (#71)
 

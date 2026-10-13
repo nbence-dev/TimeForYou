@@ -4,9 +4,10 @@ import { useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { api, ApiError, type Note } from '@/shared/api';
+import { ApiError } from '@/shared/api';
 import { Button } from '@/shared/components/button';
 import { StatusChip } from '@/shared/components/status-chip';
+import { saveNoteChange, type ShownNote } from '@/shared/sync/notes-outbox';
 import { announceSynced } from '@/shared/sync/synced';
 import { Font } from '@/shared/theme/fonts';
 import { Brand, Colors, MaxContentWidth, Radius, Spacing, Status } from '@/shared/theme/theme';
@@ -15,12 +16,15 @@ import { formatLessonWhen, formatNoteAge, noteErrorMessage } from './note-rules'
 import { useCachedLesson } from './use-cached-lesson';
 import { useLessonNotes } from './use-lesson-notes';
 
-/** A lesson and the student's notes on it: view, add, edit and delete (#73). Opens over the timetable. */
+/**
+ * A lesson and the student's notes on it: view, add, edit and delete (#73). Opens over the timetable.
+ * Works offline (#124): changes made without a connection show at once, marked "Waiting to sync".
+ */
 export function LessonDetailScreen({ lessonId }: { lessonId: string }) {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const lesson = useCachedLesson(lessonId);
-  const { notes, error, reload } = useLessonNotes(lessonId);
+  const { notes, offline, error, reload } = useLessonNotes(lessonId);
 
   const [confirming, setConfirming] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -41,8 +45,9 @@ export function LessonDetailScreen({ lessonId }: { lessonId: string }) {
     setDeleting(true);
     setDeleteError(null);
     try {
-      await api.deleteNote(noteId);
-      announceSynced(); // the card's note icon comes from the timetable, so refetch it
+      // Offline, the delete is kept and sent later; the note disappears from the list either way.
+      const result = await saveNoteChange({ kind: 'delete', id: noteId, lessonId });
+      if (result === 'sent') announceSynced(); // the card's note icon comes from the timetable
       setConfirming(null);
       await reload();
     } catch (failure) {
@@ -91,6 +96,12 @@ export function LessonDetailScreen({ lessonId }: { lessonId: string }) {
           <Ionicons name="document-text-outline" size={18} color={Brand.navy} />
           <Text style={styles.sectionLabel}>MY NOTES</Text>
         </View>
+
+        {offline && notes ? (
+          <Text style={styles.offlineText}>
+            You&apos;re offline. Showing the notes saved on this device; changes sync when you&apos;re back online.
+          </Text>
+        ) : null}
 
         {error ? (
           <View style={styles.notice} accessibilityRole="alert">
@@ -147,7 +158,7 @@ function NoteCard({
   onCancelDelete,
   onConfirmDelete,
 }: {
-  note: Note;
+  note: ShownNote;
   now: Date;
   confirming: boolean;
   busy: boolean;
@@ -170,9 +181,16 @@ function NoteCard({
           </Pressable>
         </View>
       </View>
-      <Text style={styles.noteMeta}>
-        {age ? `Created ${age} · ` : ''}Private to you
-      </Text>
+      {note.pending ? (
+        <View style={styles.pendingRow}>
+          <Ionicons name="cloud-upload-outline" size={14} color={Status.changed.text} />
+          <Text style={styles.pendingText}>Waiting to sync</Text>
+        </View>
+      ) : (
+        <Text style={styles.noteMeta}>
+          {age ? `Created ${age} · ` : ''}Private to you
+        </Text>
+      )}
       {confirming ? (
         <View style={styles.confirmRow} accessibilityRole="alert">
           <Text style={styles.confirmText}>Delete this note?</Text>
@@ -208,6 +226,7 @@ const styles = StyleSheet.create({
   },
   sectionHeading: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two, marginTop: Spacing.two },
   sectionLabel: { fontFamily: Font.textBold, fontSize: 14, letterSpacing: 0.5, color: Brand.navy },
+  offlineText: { fontFamily: Font.text, fontSize: 13, color: Colors.light.textSecondary },
   list: { gap: Spacing.three },
   card: {
     gap: Spacing.two,
@@ -221,6 +240,8 @@ const styles = StyleSheet.create({
   noteBody: { flex: 1, fontFamily: Font.text, fontSize: 16, color: Colors.light.text },
   cardIcons: { flexDirection: 'row', gap: Spacing.three },
   noteMeta: { fontFamily: Font.label, fontSize: 12, color: Colors.light.textSecondary },
+  pendingRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.one },
+  pendingText: { fontFamily: Font.labelSemiBold, fontSize: 12, color: Status.changed.text },
   confirmRow: { gap: Spacing.two, paddingTop: Spacing.two },
   confirmText: { fontFamily: Font.textSemiBold, fontSize: 14, color: Status.cancelled.text },
   confirmButtons: { flexDirection: 'row', gap: Spacing.two },

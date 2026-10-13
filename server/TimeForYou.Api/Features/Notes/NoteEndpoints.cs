@@ -17,7 +17,10 @@ public sealed record NoteResponse(
     [property: JsonPropertyName("updated_at")] DateTimeOffset UpdatedAt);
 
 /// <summary>docs/openapi.yaml `#/components/schemas/NoteWriteRequest`. Nullable so a missing property is a 400, not a 500.</summary>
-public sealed record NoteWriteRequest([property: JsonPropertyName("body")] string? Body);
+public sealed record NoteWriteRequest(
+    [property: JsonPropertyName("body")] string? Body,
+    // Create only (#124): the app can choose the note's id, so a retried create can't add a second note.
+    [property: JsonPropertyName("id")] Guid? Id = null);
 
 /// <summary>
 /// Notes CRUD (#35). Notes belong to the user, not the device; a lesson or note that isn't the
@@ -69,7 +72,7 @@ public static class NoteEndpoints
         return Results.Ok(notes.Select(ToResponse));
     }
 
-    private static async Task<IResult> CreateAsync(
+        private static async Task<IResult> CreateAsync(
         Guid lessonId,
         NoteWriteRequest? request,
         ClaimsPrincipal caller,
@@ -88,15 +91,34 @@ public static class NoteEndpoints
             return error;
         }
 
+        // An id chosen by the app (#124) makes a retried create safe: if an earlier attempt already
+        // saved this note (and only its reply was lost), return that note instead of adding another.
+        var clientId = request!.Id is { } id && id != Guid.Empty ? id : (Guid?)null;
+        if (clientId is not null)
+        {
+            var existing = await db.Notes.AsNoTracking().SingleOrDefaultAsync(n => n.Id == clientId, cancellationToken);
+            if (existing is not null)
+            {
+                return existing.UserId == userId && existing.LessonId == lessonId
+                    ? Results.Ok(ToResponse(existing))
+                    : Results.Conflict(new ErrorResponse("A note with this id already exists."));
+            }
+        }
+
         var now = clock.GetUtcNow();
         var note = new Note
         {
             UserId = userId,
             LessonId = lessonId,
-            Body = request!.Body!,
+            Body = request.Body!,
             CreatedAt = now,
             UpdatedAt = now,
         };
+        if (clientId is { } chosen)
+        {
+            note.Id = chosen;
+        }
+
         db.Notes.Add(note);
         await db.SaveChangesAsync(cancellationToken);
 

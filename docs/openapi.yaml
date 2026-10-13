@@ -156,7 +156,11 @@ paths:
     post:
       operationId: createNote
       tags: [notes]
-      summary: Attach a new note to a lesson
+            summary: Attach a new note to a lesson
+      description: |
+        The app may send its own `id` (a UUID) so a create can be retried safely, e.g. after a reply
+        was lost while offline. If a note with that `id` already belongs to the caller on this
+        lesson, it is returned with 200 and nothing new is created.
       requestBody:
         required: true
         content:
@@ -164,6 +168,12 @@ paths:
             schema:
               $ref: "#/components/schemas/NoteWriteRequest"
       responses:
+        "200":
+          description: A retry with an `id` that was already saved; the existing note.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Note"
         "201":
           description: Note created.
           content:
@@ -180,6 +190,12 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "404":
           description: No lesson with this id belongs to the caller.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: The `id` is already used by a note that isn't this caller's on this lesson.
           content:
             application/json:
               schema:
@@ -606,6 +622,11 @@ components:
           minLength: 1
           maxLength: 500
           description: Non-empty, max 500 characters (brief FR-33).
+    
+            id:
+          type: string
+          format: uuid
+          description: Create only, optional. A UUID chosen by the app so a retried create is not saved twice. Ignored on update.
 
     Device:
       type: object
