@@ -19,6 +19,12 @@ public class LessonSnapshot
 
     public string? Room { get; set; }
 
+    /// <summary>Display-only, like <see cref="Lecturer"/>: never diffed, never notifies (#49).</summary>
+    public string? Group { get; set; }
+
+    /// <summary>"online" or "in_person". Display-only (#49).</summary>
+    public string? Mode { get; set; }
+
     public DateTimeOffset StartTs { get; set; }
 
     public DateTimeOffset EndTs { get; set; }

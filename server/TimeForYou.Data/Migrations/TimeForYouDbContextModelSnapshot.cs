@@ -159,9 +159,17 @@ namespace TimeForYou.Data.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("end_ts");
 
+                    b.Property<string>("Group")
+                        .HasColumnType("text")
+                        .HasColumnName("group_name");
+
                     b.Property<string>("Lecturer")
                         .HasColumnType("text")
                         .HasColumnName("lecturer");
+
+                    b.Property<string>("Mode")
+                        .HasColumnType("text")
+                        .HasColumnName("mode");
 
                     b.Property<string>("Room")
                         .HasColumnType("text")

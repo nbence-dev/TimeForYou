@@ -219,6 +219,9 @@ function LessonRow({ lesson, now, isToday }: { lesson: Lesson; now: Date; isToda
         title={lesson.subject}
         room={lesson.room}
         teacher={lesson.lecturer}
+        group={lesson.group}
+        mode={lesson.mode}
+        hasNote={lesson.has_note}
         unseen={unseenLessonIds.has(lesson.id)}
         onPress={() => {
           markLessonSeen(lesson.id); // opening a lesson is seeing its changes

@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel
 
@@ -18,7 +19,10 @@ class LessonOut(BaseModel):
     untis_lesson_id: str
     subject_code: str
     subject_name: str
-    room: str
+    room: str | None  # None while the lesson is online
+    lecturer: str
+    group: str
+    mode: Literal["online", "in_person"]  # display-only, never diffed (issue #49)
     status: str
     start_ts: datetime
     end_ts: datetime

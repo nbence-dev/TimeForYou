@@ -33,6 +33,12 @@ public class LessonSnapshotConfiguration : IEntityTypeConfiguration<LessonSnapsh
         builder.Property(l => l.Room)
             .HasColumnName("room");
 
+        builder.Property(l => l.Group)
+            .HasColumnName("group_name");
+
+        builder.Property(l => l.Mode)
+            .HasColumnName("mode");
+
         builder.Property(l => l.StartTs)
             .HasColumnName("start_ts")
             .IsRequired();

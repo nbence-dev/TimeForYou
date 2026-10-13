@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api, ApiError, type Note } from '@/shared/api';
 import { Button } from '@/shared/components/button';
 import { StatusChip } from '@/shared/components/status-chip';
+import { announceSynced } from '@/shared/sync/synced';
 import { Font } from '@/shared/theme/fonts';
 import { Brand, Colors, MaxContentWidth, Radius, Spacing, Status } from '@/shared/theme/theme';
 
@@ -41,6 +42,7 @@ export function LessonDetailScreen({ lessonId }: { lessonId: string }) {
     setDeleteError(null);
     try {
       await api.deleteNote(noteId);
+      announceSynced(); // the card's note icon comes from the timetable, so refetch it
       setConfirming(null);
       await reload();
     } catch (failure) {
