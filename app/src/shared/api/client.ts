@@ -9,6 +9,7 @@ import type {
   DeviceRegisterRequest,
   Lesson,
   Note,
+  Profile,
   QrScanRequest,
   QrScanResponse,
   UserSettings,
@@ -133,6 +134,8 @@ export const api = {
   getCalendar: () => request<CalendarFeed>('/calendar'),
   
   getSettings: () => request<UserSettings>('/settings'),
+  
+  getProfile: () => request<Profile>('/profile'),
 
   /** Saves the given settings for the user (every device they have linked) and returns them all. */
   updateSettings: (changes: UserSettings) =>

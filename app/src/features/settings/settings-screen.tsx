@@ -1,10 +1,11 @@
+import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { api, NetworkError, onUnauthorized, UnauthorizedError } from '@/shared/api';
+import { api, NetworkError, onUnauthorized, UnauthorizedError, type Profile } from '@/shared/api';
 import { Button } from '@/shared/components/button';
 import { syncPush, type PushState } from '@/shared/push';
 import { changesStore, lessonCache } from '@/shared/storage';
@@ -24,11 +25,44 @@ const NOTIFICATION_LABEL: Record<PushState, string> = {
   unsupported: 'Unavailable',
 };
 
+type SyncTone = 'ok' | 'problem' | 'busy';
+
+/** The "Sync status" pill on the profile card, by how the last sync went. */
+const SYNC_PILL: Record<SyncTone, { bg: string; border: string; fg: string; dot: string }> = {
+  ok: { bg: Status.onTime.bg, border: Status.onTime.border, fg: Status.onTime.text, dot: Status.onTime.strip },
+  problem: {
+    bg: Status.cancelled.bg,
+    border: Status.cancelled.border,
+    fg: Status.cancelled.text,
+    dot: Status.cancelled.strip,
+  },
+  busy: {
+    bg: Colors.light.backgroundElement,
+    border: Colors.light.backgroundSelected,
+    fg: Colors.light.textSecondary,
+    dot: Colors.light.textSecondary,
+  },
+};
+
+/** "09:41". */
+function formatClock(date: Date): string {
+  return date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+}
+
 /** "Wed 14 Oct 09:41". */
 function formatSynced(date: Date): string {
   const day = date.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
-  const time = date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
-  return `${day} ${time}`;
+  return `${day} ${formatClock(date)}`;
+}
+
+/** "Nicholas Bence" -> "NB". */
+function initials(name: string): string {
+  return name
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((word) => word.charAt(0).toUpperCase())
+    .join('');
 }
 
 /**
@@ -42,6 +76,8 @@ export function SettingsScreen() {
   const [syncing, setSyncing] = useState(true);
   const [syncedAt, setSyncedAt] = useState<Date | null>(null);
   const [problem, setProblem] = useState<'offline' | 'failed' | null>(null);
+  // The student's name from WebUntis (#113). Null until loaded, or if it can't be.
+  const [profile, setProfile] = useState<Profile | null>(null);
   // "Change alerts" (#110): null until the server says. Saved on the user, so it covers every device.
   const [alerts, setAlerts] = useState<boolean | null>(null);
   const [savingAlerts, setSavingAlerts] = useState(false);
@@ -104,6 +140,22 @@ export function SettingsScreen() {
     };
   }, []);
 
+  // On every visit, not just the first mount: the worker fills the name in on its own schedule, so a
+  // student who just linked sees it on their next look at Settings. A failure leaves the card as it
+  // was; the rest of Settings still works.
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+      api.getProfile().then(
+        (loaded) => !cancelled && setProfile(loaded),
+        () => undefined,
+      );
+      return () => {
+        cancelled = true;
+      };
+    }, []),
+  );
+
   useEffect(() => {
     let cancelled = false;
     api.getSettings().then(
@@ -151,6 +203,15 @@ export function SettingsScreen() {
   }
 
   const syncChip = problem === 'offline' ? 'Offline' : problem ? "Couldn't sync" : syncedAt ? 'Synced' : '';
+  const syncTone: SyncTone = problem ? 'problem' : syncing || !syncedAt ? 'busy' : 'ok';
+  const syncLabel =
+    problem === 'offline'
+      ? 'Offline'
+      : problem
+        ? "Couldn't sync"
+        : syncing || !syncedAt
+          ? 'Syncing…'
+          : `Synced ${formatClock(syncedAt)}`;
 
   return (
     <ScrollView
@@ -160,6 +221,8 @@ export function SettingsScreen() {
         <Text style={styles.title} accessibilityRole="header">
           Settings
         </Text>
+
+        <ProfileCard profile={profile} syncTone={syncTone} syncLabel={syncLabel} />
 
         <Section label="Notifications">
           <ToggleRow
@@ -208,13 +271,58 @@ export function SettingsScreen() {
         </Section>
 
         <Section label="About">
-          <Row icon="help-circle-outline" title="Help and FAQ" soon />
+          <Row icon="help-circle-outline" title="Help and FAQ" arrow onPress={() => router.push('/help')} />
           <Row icon="information-circle-outline" title="Version" value={Constants.expoConfig?.version ?? ''} />
         </Section>
 
         <UnlinkDevice />
       </View>
     </ScrollView>
+  );
+}
+
+/** Who is signed in (#113): name from WebUntis, and how the last sync went. */
+function ProfileCard({
+  profile,
+  syncTone,
+  syncLabel,
+}: {
+  profile: Profile | null;
+  syncTone: SyncTone;
+  syncLabel: string;
+}) {
+  const name = profile?.display_name ?? null;
+  const pill = SYNC_PILL[syncTone];
+  return (
+    <View style={styles.profile}>
+      <View style={styles.profileTop}>
+        <View style={styles.avatar}>
+          {name ? (
+            <Text style={styles.avatarText}>{initials(name)}</Text>
+          ) : (
+            <Ionicons name="person-outline" size={26} color={Brand.white} />
+          )}
+        </View>
+        <View style={styles.profileText}>
+          <Text style={styles.profileName} numberOfLines={1}>
+            {name ?? 'Your profile'}
+          </Text>
+          {!name && (
+            <Text style={styles.profileClass} numberOfLines={2}>
+              Your name appears after the first sync.
+            </Text>
+          )}
+        </View>
+      </View>
+      <View style={styles.divider} />
+      <View style={styles.syncRow}>
+        <Text style={styles.syncLabel}>Sync status</Text>
+        <View style={[styles.pill, { backgroundColor: pill.bg, borderColor: pill.border }]}>
+          <View style={[styles.pillDot, { backgroundColor: pill.dot }]} />
+          <Text style={[styles.pillText, { color: pill.fg }]}>{syncLabel}</Text>
+        </View>
+      </View>
+    </View>
   );
 }
 
@@ -275,6 +383,42 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: Spacing.three, paddingBottom: Spacing.four, alignItems: 'center' },
   column: { width: '100%', maxWidth: MaxContentWidth, gap: Spacing.three },
   title: { fontFamily: Font.textBold, fontSize: 24, color: Brand.navy },
+
+  profile: {
+    gap: Spacing.three,
+    padding: Spacing.three,
+    borderRadius: Radius.card,
+    borderWidth: 1,
+    borderColor: Brand.border,
+    backgroundColor: Brand.white,
+  },
+  profileTop: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
+  avatar: {
+    width: 56,
+    height: 56,
+    borderRadius: Radius.pill,
+    backgroundColor: Brand.navy,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarText: { fontFamily: Font.textBold, fontSize: 20, color: Brand.white },
+  profileText: { flex: 1, gap: Spacing.half },
+  profileName: { fontFamily: Font.textBold, fontSize: 20, color: Brand.navy },
+  profileClass: { fontFamily: Font.label, fontSize: 14, color: Colors.light.textSecondary },
+  divider: { height: 1, backgroundColor: Brand.border },
+  syncRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: Spacing.two },
+  syncLabel: { fontFamily: Font.text, fontSize: 14, color: Colors.light.textSecondary },
+  pill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.one,
+    borderRadius: Radius.pill,
+    borderWidth: 1,
+  },
+  pillDot: { width: 8, height: 8, borderRadius: Radius.pill },
+  pillText: { fontFamily: Font.labelSemiBold, fontSize: 13, fontVariant: ['tabular-nums'] },
 
   alertsError: {
     fontFamily: Font.textSemiBold,

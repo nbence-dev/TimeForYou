@@ -272,6 +272,11 @@ namespace TimeForYou.Data.Migrations
                         .HasDefaultValue(true)
                         .HasColumnName("change_alerts_enabled");
 
+                    b.Property<string>("ClassName")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("class_name");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
@@ -282,6 +287,11 @@ namespace TimeForYou.Data.Migrations
                         .IsRequired()
                         .HasColumnType("text")
                         .HasColumnName("credentials_protected");
+
+                    b.Property<string>("DisplayName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("display_name");
 
                     b.Property<string>("School")
                         .IsRequired()

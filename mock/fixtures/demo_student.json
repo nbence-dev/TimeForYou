@@ -5,6 +5,7 @@
   "key": "MOCK-QR-SECRET-0001",
   "display_name": "Demo Student",
   "block_start": "2026-10-12",
+  "class_name": "ITMDA3-B34",
   "subjects": [
     { "id": 1, "code": "ITMDA3", "name": "IT Major Design & Analysis 3" },
     { "id": 2, "code": "PROG300", "name": "Programming 300" },

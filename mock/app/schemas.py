@@ -48,3 +48,7 @@ class MoveLessonRequest(BaseModel):
 
 class ChangeRoomRequest(BaseModel):
     room: str
+
+class ProfileOut(BaseModel):
+    display_name: str
+    class_name: str | None = None

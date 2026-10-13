@@ -18,6 +18,12 @@ public class User
     /// </summary>
     public bool ChangeAlertsEnabled { get; set; } = true;
 
+    /// <summary>The student's name as WebUntis shows it (#113). Null until a poll has fetched it.</summary>
+    public string? DisplayName { get; set; }
+
+    /// <summary>The student's class or group in WebUntis (#113). Null when WebUntis has none.</summary>
+    public string? ClassName { get; set; }
+
     /// <summary>
     /// SHA-256 of the normalised `(school, user)` pair. <see cref="CredentialsProtected"/> is
     /// non-deterministic ciphertext and can't be searched, so a second device scanning the same

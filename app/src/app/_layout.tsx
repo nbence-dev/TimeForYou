@@ -34,6 +34,7 @@ function Routes() {
           <Stack.Protected guard={signedIn === true && !showingInstallGuide}>
             <Stack.Screen name="(tabs)" />
             <Stack.Screen name="calendar" />
+            <Stack.Screen name="help" />
             <Stack.Screen name="lesson/[id]" options={{ presentation: 'modal' }} />
             <Stack.Screen name="note/[lessonId]" options={{ presentation: 'modal' }} />
           </Stack.Protected>

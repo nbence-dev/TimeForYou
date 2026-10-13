@@ -19,4 +19,13 @@ public interface IWebUntisClient
         DateOnly from,
         DateOnly to,
         CancellationToken cancellationToken = default);
+
+        /// <summary>
+    /// The signed-in student's display name and class (#113), or null when WebUntis doesn't offer
+    /// them. The default returns null, so a client that can't fetch a profile needn't implement it.
+    /// </summary>
+    /// <exception cref="WebUntisCredentialsRejectedException">The session is unknown or expired.</exception>
+    /// <exception cref="WebUntisUnavailableException">WebUntis could not be reached.</exception>
+    Task<WebUntisProfile?> GetProfileAsync(WebUntisSession session, CancellationToken cancellationToken = default) =>
+        Task.FromResult<WebUntisProfile?>(null);
 }
