@@ -243,9 +243,14 @@ def restore_lesson(lesson_id: str) -> LessonOut:
 
 @app.get("/mock/lessons", response_model=list[LessonOut])
 def list_lessons() -> list[LessonOut]:
-    """Upcoming lessons for the demo student, so the /demo page needs no login."""
+    """Upcoming lessons for the demo student, so the /demo page needs no login.
+
+    Runs to the end of the same 7-week window the worker polls (Monday of this week + 49 days), so
+    every lesson the app can show can be changed from the page.
+    """
     today = datetime.now(SAST).date()
-    lessons = _materialize(_demo_student(), today, today + timedelta(days=14))
+    window_end = _week_monday(today) + timedelta(days=7 * 7 - 1)
+    lessons = _materialize(_demo_student(), today, window_end)
     return sorted(lessons, key=lambda lesson: lesson.start_ts)
 
 
