@@ -7,7 +7,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { api, NetworkError, onUnauthorized, UnauthorizedError, type Profile } from '@/shared/api';
 import { Button } from '@/shared/components/button';
-import { syncPush, type PushState } from '@/shared/push';
+import { usePushState } from '@/shared/push/push-state';
+import type { PushState } from '@/shared/push/types';
 import { changesStore, lessonCache } from '@/shared/storage';
 import { sortLessonsByStart } from '@/shared/storage/sort-lessons';
 import { announceSynced } from '@/shared/sync/synced';
@@ -72,7 +73,7 @@ function initials(name: string): string {
 export function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const [push, setPush] = useState<PushState>('checking');
+  const push = usePushState();
   const [syncing, setSyncing] = useState(true);
   const [syncedAt, setSyncedAt] = useState<Date | null>(null);
   const [problem, setProblem] = useState<'offline' | 'failed' | null>(null);
@@ -127,18 +128,6 @@ export function SettingsScreen() {
       stopListening();
     };
   }, [sync]);
-
-  useEffect(() => {
-    let cancelled = false;
-    // Never prompts: it only reports the state (and refreshes the token if already allowed).
-    syncPush().then(
-      (state) => !cancelled && setPush(state),
-      () => !cancelled && setPush('failed'),
-    );
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   // On every visit, not just the first mount: the worker fills the name in on its own schedule, so a
   // student who just linked sees it on their next look at Settings. A failure leaves the card as it

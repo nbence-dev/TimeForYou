@@ -44,6 +44,23 @@ device with the backend running and the mock reset (`POST /mock/reset`).
 - Once lessons are available, the screen replaces the empty state with this week's lessons
   within a few seconds, with no reload or restart.
 
+### TT-3 Lessons refresh after a change (#130)
+
+**Setup:** A linked device with push working, on Timetable (then repeat on Today). The demo page
+from #103 open on the laptop.
+
+**Steps:**
+1. In the demo page, change the end time of a lesson that is on screen, then **Nudge now**.
+2. Without reloading or pulling down, wait for the push.
+3. Repeat, but this time put the app in the background (or switch to another tab) before the
+   nudge, and bring it back afterwards.
+4. Repeat once more with the API stopped, then bring the app back.
+
+**Expected:**
+- Steps 2 and 3: the lesson shows its new end time and the Changes badge appears, with no manual
+  refresh.
+- Step 4: the lessons stay on screen. They are not replaced by an error state.
+
 ## Add to Home Screen (#67)
 
 A2HS-1 and A2HS-3 need a real iPhone: iOS only opens the app full-screen (and delivers Web Push)
@@ -120,8 +137,10 @@ Needs a real iPhone (iOS 16.4+) with the PWA added to the Home Screen, the Fireb
 
 **Steps:** Open the installed PWA, tap "Turn on notifications", allow.
 
-**Expected:** The strip disappears and `devices` holds one `web_push` row for the user. Reopening
-the app does not add a second row.
+**Expected:** The strip disappears without tapping its ✕, Settings → Notification status reads
+"On" without reloading, and `devices` holds one `web_push` row for the user. Reopening the app
+does not add a second row. If the red "Notifications are off. Add TimeForYou to your Home Screen"
+banner (A2HS-2) was showing, it goes away too once notifications are on.
 
 ### PUSH-2 Denied permission
 
