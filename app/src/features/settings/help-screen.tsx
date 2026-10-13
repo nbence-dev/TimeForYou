@@ -44,8 +44,8 @@ const FAQ: readonly { question: string; answer: string }[] = [
       'Yes. Open Calendar subscription in Settings and copy your link into Google Calendar or Apple Calendar. Keep the link private: anyone with it can see your timetable.',
   },
   {
-    question: 'Where do my name and class come from?',
-    answer: 'From WebUntis. If they are wrong, they need to be fixed in WebUntis; the app updates on its next sync.',
+    question: 'Where does my name come from?',
+    answer: 'From WebUntis. If it is wrong, it needs to be fixed in WebUntis; the app updates on its next sync.',
   },
   {
     question: 'How do I sign out?',

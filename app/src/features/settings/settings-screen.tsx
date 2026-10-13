@@ -76,7 +76,7 @@ export function SettingsScreen() {
   const [syncing, setSyncing] = useState(true);
   const [syncedAt, setSyncedAt] = useState<Date | null>(null);
   const [problem, setProblem] = useState<'offline' | 'failed' | null>(null);
-  // The student's name and class from WebUntis (#113). Null until loaded, or if it can't be.
+  // The student's name from WebUntis (#113). Null until loaded, or if it can't be.
   const [profile, setProfile] = useState<Profile | null>(null);
   // "Change alerts" (#110): null until the server says. Saved on the user, so it covers every device.
   const [alerts, setAlerts] = useState<boolean | null>(null);
@@ -277,7 +277,7 @@ export function SettingsScreen() {
   );
 }
 
-/** Who is signed in (#113): name and class from WebUntis, and how the last sync went. */
+/** Who is signed in (#113): name from WebUntis, and how the last sync went. */
 function ProfileCard({
   profile,
   syncTone,
@@ -303,9 +303,11 @@ function ProfileCard({
           <Text style={styles.profileName} numberOfLines={1}>
             {name ?? 'Your profile'}
           </Text>
-          <Text style={styles.profileClass} numberOfLines={2}>
-            {name ? (profile?.class_name ?? 'No class in WebUntis') : 'Your name and class appear after the first sync.'}
-          </Text>
+          {!name && (
+            <Text style={styles.profileClass} numberOfLines={2}>
+              Your name appears after the first sync.
+            </Text>
+          )}
         </View>
       </View>
       <View style={styles.divider} />
