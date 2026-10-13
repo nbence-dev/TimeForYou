@@ -174,6 +174,26 @@ banner (A2HS-2) was showing, it goes away too once notifications are on.
 grouped push to the device. Step 6 shows an error in the banner, not a silent failure. Over the public
 hostnames, `/demo` does not return the page.
 
+### DEMO-2 One timetable per developer, and guests (#129)
+
+**Setup:** Stack up, `/demo` open on the LAN, the PWA installed on two phones with notifications on.
+
+**Steps:**
+
+1. In the **Student** dropdown pick a developer (their GitHub handle). Confirm the lesson list and the
+   QR code change. Pick a different developer and confirm the timetable differs.
+2. On phone A, scan the QR code of one developer (**Scan** in the app's onboarding).
+3. In **Add a guest** type a name and surname and press **Create**. Confirm the guest is selected and
+   a QR code appears.
+4. On phone B, scan the guest's QR code. Open Settings, copy the calendar link and add it to a
+   calendar app.
+5. With the guest selected, **Cancel** a lesson, then press **Nudge now**.
+6. Select the developer linked on phone A and confirm their lessons are untouched.
+
+**Expected:** Phone B shows the guest's own timetable and receives one grouped push; phone A receives
+nothing. The calendar feed on phone B shows the cancelled lesson as cancelled. Guests live in memory:
+restarting `mock` removes them.
+
 ## Android native push (#70)
 
 Needs a real Android phone running the Expo build (`npx expo run:android` with the device attached,
@@ -641,6 +661,46 @@ public address, so `localhost` proves nothing.
 
 **Still to run by hand:** steps 2 to 5 (a real feed over mobile data, Apple Calendar, Google Calendar and
 the cancelled-lesson refresh).
+
+## Linked devices (#111)
+
+### LD-1 The list of my devices
+
+**Steps:**
+
+1. Link two devices to the same student (scan the same QR on both, or scan twice in a browser). On one
+   of them allow notifications.
+2. On the first device open **Settings → Linked devices**. Then open the same screen on the second.
+
+**Expected:**
+
+- Both devices are listed, and only those: never another student's. The device you are on is first and
+  has a **This device** tag, and the tag moves when you open the screen on the other device.
+- Each shows its platform (**Android app** or **Web app**), **Notifications on** or **off**, and when it
+  was last active ("just now" for the one you are on).
+- A short **Link another device** note says to scan the same WebUntis QR code on the new device.
+
+### LD-2 An unlinked device leaves the list
+
+**Steps:**
+
+1. On the second device tap **Settings → Unlink this device** and confirm.
+2. On the first device open **Linked devices** again.
+
+**Expected:**
+
+- Only the first device is listed now.
+
+### LD-3 Offline
+
+**Steps:**
+
+1. Stop the `api` container and open **Linked devices**. Start it again and tap **Try again**.
+
+**Expected:**
+
+- A message says you're offline, with a **Try again** button, not a blank screen. After Try again the
+  devices are listed.
 
 ## Changes archive (#138)
 

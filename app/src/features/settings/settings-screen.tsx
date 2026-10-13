@@ -245,7 +245,7 @@ export function SettingsScreen() {
         </Section>
 
         <Section label="Devices">
-          <Row icon="phone-portrait-outline" title="Linked devices" soon />
+          <Row icon="phone-portrait-outline" title="Linked devices" arrow onPress={() => router.push('/devices')} />
         </Section>
 
         <Section label="Data">

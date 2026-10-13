@@ -1,0 +1,121 @@
+{
+  "server": "mock.timeforyou.local",
+  "school": "eduvos-demo",
+  "user": "stefanroux501",
+  "key": "MOCK-QR-SECRET-0004",
+  "display_name": "stefanroux501",
+  "block_start": "2026-10-12",
+  "class_name": "ITMDA3-B34",
+  "subjects": [
+    {
+      "id": 1,
+      "code": "ITMDA3",
+      "name": "IT Major Design & Analysis 3"
+    },
+    {
+      "id": 2,
+      "code": "PROG300",
+      "name": "Programming 300"
+    },
+    {
+      "id": 3,
+      "code": "NETW300",
+      "name": "Networks 300"
+    },
+    {
+      "id": 4,
+      "code": "DBAS300",
+      "name": "Database Application Systems 300"
+    }
+  ],
+  "lessons": [
+    {
+      "id": 4001,
+      "subject_id": 3,
+      "weekday": 2,
+      "start_time": "08:00",
+      "end_time": "09:30",
+      "room": "Lab 1",
+      "status": "scheduled",
+      "lecturer": "Ms L. Dlamini",
+      "group": "Group 1"
+    },
+    {
+      "id": 4002,
+      "subject_id": 4,
+      "weekday": 2,
+      "start_time": "16:30",
+      "end_time": "17:30",
+      "room": "D15",
+      "status": "scheduled",
+      "lecturer": "Dr P. van Wyk",
+      "group": "Group 2"
+    },
+    {
+      "id": 4003,
+      "subject_id": 1,
+      "weekday": 3,
+      "start_time": "13:00",
+      "end_time": "14:30",
+      "room": "A04",
+      "status": "scheduled",
+      "lecturer": "Dr A. Naidoo",
+      "group": "Group 1"
+    },
+    {
+      "id": 4004,
+      "subject_id": 2,
+      "weekday": 3,
+      "start_time": "16:30",
+      "end_time": "17:30",
+      "room": "B12",
+      "status": "scheduled",
+      "lecturer": "Mr T. Botha",
+      "group": "Group 2"
+    },
+    {
+      "id": 4005,
+      "subject_id": 3,
+      "weekday": 4,
+      "start_time": "08:00",
+      "end_time": "09:30",
+      "room": "Lab 2",
+      "status": "scheduled",
+      "lecturer": "Ms L. Dlamini",
+      "group": "Group 1"
+    },
+    {
+      "id": 4006,
+      "subject_id": 4,
+      "weekday": 4,
+      "start_time": "16:30",
+      "end_time": "17:30",
+      "room": "C07",
+      "status": "scheduled",
+      "lecturer": "Dr P. van Wyk",
+      "group": "Group 2"
+    },
+    {
+      "id": 4007,
+      "subject_id": 1,
+      "weekday": 0,
+      "start_time": "13:00",
+      "end_time": "14:30",
+      "room": "Lab 1",
+      "status": "scheduled",
+      "lecturer": "Dr A. Naidoo",
+      "group": "Group 1"
+    },
+    {
+      "id": 4008,
+      "subject_id": 2,
+      "weekday": 0,
+      "start_time": "16:30",
+      "end_time": "17:30",
+      "room": "D15",
+      "status": "scheduled",
+      "lecturer": "Mr T. Botha",
+      "group": "Group 2"
+    }
+  ]
+}

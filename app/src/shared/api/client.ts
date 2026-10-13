@@ -8,6 +8,7 @@ import type {
   Device,
   DeviceRegisterRequest,
   Lesson,
+  LinkedDevice,
   Note,
   Profile,
   QrScanRequest,
@@ -157,6 +158,9 @@ export const api = {
 
   /** Replaces the calendar link: the old one stops working at once. Returns the new one. */
   resetCalendar: () => request<CalendarFeed>('/calendar/reset', { method: 'POST' }),
+
+  /** The student's own devices, this one first. */
+  listDevices: () => request<LinkedDevice[]>('/devices'),
 
   registerDevice: (payload: DeviceRegisterRequest) =>
     request<Device>('/devices', { method: 'POST', body: payload }),
