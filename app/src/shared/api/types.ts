@@ -43,6 +43,18 @@ export interface ChangeLogEntry {
   detected_at: string;
 }
 
+/** One of the student's own devices, from `GET /devices`. Never carries the push token. */
+export interface LinkedDevice {
+  id: string;
+  /** `null` until the device first registers for push. */
+  platform: DevicePlatform | null;
+  notifications_on: boolean;
+  created_at: string;
+  last_seen_at: string;
+  /** True for the device making the request. */
+  is_current: boolean;
+}
+
 export interface CalendarFeed {
   url: string;
 }

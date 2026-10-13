@@ -272,6 +272,26 @@ paths:
                 $ref: "#/components/schemas/Error"
         "401":
           $ref: "#/components/responses/Unauthorized"
+    get:
+      operationId: listDevices
+      tags: [devices]
+      summary: List the caller's own devices
+      description: |
+        The devices linked to the caller's user, this one first and then the most recently active.
+        Only the caller's own devices are ever returned, never another student's. The push token is
+        not included, only whether notifications are on for the device. A device has no `platform`
+        and no notifications until its first `POST /devices`.
+      responses:
+        "200":
+          description: The caller's devices.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LinkedDevice"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
     delete:
       operationId: unlinkDevice
       tags: [devices]
@@ -624,6 +644,33 @@ components:
         created_at:
           type: string
           format: date-time
+
+    LinkedDevice:
+      type: object
+      description: One of the caller's own devices, as listed by `GET /devices`. Carries no push token.
+      required: [id, platform, notifications_on, created_at, last_seen_at, is_current]
+      properties:
+        id:
+          type: string
+          format: uuid
+        platform:
+          type: string
+          nullable: true
+          enum: [android_fcm, web_push]
+          description: Null until the device first registers for push.
+        notifications_on:
+          type: boolean
+          description: Whether a push token is stored for this device.
+        created_at:
+          type: string
+          format: date-time
+          description: When the device was linked.
+        last_seen_at:
+          type: string
+          format: date-time
+        is_current:
+          type: boolean
+          description: True for the device making this request.
 
     DeviceRegisterRequest:
       type: object
