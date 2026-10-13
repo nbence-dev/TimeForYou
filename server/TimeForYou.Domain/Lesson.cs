@@ -7,4 +7,6 @@ public sealed record Lesson(
     string? Room,
     DateTimeOffset StartTs,
     DateTimeOffset EndTs,
-    LessonStatus Status);
+    LessonStatus Status,
+    string? Group = null,
+    string? Mode = null);

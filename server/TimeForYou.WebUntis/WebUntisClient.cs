@@ -126,13 +126,13 @@ public sealed class WebUntisClient(HttpClient httpClient) : IWebUntisClient
             wire.UntisLessonId,
             wire.SubjectCode,
             wire.SubjectName,
-            Lecturer: null,
+            wire.Lecturer,
             wire.Room,
             status,
             wire.StartTs,
-            wire.EndTs);
-        
-        
+            wire.EndTs,
+            wire.Group,
+            wire.Mode);
     }
 
     private sealed record LoginRequestWire(
@@ -148,7 +148,10 @@ public sealed class WebUntisClient(HttpClient httpClient) : IWebUntisClient
         [property: JsonPropertyName("untis_lesson_id")] string UntisLessonId,
         [property: JsonPropertyName("subject_code")] string SubjectCode,
         [property: JsonPropertyName("subject_name")] string SubjectName,
-        [property: JsonPropertyName("room")] string Room,
+        [property: JsonPropertyName("room")] string? Room,
+        [property: JsonPropertyName("lecturer")] string? Lecturer,
+        [property: JsonPropertyName("group")] string? Group,
+        [property: JsonPropertyName("mode")] string? Mode,
         [property: JsonPropertyName("status")] string Status,
         [property: JsonPropertyName("start_ts")] DateTimeOffset StartTs,
         [property: JsonPropertyName("end_ts")] DateTimeOffset EndTs);

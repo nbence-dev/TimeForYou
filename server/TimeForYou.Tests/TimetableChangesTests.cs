@@ -139,6 +139,28 @@ public sealed class TimetableChangesTests(SeamAFixture fixture) : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Timetable_flags_only_the_lessons_that_have_a_note()
+    {
+        var (userId, token) = await SeedUserAsync("a");
+        var withNote = await SeedLessonAsync(userId, new(2026, 10, 14, 6, 0, 0, TimeSpan.Zero));
+        var without = await SeedLessonAsync(userId, new(2026, 10, 15, 6, 0, 0, TimeSpan.Zero));
+        await using (var db = fixture.CreateDbContext())
+        {
+            db.Notes.Add(new Note { UserId = userId, LessonId = withNote.Id, Body = "Bring laptop" });
+            await db.SaveChangesAsync();
+        }
+
+        using var factory = CreateFactory();
+        using var client = Authed(factory, token);
+
+        var lessons = await client.GetFromJsonAsync<JsonElement[]>("/timetable");
+
+        Assert.Equal(
+            [(withNote.Id, true), (without.Id, false)],
+            lessons!.Select(l => (l.GetProperty("id").GetGuid(), l.GetProperty("has_note").GetBoolean())).ToArray());
+    }
+
+    [Fact]
     public async Task Timetable_uses_the_openapi_field_names_and_enum_wire_values()
     {
         var (userId, token) = await SeedUserAsync("a");
@@ -162,7 +184,7 @@ public sealed class TimetableChangesTests(SeamAFixture fixture) : IAsyncLifetime
         var lesson = (await client.GetFromJsonAsync<JsonElement[]>("/timetable"))!.Single();
 
         Assert.Equal(
-            ["end_ts", "id", "lecturer", "room", "start_ts", "status", "subject", "untis_lesson_id"],
+            ["end_ts", "group", "has_note", "id", "lecturer", "mode", "room", "start_ts", "status", "subject", "untis_lesson_id"],
             lesson.EnumerateObject().Select(p => p.Name).Order().ToArray());
         Assert.Equal("cancelled", lesson.GetProperty("status").GetString());
         Assert.Equal(JsonValueKind.Null, lesson.GetProperty("room").ValueKind);

@@ -237,6 +237,9 @@ function DaySchedule({ day, lessons }: { day: string; lessons: Lesson[] }) {
             title={lesson.subject}
             room={lesson.room}
             teacher={lesson.lecturer}
+            group={lesson.group}
+            mode={lesson.mode}
+            hasNote={lesson.has_note}
             unseen={unseenLessonIds.has(lesson.id)}
             onPress={() => {
               markLessonSeen(lesson.id); // opening a lesson is seeing its changes

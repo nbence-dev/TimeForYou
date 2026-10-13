@@ -176,6 +176,31 @@ public sealed class PollJobTests(SeamAFixture fixture) : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Group_and_mode_changes_are_stored_but_produce_nothing()
+    {
+        await OnboardDemoUserWithPushDeviceAsync();
+        await RunPollCycleAsync();
+
+        await using (var db = fixture.CreateDbContext())
+        {
+            var snapshot = await db.LessonSnapshots.OrderBy(s => s.StartTs).FirstAsync();
+            Assert.False(string.IsNullOrEmpty(snapshot.Group));
+            Assert.False(string.IsNullOrEmpty(snapshot.Mode));
+            snapshot.Group = "Group Z";
+            snapshot.Mode = snapshot.Mode == "online" ? "in_person" : "online";
+            await db.SaveChangesAsync();
+        }
+
+        await RunPollCycleAsync();
+
+        Assert.Empty(await ChangeLogAsync());
+        Assert.Empty(fixture.PushSender.Sent);
+        await using var check = fixture.CreateDbContext();
+        var refreshed = await check.LessonSnapshots.OrderBy(s => s.StartTs).FirstAsync();
+        Assert.NotEqual("Group Z", refreshed.Group); // the poll refreshed it from the mock
+    }
+
+    [Fact]
     public async Task A_lesson_moved_out_of_the_window_is_reported_removed_only_once()
     {
         await OnboardDemoUserWithPushDeviceAsync();

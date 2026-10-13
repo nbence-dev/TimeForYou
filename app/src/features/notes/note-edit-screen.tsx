@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { api } from '@/shared/api';
 import { Button } from '@/shared/components/button';
+import { announceSynced } from '@/shared/sync/synced';
 import { Font } from '@/shared/theme/fonts';
 import { Brand, Colors, MaxContentWidth, Radius, Spacing, Status } from '@/shared/theme/theme';
 
@@ -82,6 +83,7 @@ export function NoteEditScreen({ lessonId, noteId }: { lessonId: string; noteId?
       const body = noteBodyToSend(text);
       if (noteId) await api.updateNote(noteId, body);
       else await api.createNote(lessonId, body);
+      announceSynced(); // the card's note icon comes from the timetable, so refetch it
       close();
     } catch (failure) {
       // Stay on this screen with the text intact, and let the student try again.
@@ -98,6 +100,7 @@ export function NoteEditScreen({ lessonId, noteId }: { lessonId: string; noteId?
     setError(null);
     try {
       await api.deleteNote(noteId);
+      announceSynced();
       close();
     } catch (failure) {
       setError(noteErrorMessage(failure));

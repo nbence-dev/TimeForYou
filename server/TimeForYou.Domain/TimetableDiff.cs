@@ -4,7 +4,7 @@ namespace TimeForYou.Domain;
 /// Compares two sets of lessons and returns the material changes between them.
 /// </summary>
 /// <remarks>
-/// Material fields are StartTs, EndTs, Room and Status; Lecturer and Subject changes are ignored.
+/// Material fields are StartTs, EndTs, Room and Status; Lecturer, Group, Mode and Subject changes are ignored.
 /// Each lesson produces at most one change per kind: a start and end shift together is one Time change,
 /// while a room and time change on the same lesson is one Room change plus one Time change.
 /// Lead-change rule: the lowest ChangeType wins (Cancelled &gt; Room &gt; Time &gt; Added &gt; Removed);

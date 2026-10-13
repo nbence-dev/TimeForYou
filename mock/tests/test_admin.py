@@ -221,3 +221,13 @@ def test_demo_page_is_served(client):
     response = client.get("/demo")
     assert response.status_code == 200
     assert "Nudge now" in response.text
+
+
+def test_change_room_on_an_online_lesson_moves_it_in_person(client):
+    online_lesson = "1001-2026-10-12"  # Monday of block_start, an online week
+
+    response = client.post(f"/mock/change-room/{online_lesson}", json={"room": "Z99"})
+
+    assert response.status_code == 200
+    assert response.json()["room"] == "Z99"
+    assert response.json()["mode"] == "in_person"

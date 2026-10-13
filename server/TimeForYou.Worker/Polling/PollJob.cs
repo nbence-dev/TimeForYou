@@ -151,6 +151,8 @@ public sealed class PollJob(IServiceScopeFactory scopeFactory, ILogger<PollJob> 
             snapshot.Subject = lesson.Subject;
             snapshot.Lecturer = lesson.Lecturer;
             snapshot.Room = lesson.Room;
+            snapshot.Group = lesson.Group;
+            snapshot.Mode = lesson.Mode;
             snapshot.StartTs = lesson.StartTs;
             snapshot.EndTs = lesson.EndTs;
             snapshot.Status = lesson.Status;
@@ -252,7 +254,9 @@ public sealed class PollJob(IServiceScopeFactory scopeFactory, ILogger<PollJob> 
         lesson.Room,
         lesson.StartTs.ToUniversalTime(),
         lesson.EndTs.ToUniversalTime(),
-        lesson.Status);
+        lesson.Status,
+        lesson.Group,
+        lesson.Mode);
 
     private static Lesson FromSnapshot(LessonSnapshot snapshot) => new(
         snapshot.UntisLessonId,
@@ -261,5 +265,7 @@ public sealed class PollJob(IServiceScopeFactory scopeFactory, ILogger<PollJob> 
         snapshot.Room,
         snapshot.StartTs,
         snapshot.EndTs,
-        snapshot.Status);
+        snapshot.Status,
+        snapshot.Group,
+        snapshot.Mode);
 }
