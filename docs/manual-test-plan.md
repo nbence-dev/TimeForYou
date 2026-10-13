@@ -592,6 +592,46 @@ public address, so `localhost` proves nothing.
 **Still to run by hand:** steps 2 to 5 (a real feed over mobile data, Apple Calendar, Google Calendar and
 the cancelled-lesson refresh).
 
+## Linked devices (#111)
+
+### LD-1 The list of my devices
+
+**Steps:**
+
+1. Link two devices to the same student (scan the same QR on both, or scan twice in a browser). On one
+   of them allow notifications.
+2. On the first device open **Settings → Linked devices**. Then open the same screen on the second.
+
+**Expected:**
+
+- Both devices are listed, and only those: never another student's. The device you are on is first and
+  has a **This device** tag, and the tag moves when you open the screen on the other device.
+- Each shows its platform (**Android app** or **Web app**), **Notifications on** or **off**, and when it
+  was last active ("just now" for the one you are on).
+- A short **Link another device** note says to scan the same WebUntis QR code on the new device.
+
+### LD-2 An unlinked device leaves the list
+
+**Steps:**
+
+1. On the second device tap **Settings → Unlink this device** and confirm.
+2. On the first device open **Linked devices** again.
+
+**Expected:**
+
+- Only the first device is listed now.
+
+### LD-3 Offline
+
+**Steps:**
+
+1. Stop the `api` container and open **Linked devices**. Start it again and tap **Try again**.
+
+**Expected:**
+
+- A message says you're offline, with a **Try again** button, not a blank screen. After Try again the
+  devices are listed.
+
 ## Changes archive (#138)
 
 ### ARC-1 Mark all as read, and the Archive
