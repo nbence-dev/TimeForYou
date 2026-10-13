@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { usePushState } from '@/shared/push/push-state';
 import { needsHomeScreenInstall } from '@/shared/pwa/install';
 import { useSession } from '@/shared/session/session';
 import { Font } from '@/shared/theme/fonts';
@@ -35,8 +36,11 @@ function rememberDismissed(): void {
 export function HomeScreenBanner() {
   const { openInstallGuide } = useSession();
   const [visible, setVisible] = useState(() => needsHomeScreenInstall() && !wasDismissed());
+  const push = usePushState();
 
-  if (!visible) return null;
+  // Notifications are on after all (the student allowed them from the prompt strip), so the
+  // "Notifications are off" warning would be wrong.
+  if (!visible || push === 'registered') return null;
 
   const dismiss = () => {
     rememberDismissed();

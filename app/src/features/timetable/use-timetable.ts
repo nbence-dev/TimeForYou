@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { api, NetworkError, UnauthorizedError } from '@/shared/api';
+import { onPushReceived } from '@/shared/push';
 import { lessonCache } from '@/shared/storage';
 import { sortLessonsByStart } from '@/shared/storage/sort-lessons';
 import { onSynced } from '@/shared/sync/synced';
@@ -103,10 +104,27 @@ export function useTimetable({ retryWhileEmptyMs }: UseTimetableOptions = {}) {
     load();
     // Settings' Sync now fetched fresh data: fetch again so this screen shows it too.
     const stopSynced = onSynced(() => void load());
+    // A lesson changed while the app was open or in the background: the same moments the change
+    // markers reload on. Tab screens stay mounted, so without these the lessons stay as they were
+    // fetched while the badge moves on (#130). A failed background fetch keeps the lessons shown.
+    const stopPush = onPushReceived(() => void load());
+    const onVisible = () => {
+      if (typeof document === 'undefined' || document.visibilityState === 'visible') void load();
+    };
+    const canListen = typeof document !== 'undefined' && typeof window !== 'undefined';
+    if (canListen) {
+      document.addEventListener('visibilitychange', onVisible);
+      window.addEventListener('focus', onVisible);
+    }
 
     return () => {
       mounted.current = false;
       stopSynced();
+      stopPush();
+      if (canListen) {
+        document.removeEventListener('visibilitychange', onVisible);
+        window.removeEventListener('focus', onVisible);
+      }
     };
   }, [load]);
 

@@ -9,8 +9,9 @@ import { Button } from '@/shared/components/button';
 import { Font } from '@/shared/theme/fonts';
 import { Brand, Radius, Spacing } from '@/shared/theme/theme';
 
-import { enablePush, onNotificationTapped, syncPush, type PushState } from './index';
+import { enablePush, onNotificationTapped, syncPush } from './index';
 import { takeOpenChangesNote } from './notification-intent';
+import { setPushState, usePushState } from './push-state';
 
 /**
  * Registers for push on launch and, while permission is still open or refused, shows a strip that
@@ -19,15 +20,15 @@ import { takeOpenChangesNote } from './notification-intent';
 export function PushPrompt() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const [state, setState] = useState<PushState>('checking');
+  const state = usePushState();
   const [busy, setBusy] = useState(false);
   const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     syncPush().then(
-      (s) => !cancelled && setState(s),
-      () => !cancelled && setState('failed'),
+      (s) => !cancelled && setPushState(s),
+      () => !cancelled && setPushState('failed'),
     );
     return () => {
       cancelled = true;
@@ -82,9 +83,9 @@ export function PushPrompt() {
           onPress={async () => {
             setBusy(true);
             try {
-              setState(await enablePush());
+              setPushState(await enablePush());
             } catch {
-              setState('failed');
+              setPushState('failed');
             } finally {
               setBusy(false);
             }
