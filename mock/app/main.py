@@ -8,12 +8,18 @@ the onboarding demo — plus the unauthenticated admin mutation endpoints (`/moc
 drive change detection in tests and on stage. `/demo` is the button-driven page over those, with
 `/mock/lessons` listing lessons and `/mock/nudge` proxying the worker's `POST /nudge` (the browser
 cannot call the worker cross-origin). LAN is the boundary for all of it; do not add a token.
+
+Several students are served (issue #129): the demo student, one per developer, and throwaway guests
+created from `/demo` (`POST /mock/guests`, in memory only). `/qr-payload`, `/qr-code` and
+`/mock/lessons` take `?student=<school:user>` and default to the first student.
 """
 
 import io
 import json
 import os
+import random
 import re
+import secrets
 import urllib.error
 import urllib.request
 import uuid
@@ -27,12 +33,14 @@ from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from app.fixtures import load_students, student_key
 from app.schemas import (
     ChangeRoomRequest,
+    GuestRequest,
     LessonOut,
     LoginRequest,
     LoginResponse,
     MoveLessonRequest,
     ProfileOut,
     QrPayload,
+    StudentOut,
     SubjectOut,
 )
 
@@ -54,18 +62,24 @@ _WORKER_NUDGE_URL = os.environ.get("WORKER_NUDGE_URL", "http://worker:8081/nudge
 _OCCURRENCE_ID_RE = re.compile(r"(\d+)-(\d{4}-\d{2}-\d{2})")
 
 
-def _demo_student() -> dict:
-    return next(iter(_students.values()))
+def _student_or_404(key: str | None) -> dict:
+    """The student named by `?student=`, or the first (demo) student when none is given."""
+    if key is None:
+        return next(iter(_students.values()))
+    student = _students.get(key)
+    if student is None:
+        raise HTTPException(status_code=404, detail="unknown student")
+    return student
 
 
 def _authenticate(authorization: str | None) -> dict:
     if authorization is None or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="missing bearer session")
     session_id = authorization.removeprefix("Bearer ")
-    key = _sessions.get(session_id)
-    if key is None:
+    student = _students.get(_sessions.get(session_id, ""))
+    if student is None:
         raise HTTPException(status_code=401, detail="unknown or expired session")
-    return _students[key]
+    return student
 
 
 @app.post("/login", response_model=LoginResponse)
@@ -184,8 +198,8 @@ def get_profile(authorization: str | None = Header(default=None)) -> ProfileOut:
 
 
 @app.get("/qr-payload", response_model=QrPayload)
-def qr_payload() -> QrPayload:
-    student = _demo_student()
+def qr_payload(student: str | None = Query(default=None)) -> QrPayload:
+    student = _student_or_404(student)
     return QrPayload(
         server=student["server"],
         school=student["school"],
@@ -195,10 +209,10 @@ def qr_payload() -> QrPayload:
 
 
 @app.get("/qr-code")
-def qr_code() -> StreamingResponse:
+def qr_code(student: str | None = Query(default=None)) -> StreamingResponse:
     """A real, scannable QR image — the demo operator opens this in a browser and a phone scans
     it directly, the same shape the app expects from a genuine WebUntis SSO QR code."""
-    payload = qr_payload()
+    payload = qr_payload(student)
     image = qrcode.make(json.dumps(payload.model_dump()))
     buffer = io.BytesIO()
     image.save(buffer, format="PNG")
@@ -242,11 +256,84 @@ def restore_lesson(lesson_id: str) -> LessonOut:
 
 
 @app.get("/mock/lessons", response_model=list[LessonOut])
-def list_lessons() -> list[LessonOut]:
-    """Upcoming lessons for the demo student, so the /demo page needs no login."""
+def list_lessons(student: str | None = Query(default=None)) -> list[LessonOut]:
+    """Upcoming lessons for one student (default: the demo student), so the /demo page needs no login."""
     today = datetime.now(SAST).date()
-    lessons = _materialize(_demo_student(), today, today + timedelta(days=14))
+    lessons = _materialize(_student_or_404(student), today, today + timedelta(days=14))
     return sorted(lessons, key=lambda lesson: lesson.start_ts)
+
+
+def _student_out(key: str, student: dict) -> StudentOut:
+    return StudentOut(
+        key=key,
+        user=student["user"],
+        display_name=student["display_name"],
+        class_name=student.get("class_name"),
+        guest=student.get("guest", False),
+    )
+
+
+@app.get("/mock/students", response_model=list[StudentOut])
+def list_students() -> list[StudentOut]:
+    """Everyone the /demo page can switch between: demo student, developers, then guests."""
+    return [_student_out(key, student) for key, student in _students.items()]
+
+
+_GUEST_TEMPLATE_BASE = 100_000  # fixture ids stay below this, so guest lesson ids never collide
+_GUEST_SLOTS = [("08:00", "09:30"), ("10:00", "11:30"), ("13:00", "14:30"), ("14:45", "16:15")]
+_GUEST_ROOMS = ["A04", "B12", "Lab 1", "Lab 2", "C07", "D15"]
+_GUEST_LECTURERS = ["Dr A. Naidoo", "Mr T. Botha", "Ms L. Dlamini", "Dr P. van Wyk"]
+_guest_count = 0
+
+
+def _build_guest(first_name: str, last_name: str) -> dict:
+    """A throwaway student: random timetable over the demo student's subjects, ids of its own."""
+    global _guest_count
+    _guest_count += 1
+    number = _guest_count
+    rng = random.Random(number)
+    template = next(iter(_students.values()))
+    slug = re.sub(r"[^a-z0-9]+", ".", f"{first_name}.{last_name}".lower()).strip(".") or "guest"
+    lessons = []
+    taken: set[tuple[int, int]] = set()
+    while len(lessons) < 8:
+        weekday, slot = rng.randrange(5), rng.randrange(len(_GUEST_SLOTS))
+        if (weekday, slot) in taken:
+            continue
+        taken.add((weekday, slot))
+        start, end = _GUEST_SLOTS[slot]
+        lessons.append({
+            "id": _GUEST_TEMPLATE_BASE + number * 100 + len(lessons),
+            "subject_id": rng.choice(template["subjects"])["id"],
+            "weekday": weekday,
+            "start_time": start,
+            "end_time": end,
+            "room": rng.choice(_GUEST_ROOMS),
+            "status": "scheduled",
+            "lecturer": rng.choice(_GUEST_LECTURERS),
+            "group": f"Group {rng.randint(1, 2)}",
+        })
+    return {
+        "server": template["server"],
+        "school": template["school"],
+        "user": f"{slug}.{secrets.token_hex(2)}",  # random suffix: a mock restart cannot reissue a name,
+        "key": f"GUEST-{secrets.token_hex(6)}",
+        "display_name": f"{first_name} {last_name}",
+        "block_start": template["block_start"],
+        "class_name": template.get("class_name"),
+        "subjects": template["subjects"],
+        "lessons": lessons,
+        "guest": True,
+    }
+
+
+@app.post("/mock/guests", response_model=StudentOut, status_code=201)
+def create_guest(body: GuestRequest) -> StudentOut:
+    """Mints a guest on the spot — a name is all it takes (issue #129). Held in memory only."""
+    guest = _build_guest(body.first_name, body.last_name)
+    key = student_key(guest["school"], guest["user"])
+    _students[key] = guest
+    return _student_out(key, guest)
 
 
 @app.post("/mock/nudge")
