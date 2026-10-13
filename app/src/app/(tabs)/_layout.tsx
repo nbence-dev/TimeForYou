@@ -5,6 +5,7 @@ import { View } from 'react-native';
 import { ChangeMarkersProvider, useChangeMarkers } from '@/features/timetable/change-markers-context';
 import { BottomNav, type NavTabKey } from '@/shared/components/bottom-nav';
 import { PushPrompt } from '@/shared/push/push-prompt';
+import { NotesOutboxSync } from '@/shared/sync/notes-outbox';
 
 /** Today is the group's index route, so it is "/" rather than "/today". */
 const ROUTE_FOR: Record<NavTabKey, string> = {
@@ -19,6 +20,7 @@ export default function TabsLayout() {
     <ChangeMarkersProvider>
       <View style={{ flex: 1 }}>
         <PushPrompt />
+                <NotesOutboxSync />
         <Tabs
           screenOptions={{ headerShown: false }}
           tabBar={({ state, navigation }) => {

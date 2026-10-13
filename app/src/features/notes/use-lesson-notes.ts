@@ -1,18 +1,18 @@
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { api, type Note } from '@/shared/api';
+import { loadLessonNotes, onNotesQueueChanged, type ShownNote } from '@/shared/sync/notes-outbox';
 
 import { loadErrorMessage } from './note-rules';
 
 /**
- * A lesson's notes, fetched from the server every time the screen comes into focus. That is what
- * makes a note written on one device show up on another when its app is next opened, and what
- * refreshes the list after the editor closes. Notes are online only for now (#73): there is no
- * local copy to fall back on, so a failed load says so instead of showing stale text.
+ * A lesson's notes, refreshed every time the screen comes into focus and whenever a note change is
+ * queued or sent (#124). Offline it shows the notes last fetched on this device, with changes made
+ * offline on top, marked "Waiting to sync".
  */
 export function useLessonNotes(lessonId: string) {
-  const [notes, setNotes] = useState<Note[] | null>(null);
+  const [notes, setNotes] = useState<ShownNote[] | null>(null);
+  const [offline, setOffline] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const mounted = useRef(true);
@@ -25,14 +25,15 @@ export function useLessonNotes(lessonId: string) {
     };
   }, []);
 
-  /** State is only set once the request settles; a newer request makes an older one a no-op. */
+  /** State is only set once the load settles; a newer load makes an older one a no-op. */
   const reload = useCallback(() => {
     const request = ++latest.current;
     const current = () => mounted.current && request === latest.current;
-    return api.listNotes(lessonId).then(
-      (fresh) => {
+    return loadLessonNotes(lessonId).then(
+      (loaded) => {
         if (!current()) return;
-        setNotes(fresh);
+        setNotes(loaded.notes);
+        setOffline(loaded.offline);
         setError(null);
       },
       (failure: unknown) => {
@@ -47,5 +48,8 @@ export function useLessonNotes(lessonId: string) {
     }, [reload]),
   );
 
-  return { notes, error, reload };
+  // A note saved offline shows at once; a sent one loses its "Waiting to sync" mark.
+  useEffect(() => onNotesQueueChanged(() => void reload()), [reload]);
+
+  return { notes, offline, error, reload };
 }
