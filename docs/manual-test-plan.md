@@ -321,7 +321,9 @@ On the web, "offline" means `docker compose stop api` and "back online" means
 
 ### NQ-4 Last write wins
 
-**Setup:** Two devices linked to the same student, with a lesson note "D" visible on both.
+**Setup:** Two devices linked to the same student, with a lesson note "D" visible on both. On the
+web, use a normal and an Incognito window (sign in on each), and take only device B offline with
+DevTools › Network › **Offline** instead of stopping the `api` container.
 
 **Steps:**
 
