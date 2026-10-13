@@ -10,6 +10,10 @@ Run everything from the repo root.
 Change room and Move buttons, plus **Nudge now** and **Reset mock**. The steps below are the `curl`
 equivalent, and `restore-lesson` is also available: `curl -X POST localhost:8000/mock/restore-lesson/<id>`.
 
+The **Student** dropdown at the top picks whose timetable you are changing and shows that student's QR
+code; **Add a guest** creates a new one from a name and surname (#129). The `curl` commands act on
+lesson ids, which are unique per student, so they need no student argument.
+
 ## Before you start
 
 - Stack is up: `docker compose --profile tunnel up -d`

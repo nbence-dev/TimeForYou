@@ -174,6 +174,26 @@ banner (A2HS-2) was showing, it goes away too once notifications are on.
 grouped push to the device. Step 6 shows an error in the banner, not a silent failure. Over the public
 hostnames, `/demo` does not return the page.
 
+### DEMO-2 One timetable per developer, and guests (#129)
+
+**Setup:** Stack up, `/demo` open on the LAN, the PWA installed on two phones with notifications on.
+
+**Steps:**
+
+1. In the **Student** dropdown pick a developer (their GitHub handle). Confirm the lesson list and the
+   QR code change. Pick a different developer and confirm the timetable differs.
+2. On phone A, scan the QR code of one developer (**Scan** in the app's onboarding).
+3. In **Add a guest** type a name and surname and press **Create**. Confirm the guest is selected and
+   a QR code appears.
+4. On phone B, scan the guest's QR code. Open Settings, copy the calendar link and add it to a
+   calendar app.
+5. With the guest selected, **Cancel** a lesson, then press **Nudge now**.
+6. Select the developer linked on phone A and confirm their lessons are untouched.
+
+**Expected:** Phone B shows the guest's own timetable and receives one grouped push; phone A receives
+nothing. The calendar feed on phone B shows the cancelled lesson as cancelled. Guests live in memory:
+restarting `mock` removes them.
+
 ## Android native push (#70)
 
 Needs a real Android phone running the Expo build (`npx expo run:android` with the device attached,

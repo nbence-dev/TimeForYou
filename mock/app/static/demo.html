@@ -124,6 +124,20 @@
   #toast.ok { background: var(--ok-text); }
   #toast.err { background: var(--bad-text); }
 
+
+  /* student picker, QR code and guest sign-up (#129) */
+  .who { display: grid; grid-template-columns: 1fr auto; gap: 20px; align-items: start; }
+  .who select, .who input[type=text] {
+    width: 100%; font: inherit; padding: 12px 14px; border-radius: 8px;
+    border: 2px solid var(--border-strong); background: #fff; color: var(--ink);
+  }
+  .who select:focus, .who input[type=text]:focus { border-color: var(--navy); outline: none; }
+  .who .qr { text-align: center; }
+  .who .qr img { width: 180px; height: 180px; border: 1px solid var(--border); border-radius: 8px; image-rendering: pixelated; }
+  .who .qr small { display: block; color: var(--muted); margin-top: 4px; }
+  .guest-form { display: grid; grid-template-columns: 1fr 1fr auto; gap: 10px; margin-top: 14px; }
+  @media (max-width: 560px) { .who, .guest-form { grid-template-columns: 1fr; } }
+
   @media (max-width: 560px) { .pair { grid-template-columns: 1fr; } h1 { font-size: 21px; } }
 </style>
 </head>
@@ -142,6 +156,23 @@
 </header>
 
 <main>
+  <section class="card who">
+    <div>
+      <label class="lbl" for="student">Student</label>
+      <select id="student"></select>
+      <label class="lbl" style="margin-top:16px">Add a guest</label>
+      <form class="guest-form" id="guest-form">
+        <input type="text" id="guest-first" placeholder="Name" autocomplete="off" required>
+        <input type="text" id="guest-last" placeholder="Surname" autocomplete="off" required>
+        <button class="btn-brand" type="submit">Create</button>
+      </form>
+    </div>
+    <div class="qr">
+      <img id="qr" alt="QR code for the selected student">
+      <small>Scan in the app to link</small>
+    </div>
+  </section>
+
   <section class="card">
     <label class="lbl" for="search">Lesson</label>
     <div class="picker">
@@ -239,9 +270,12 @@ async function act(label, path, body) {
 
 async function load() {
   try {
-    const response = await fetch("/mock/lessons");
+    const asked = studentKey;
+    const response = await fetch("/mock/lessons" + studentParam());
     if (!response.ok) throw new Error(response.status + " " + await response.text());
-    lessons = await response.json();
+    const fetched = await response.json();
+    if (asked !== studentKey) return; // the operator switched student meanwhile; a newer load is coming
+    lessons = fetched;
     if (selectedId && !lessons.some((l) => l.untis_lesson_id === selectedId)) selectedId = null;
     renderDetail();
     renderOptions();
@@ -387,8 +421,67 @@ $("reset").addEventListener("click", async () => {
   await act("Mock reset", "/mock/reset");
 });
 
+
+/* ---------- student picker, QR code and guests (#129) ---------- */
+const studentEl = $("student"), qrEl = $("qr");
+let studentKey = "";
+
+function studentParam() { return studentKey ? "?student=" + encodeURIComponent(studentKey) : ""; }
+
+function refreshQr() { qrEl.src = "/qr-code" + studentParam() + (studentKey ? "&" : "?") + "t=" + Date.now(); }
+
+async function loadStudents(select) {
+  const response = await fetch("/mock/students");
+  if (!response.ok) throw new Error(response.status + " " + await response.text());
+  const students = await response.json();
+  studentEl.innerHTML = "";
+  for (const s of students) {
+    const option = el("option", "", s.display_name + (s.guest ? " (guest)" : ""));
+    option.value = s.key;
+    studentEl.append(option);
+  }
+  const wanted = select || localStorage.getItem("demoStudent");
+  studentKey = students.some((s) => s.key === wanted) ? wanted : students[0].key;
+  studentEl.value = studentKey;
+}
+
+async function switchStudent() {
+  studentKey = studentEl.value;
+  localStorage.setItem("demoStudent", studentKey);
+  selectedId = null; chosenLabel = ""; searchEl.value = "";
+  refreshQr();
+  await load();
+}
+
+studentEl.addEventListener("change", switchStudent);
+
+$("guest-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const first = $("guest-first"), last = $("guest-last"), submit = event.submitter;
+  submit.disabled = true; // a double-click would mint two identical guests
+  let response;
+  try {
+    response = await fetch("/mock/guests", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ first_name: first.value, last_name: last.value }),
+    });
+  } finally {
+    submit.disabled = false;
+  }
+  if (!response.ok) { toast("Could not create guest", false); addLog("Could not create guest", false); return; }
+  const guest = await response.json();
+  first.value = ""; last.value = "";
+  toast("Created " + guest.display_name, true); addLog("Created guest " + guest.display_name, true);
+  await loadStudents(guest.key);
+  await switchStudent();
+});
+
 logEl.firstChild.dataset.placeholder = "1";
-load();
+loadStudents().then(() => { refreshQr(); return load(); }).catch((error) => {
+  toast("Could not load students: " + error.message, false);
+  addLog("Could not load students: " + error.message, false);
+});
 </script>
 </body>
 </html>
