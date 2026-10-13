@@ -474,3 +474,43 @@ however much history exists). The lesson to change is on a day the app shows.
 - The old link now gives a "not found" page and the new link gives the calendar file. Another device
   of the same student shows the new link too.
 - Offline, a message says so and that the current link still works. The link does not change.
+
+### CS-5 The feed on the live server, in real calendar apps (#126)
+
+Run against the shared instance (the installed Android app, or the web app at
+`https://app.timeforyou.co.za`), not a local stack: Google Calendar and Apple Calendar can only reach a
+public address, so `localhost` proves nothing.
+
+**Steps:**
+
+1. In the app, open **Settings → Calendar subscription** and note the address shown.
+2. Open that address in a browser on a device that is **not** on the team's network (mobile data).
+3. On an iPhone, tap **Add to Apple Calendar**, accept the subscription, and open the Calendar app.
+4. In Google Calendar, tap **Add to Google Calendar** (or **Other calendars → From URL** with the same
+   address) and let it add the feed.
+5. In the mock demo page (`/demo`, LAN only), cancel one lesson that is still in the future and press
+   **Nudge now**. Wait for the calendar app's next refresh (Apple: Settings → Calendar → Accounts →
+   Fetch New Data; Google: it refreshes on its own, which can take hours).
+
+**Expected:**
+
+- The address starts with `https://api.timeforyou.co.za/ics/` and ends with `.ics` (not `localhost`, not
+  `http://`, not an internal host name).
+- Step 2 downloads or shows a calendar file (`BEGIN:VCALENDAR`), not a sign-in or "not found" page.
+- After steps 3 and 4 the student's future lessons show in both calendars, with the room as the event
+  location and any note in the description.
+- After step 5 the cancelled lesson shows as cancelled (struck through or marked) once the calendar app
+  refreshes. Google's refresh delay is not a bug.
+
+**Last checked (2026-10-13), the parts that need no phone:**
+
+- `GET /calendar` on the live server returned an `https://api.timeforyou.co.za/ics/…` address, so
+  `PUBLIC_BASE_URL` is set correctly there. `deploy/release.compose.yml` passes it through from the VM's
+  `.env`.
+- A made-up feed token on `https://api.timeforyou.co.za/ics/…` gets the API's own JSON "No calendar feed
+  matches this token" (404) over valid HTTPS through Cloudflare, so the route is reachable publicly.
+  (On `app.timeforyou.co.za` the same path returns the web app, which is fine: the app's link uses the
+  `api.` host.)
+
+**Still to run by hand:** steps 2 to 5 (a real feed over mobile data, Apple Calendar, Google Calendar and
+the cancelled-lesson refresh).
