@@ -159,6 +159,22 @@ export function applyQueued(notes: readonly Note[], queued: readonly QueuedNoteC
 }
 
 /**
+ * For each lesson with waiting changes, whether it will have a note once they are sent, so the
+ * timetable's note icon follows an offline add or delete straight away. A lesson whose saved notes
+ * are unknown is left out unless a create is waiting (the server's flag stands).
+ */
+export async function queuedNoteFlags(): Promise<Map<string, boolean>> {
+  const queued = await notesStore.readQueue();
+  const flags = new Map<string, boolean>();
+  for (const lessonId of new Set(queued.map((c) => c.lessonId))) {
+    const saved = await notesStore.readLessonNotes(lessonId);
+    if (saved) flags.set(lessonId, applyQueued(saved, queued, lessonId).length > 0);
+    else if (queued.some((c) => c.lessonId === lessonId && c.kind === 'create')) flags.set(lessonId, true);
+  }
+  return flags;
+}
+
+/**
  * A lesson's notes for the screens: from the server when it can be reached (and saved for offline),
  * otherwise the saved copy, with waiting changes on top. `offline` says the server wasn't reached.
  * Rejects when there is nothing at all to show.

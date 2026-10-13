@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { api, NetworkError, UnauthorizedError } from '@/shared/api';
 import { onPushReceived } from '@/shared/push';
 import { lessonCache } from '@/shared/storage';
 import { sortLessonsByStart } from '@/shared/storage/sort-lessons';
+import { onNotesQueueChanged, queuedNoteFlags } from '@/shared/sync/notes-outbox';
 import { onSynced } from '@/shared/sync/synced';
 import type { Lesson } from '@/shared/types/lesson';
 
@@ -138,5 +139,27 @@ export function useTimetable({ retryWhileEmptyMs }: UseTimetableOptions = {}) {
     return () => clearTimeout(id);
   }, [retryWhileEmptyMs, cacheRead, refreshing, lessons.length, problem, refresh]);
 
-  return { lessons, cacheRead, refreshing, problem, syncedAt, refresh };
+  // Notes added or deleted offline are not in the server's flag yet; show them on the icon now (#124).
+  const [noteFlags, setNoteFlags] = useState<Map<string, boolean>>(new Map());
+  useEffect(() => {
+    let live = true;
+    const update = () => {
+      queuedNoteFlags().then(
+        (flags) => live && setNoteFlags(flags),
+        () => undefined,
+      );
+    };
+    update();
+    const stop = onNotesQueueChanged(update);
+    return () => {
+      live = false;
+      stop();
+    };
+  }, []);
+  const shownLessons = useMemo(
+    () => (noteFlags.size === 0 ? lessons : lessons.map((l) => (noteFlags.has(l.id) ? { ...l, has_note: noteFlags.get(l.id) } : l))),
+    [lessons, noteFlags],
+  );
+
+  return { lessons: shownLessons, cacheRead, refreshing, problem, syncedAt, refresh };
 }
