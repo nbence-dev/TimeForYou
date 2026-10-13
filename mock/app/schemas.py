@@ -1,7 +1,7 @@
 from datetime import datetime
-from typing import Literal
+from typing import Annotated, Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, StringConstraints
 
 
 class LoginRequest(BaseModel):
@@ -52,3 +52,20 @@ class ChangeRoomRequest(BaseModel):
 class ProfileOut(BaseModel):
     display_name: str
     class_name: str | None = None
+
+
+class StudentOut(BaseModel):
+    key: str  # "{school}:{user}", what the ?student= parameter takes
+    user: str
+    display_name: str
+    class_name: str | None
+    guest: bool
+
+
+# Names are typed on the /demo page by the operator; anything non-blank is accepted.
+Name = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=40)]
+
+
+class GuestRequest(BaseModel):
+    first_name: Name
+    last_name: Name

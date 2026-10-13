@@ -1,7 +1,7 @@
 import pytest
 from fastapi.testclient import TestClient
 
-from app.main import _overrides, app
+from app.main import _overrides, _students, app
 
 
 @pytest.fixture(autouse=True)
@@ -9,6 +9,8 @@ def _reset_overrides():
     _overrides.clear()
     yield
     _overrides.clear()
+    for key in [k for k, s in _students.items() if s.get("guest")]:
+        del _students[key]  # guests are per-test, like the overrides
 
 
 @pytest.fixture()
