@@ -81,6 +81,7 @@ export const lessonCache: LessonCache = {
           lecturer: lesson.lecturer ?? null,
           group: lesson.group ?? null,
           mode: lesson.mode ?? null,
+          has_note: lesson.has_note ?? false,
         });
       }
     } catch (error) {

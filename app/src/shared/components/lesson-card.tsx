@@ -65,9 +65,9 @@ export function LessonCard({
           <View style={styles.flex} />
           {hasNote ? (
             <Ionicons
-              name="document-text-outline"
-              size={16}
-              color={Colors.light.textSecondary}
+              name="document-text"
+              size={18}
+              color={Brand.orange}
               accessibilityLabel="Has a note"
             />
           ) : null}

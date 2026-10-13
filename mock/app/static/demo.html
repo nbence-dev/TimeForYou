@@ -253,7 +253,7 @@ async function load() {
 
 /* ---------- searchable picker ---------- */
 function haystack(l) {
-  return [l.subject_code, l.subject_name, l.room, l.status, l.untis_lesson_id, dayLabel(l.start_ts), timeRange(l)].join(" ").toLowerCase();
+  return [l.subject_code, l.subject_name, l.room ?? "online", l.status, l.untis_lesson_id, dayLabel(l.start_ts), timeRange(l)].join(" ").toLowerCase();
 }
 
 function renderOptions() {
@@ -272,7 +272,7 @@ function renderOptions() {
     const strip = el("span", "strip");
     strip.style.background = stripFor(l.status);
     const main = el("div", "main");
-    main.append(el("div", "name", l.subject_name), el("div", "meta", dayLabel(l.start_ts) + " · " + timeRange(l) + " · " + l.room));
+    main.append(el("div", "name", l.subject_name), el("div", "meta", dayLabel(l.start_ts) + " · " + timeRange(l) + " · " + (l.room ?? "Online")));
     row.append(strip, main, chip(l.status));
     row.addEventListener("mousedown", (e) => { e.preventDefault(); choose(l.untis_lesson_id); });
     optionsEl.append(row);
@@ -335,7 +335,7 @@ function renderDetail() {
   edge.style.background = stripFor(l.status);
   const body = el("div", "body");
   const row = el("div", "row");
-  row.append(el("span", "pill", "Room " + l.room), el("span", "pill", l.subject_code), chip(l.status));
+  row.append(el("span", "pill", l.room ? "Room " + l.room : "Online"), el("span", "pill", l.subject_code), chip(l.status));
   body.append(el("div", "time", dayLabel(l.start_ts) + " · " + timeRange(l)), el("h2", "", l.subject_name), row);
   hero.append(edge, body);
   detailEl.append(hero);

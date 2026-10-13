@@ -13,7 +13,7 @@ public sealed record WebUntisLesson(
     string SubjectCode,
     string SubjectName,
     string? Lecturer,
-    string Room,
+    string? Room,
     LessonStatus Status,
     DateTimeOffset StartTs,
     DateTimeOffset EndTs,

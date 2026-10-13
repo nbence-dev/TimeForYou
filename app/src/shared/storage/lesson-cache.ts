@@ -20,6 +20,7 @@ type LessonRow = {
   room: string | null;
   group_name: string | null;
   mode: LessonMode | null;
+  has_note: number;
   start_ts: string;
   end_ts: string;
   status: LessonStatus;
@@ -36,10 +37,10 @@ function openDatabase(): Promise<SQLite.SQLiteDatabase> {
       PRAGMA journal_mode = WAL;
     `);
     // The cache is disposable (the next sync refills it), so a schema bump drops the table
-    // rather than migrating it. user_version 2 added group_name and mode (#49).
+    // rather than migrating it. user_version 3 added group_name, mode and has_note (#49).
     const version = await db.getFirstAsync<{ user_version: number }>("PRAGMA user_version");
-    if ((version?.user_version ?? 0) < 2) {
-      await db.execAsync("DROP TABLE IF EXISTS lessons; PRAGMA user_version = 2;");
+    if ((version?.user_version ?? 0) < 3) {
+      await db.execAsync("DROP TABLE IF EXISTS lessons; PRAGMA user_version = 3;");
     }
     await db.execAsync(`
       CREATE TABLE IF NOT EXISTS lessons (
@@ -50,6 +51,7 @@ function openDatabase(): Promise<SQLite.SQLiteDatabase> {
         room TEXT,
         group_name TEXT,
         mode TEXT,
+        has_note INTEGER NOT NULL DEFAULT 0,
         start_ts TEXT NOT NULL,
         end_ts TEXT NOT NULL,
         status TEXT NOT NULL
@@ -67,10 +69,14 @@ export const lessonCache: LessonCache = {
   async readLessons() {
     const db = await openDatabase();
     const rows = await db.getAllAsync<LessonRow>(
-      "SELECT id, untis_lesson_id, subject, lecturer, room, group_name, mode, start_ts, end_ts, status FROM lessons",
+      "SELECT id, untis_lesson_id, subject, lecturer, room, group_name, mode, has_note, start_ts, end_ts, status FROM lessons",
     );
     return sortLessonsByStart(
-      rows.map(({ group_name, ...rest }): Lesson => ({ ...rest, group: group_name })),
+      rows.map(({ group_name, has_note, ...rest }): Lesson => ({
+        ...rest,
+        group: group_name,
+        has_note: has_note === 1,
+      })),
     );
   },
 
@@ -82,8 +88,8 @@ export const lessonCache: LessonCache = {
       for (const lesson of lessons) {
         await txn.runAsync(
           `INSERT OR REPLACE INTO lessons
-             (id, untis_lesson_id, subject, lecturer, room, group_name, mode, start_ts, end_ts, status)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+             (id, untis_lesson_id, subject, lecturer, room, group_name, mode, has_note, start_ts, end_ts, status)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           lesson.id,
           lesson.untis_lesson_id,
           lesson.subject,
@@ -91,6 +97,7 @@ export const lessonCache: LessonCache = {
           lesson.room,
           lesson.group ?? null,
           lesson.mode ?? null,
+          lesson.has_note ? 1 : 0,
           lesson.start_ts,
           lesson.end_ts,
           lesson.status,

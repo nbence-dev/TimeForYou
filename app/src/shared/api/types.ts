@@ -31,6 +31,7 @@ export interface Lesson {
   start_ts: string;
   end_ts: string;
   status: LessonStatus;
+  has_note?: boolean;
 }
 
 export interface ChangeLogEntry {

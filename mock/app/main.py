@@ -86,6 +86,13 @@ def _occurrence_id(template_id: int, occurrence_date: date) -> str:
     return f"{template_id}-{occurrence_date.isoformat()}"
 
 
+def _mode_for(student: dict, occurrence_date: date) -> str:
+    """Weeks alternate online / in-person for the whole block, starting online in the block's first week."""
+    block_start = date.fromisoformat(student["block_start"])
+    weeks_in = (_week_monday(occurrence_date) - _week_monday(block_start)).days // 7
+    return "online" if weeks_in % 2 == 0 else "in_person"
+
+
 def _lesson_out(student: dict, lesson: dict, occurrence_date: date) -> LessonOut:
     """Builds one occurrence of a template lesson on a given date, with any admin override applied."""
     subject = next(s for s in student["subjects"] if s["id"] == lesson["subject_id"])
@@ -93,14 +100,17 @@ def _lesson_out(student: dict, lesson: dict, occurrence_date: date) -> LessonOut
     override = _overrides.get(occurrence_id, {})
     default_start = datetime.combine(occurrence_date, time.fromisoformat(lesson["start_time"]), tzinfo=SAST)
     default_end = datetime.combine(occurrence_date, time.fromisoformat(lesson["end_time"]), tzinfo=SAST)
+    # Assigning a room by hand is the demo's "this lesson is now on campus", so it overrides the week's mode.
+    mode = "in_person" if "room" in override else _mode_for(student, occurrence_date)
     return LessonOut(
         untis_lesson_id=occurrence_id,
         subject_code=subject["code"],
         subject_name=subject["name"],
-        room=override.get("room", lesson["room"]),
+        # Online lessons have no room.
+        room=override.get("room", lesson["room"]) if mode == "in_person" else None,
         lecturer=lesson["lecturer"],
         group=lesson["group"],
-        mode=lesson["mode"],
+        mode=mode,
         status=override.get("status", lesson["status"]),
         start_ts=override.get("start_ts", default_start),
         end_ts=override.get("end_ts", default_end),

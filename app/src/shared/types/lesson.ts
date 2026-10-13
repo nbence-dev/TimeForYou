@@ -19,4 +19,6 @@ export type Lesson = {
   /** ISO-8601 instant. */
   end_ts: string;
   status: LessonStatus;
+  /** The student has at least one note on this lesson. */
+  has_note?: boolean;
 };

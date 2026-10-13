@@ -527,6 +527,9 @@ components:
         status:
           type: string
           enum: [scheduled, cancelled, irregular]
+        has_note:
+          type: boolean
+          description: True when the caller has at least one note on this lesson. Drives the note icon on cards.
 
     ChangeLogEntry:
       type: object

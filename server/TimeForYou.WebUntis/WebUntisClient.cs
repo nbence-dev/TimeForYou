@@ -126,7 +126,7 @@ public sealed class WebUntisClient(HttpClient httpClient) : IWebUntisClient
         [property: JsonPropertyName("untis_lesson_id")] string UntisLessonId,
         [property: JsonPropertyName("subject_code")] string SubjectCode,
         [property: JsonPropertyName("subject_name")] string SubjectName,
-        [property: JsonPropertyName("room")] string Room,
+        [property: JsonPropertyName("room")] string? Room,
         [property: JsonPropertyName("lecturer")] string? Lecturer,
         [property: JsonPropertyName("group")] string? Group,
         [property: JsonPropertyName("mode")] string? Mode,
