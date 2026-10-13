@@ -24,7 +24,7 @@ import {
   shiftDay,
 } from './lesson-time';
 import { useChangeMarkers } from './change-markers-context';
-import { useTimetable, type TimetableProblem } from './use-timetable';
+import { RETRY_WHILE_EMPTY_MS, useTimetable, type TimetableProblem } from './use-timetable';
 
 /** Re-evaluates "now" so the live and finished lessons update while the screen stays open. */
 function useNow(intervalMs: number): Date {
@@ -39,7 +39,7 @@ function useNow(intervalMs: number): Date {
 /** The landing screen: today's lessons in time order, from the cache first. */
 export function TodayScreen() {
   const insets = useSafeAreaInsets();
-  const { lessons, cacheRead, refreshing, problem, syncedAt, refresh } = useTimetable();
+  const { lessons, problem, syncedAt, refresh } = useTimetable({ retryWhileEmptyMs: RETRY_WHILE_EMPTY_MS });
   const { reload: reloadChanges } = useChangeMarkers();
   const now = useNow(30_000);
   const [pulling, setPulling] = useState(false);
@@ -51,6 +51,10 @@ export function TodayScreen() {
   // A refresh can shrink the range under a chosen day; keep the view inside the days that exist.
   const day = clampDay(chosenDay ?? today, range);
   const dayLessons = byDay.get(day) ?? [];
+
+    // No lessons at all yet: the first poll may still be running (#58) and Today keeps asking until
+  // they arrive (#142), so say it is loading rather than "No lessons". A dead session has its own notice.
+  const waitingForLessons = lessons.length === 0 && problem !== 'session';
 
   const isToday = day === today;
   const remaining = isToday
@@ -90,7 +94,7 @@ export function TodayScreen() {
               {formatDayTitle(day)}
             </Text>
             <Text style={styles.daySubtitle}>
-              {summary(dayLessons.length, remaining, isToday)}
+              {waitingForLessons ? 'Loading…' : summary(dayLessons.length, remaining, isToday)}
             </Text>
           </View>
           <DayArrow
@@ -115,7 +119,7 @@ export function TodayScreen() {
             ))}
           </View>
         ) : (
-          <Text style={styles.empty}>{emptyText(cacheRead, refreshing, lessons.length === 0)}</Text>
+          <Text style={styles.empty}>{waitingForLessons ? 'Loading your timetable…' : 'No lessons on this day.'}</Text>
         )}
       </View>
     </ScrollView>
@@ -128,10 +132,6 @@ function summary(total: number, remaining: number, isToday: boolean): string {
   return isToday ? `${remaining} of ${noun(total)} still to come` : noun(total);
 }
 
-function emptyText(cacheRead: boolean, refreshing: boolean, nothingCached: boolean): string {
-  if (nothingCached && (!cacheRead || refreshing)) return 'Loading your timetable…';
-  return 'No lessons on this day.';
-}
 
 function Header({ offline, syncedAt }: { offline: boolean; syncedAt: Date | null }) {
   return (

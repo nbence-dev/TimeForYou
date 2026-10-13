@@ -13,7 +13,7 @@ import type { Lesson } from '@/shared/types/lesson';
 
 import { cardStatusFor, dayKey, dayRange, formatDayTitle, formatTime, lessonsByDay, shiftDay } from './lesson-time';
 import { useChangeMarkers } from './change-markers-context';
-import { useTimetable, type TimetableProblem } from './use-timetable';
+import { RETRY_WHILE_EMPTY_MS, useTimetable, type TimetableProblem } from './use-timetable';
 import {
   clampDay,
   dayOfMonth,
@@ -28,8 +28,6 @@ import {
   weeksIn,
 } from './week-helpers';
 
-/** How often to ask again while the student has no lessons yet (first poll still running, #58). */
-const RETRY_WHILE_EMPTY_MS = 5_000;
 
 /**
  * Browse the whole window `GET /timetable` serves, a week at a time (#60). The window is taken from
