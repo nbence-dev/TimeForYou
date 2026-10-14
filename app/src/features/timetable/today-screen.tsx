@@ -53,8 +53,9 @@ export function TodayScreen() {
   const dayLessons = byDay.get(day) ?? [];
 
     // No lessons at all yet: the first poll may still be running (#58) and Today keeps asking until
-  // they arrive (#142), so say it is loading rather than "No lessons". A dead session has its own notice.
-  const waitingForLessons = lessons.length === 0 && problem !== 'session';
+  // they arrive (#142), so say it is loading rather than "No lessons". A problem (offline, failed, dead
+  // session) has its own notice, so "Loading…" is not shown beside it.
+  const waitingForLessons = lessons.length === 0 && problem === null;
 
   const isToday = day === today;
   const remaining = isToday
