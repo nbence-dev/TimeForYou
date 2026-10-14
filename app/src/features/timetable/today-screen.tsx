@@ -26,7 +26,7 @@ import {
   shiftDay,
 } from './lesson-time';
 import { useChangeMarkers } from './change-markers-context';
-import { useTimetable, type TimetableProblem } from './use-timetable';
+import { RETRY_WHILE_EMPTY_MS, useTimetable, type TimetableProblem } from './use-timetable';
 
 /** Re-evaluates "now" so the live and finished lessons update while the screen stays open. */
 function useNow(intervalMs: number): Date {
@@ -40,7 +40,7 @@ function useNow(intervalMs: number): Date {
 
 /** The landing screen: today's lessons in time order, from the cache first. */
 export function TodayScreen() {
-  const { lessons, cacheRead, refreshing, problem, syncedAt, refresh } = useTimetable();
+  const { lessons, problem, syncedAt, refresh } = useTimetable({ retryWhileEmptyMs: RETRY_WHILE_EMPTY_MS });
   const { reload: reloadChanges } = useChangeMarkers();
   const now = useNow(30_000);
   const [pulling, setPulling] = useState(false);
@@ -52,6 +52,11 @@ export function TodayScreen() {
   // A refresh can shrink the range under a chosen day; keep the view inside the days that exist.
   const day = clampDay(chosenDay ?? today, range);
   const dayLessons = byDay.get(day) ?? [];
+
+  // No lessons at all yet: the first poll may still be running (#58) and Today keeps asking until
+  // they arrive (#142), so say it is loading rather than "No lessons". A problem (offline, failed, dead
+  // session) has its own notice, so "Loading…" is not shown beside it.
+  const waitingForLessons = lessons.length === 0 && problem === null;
 
   const isToday = day === today;
   const remaining = isToday
@@ -90,7 +95,7 @@ export function TodayScreen() {
           <View style={styles.dayTitleBlock}>
             <Text style={styles.dayTitle}>{formatDayTitle(day)}</Text>
             <Text style={styles.daySubtitle}>
-              {summary(dayLessons.length, remaining, isToday)}
+              {waitingForLessons ? 'Loading…' : summary(dayLessons.length, remaining, isToday)}
             </Text>
           </View>
           <NavArrow
@@ -116,7 +121,7 @@ export function TodayScreen() {
             ))}
           </View>
         ) : (
-          <EmptyDay loading={lessons.length === 0 && (!cacheRead || refreshing)} />
+          <EmptyDay loading={waitingForLessons} />
         )}
       </View>
     </ScrollView>
