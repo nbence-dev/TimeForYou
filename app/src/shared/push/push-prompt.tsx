@@ -1,13 +1,13 @@
-import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useEffect, useState, type ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Banner } from '@/shared/components/banner';
 import { Button } from '@/shared/components/button';
 import { Font } from '@/shared/theme/fonts';
-import { Brand, Radius, Spacing } from '@/shared/theme/theme';
+import { Brand, Spacing } from '@/shared/theme/theme';
 
 import { enablePush, onNotificationTapped, syncPush } from './index';
 import { takeOpenChangesNote } from './notification-intent';
@@ -127,30 +127,13 @@ function Strip({
   children: ReactNode;
 }) {
   return (
-    <View style={[styles.strip, { marginTop }]}>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel="Dismiss"
-        hitSlop={8}
-        onPress={onDismiss}
-        style={styles.close}>
-        <Ionicons name="close" size={18} color={Brand.navy} />
-      </Pressable>
+    <Banner onDismiss={onDismiss} style={[styles.strip, { marginTop }]}>
       {children}
-    </View>
+    </Banner>
   );
 }
 
 const styles = StyleSheet.create({
-  strip: {
-    margin: Spacing.three,
-    padding: Spacing.three,
-    gap: Spacing.two,
-    backgroundColor: Brand.white,
-    borderWidth: 1,
-    borderColor: Brand.border,
-    borderRadius: Radius.base,
-  },
+  strip: { margin: Spacing.three },
   text: { fontFamily: Font.text, fontSize: 14, color: Brand.navy },
-  close: { position: 'absolute', top: Spacing.two, right: Spacing.two, zIndex: 1, padding: Spacing.one },
 });

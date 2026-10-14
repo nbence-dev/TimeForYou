@@ -2,11 +2,15 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Banner } from '@/shared/components/banner';
 import { Button } from '@/shared/components/button';
+import { Card } from '@/shared/components/card';
+import { EmptyState } from '@/shared/components/empty-state';
+import { ScreenHeader } from '@/shared/components/screen-header';
+import { StatusChip } from '@/shared/components/status-chip';
 import { Font } from '@/shared/theme/fonts';
-import { Brand, Colors, MaxContentWidth, Radius, Spacing, Status } from '@/shared/theme/theme';
+import { Brand, Colors, MaxContentWidth, Radius, Spacing, Status, TitleSize } from '@/shared/theme/theme';
 
 import { ChangeCard } from './change-card';
 import { splitByArchive } from './change-archive';
@@ -20,7 +24,6 @@ import { useChanges, type ChangesProblem } from './use-changes';
  * what is shown into the Archive, kept on this device (#138); only new changes are listed by default.
  */
 export function ChangesScreen() {
-  const insets = useSafeAreaInsets();
   const router = useRouter();
   const { changes, lessons, loaded, refreshing, problem, checkedAt, refresh } = useChanges();
   const { archived, ready, archiveAll } = useArchive();
@@ -55,17 +58,17 @@ export function ChangesScreen() {
   return (
     <ScrollView
       style={styles.screen}
-      contentContainerStyle={[styles.content, { paddingTop: insets.top + Spacing.three }]}
+      contentContainerStyle={styles.content}
       refreshControl={<RefreshControl refreshing={pulling} onRefresh={onPullToRefresh} />}>
       <View style={styles.column}>
-        <Header />
+        <ScreenHeader title="Changes" right={problem === 'offline' ? <StatusChip kind="offline" /> : undefined} />
 
         <ViewToggle view={view} onChange={setView} newCount={shown.length} archivedCount={archivedChanges.length} />
 
         {problem ? <ProblemNotice problem={problem} onRetry={refresh} /> : null}
 
         {!loaded || !ready ? (
-          <Text style={styles.muted}>Loading changes…</Text>
+          <EmptyState loading title="Loading changes" />
         ) : view === 'archive' ? (
           archivedChanges.length === 0 ? (
             problem ? null : <ArchiveEmpty />
@@ -78,7 +81,7 @@ export function ChangesScreen() {
           )
         ) : shown.length === 0 ? (
           problem ? null : (
-            <EmptyState checkedAt={checkedAt} onViewTimetable={() => router.navigate('/timetable')} />
+            <CaughtUp checkedAt={checkedAt} onViewTimetable={() => router.navigate('/timetable')} />
           )
         ) : (
           <>
@@ -99,19 +102,6 @@ export function ChangesScreen() {
         )}
       </View>
     </ScrollView>
-  );
-}
-
-function Header() {
-  return (
-    <View style={styles.header}>
-      <View style={styles.headerIcon}>
-        <Ionicons name="calendar-outline" size={22} color={Brand.navy} />
-      </View>
-      <Text style={styles.headerTitle} accessibilityRole="header">
-        Changes
-      </Text>
-    </View>
   );
 }
 
@@ -170,7 +160,7 @@ function Summary({
   onRefresh: () => void;
 }) {
   return (
-    <View style={styles.summary}>
+    <Card>
       <View style={styles.summaryTop}>
         <View style={styles.flex}>
           <Text style={styles.eyebrow}>
@@ -203,32 +193,25 @@ function Summary({
           ) : null,
         )}
       </View>
-    </View>
+    </Card>
   );
 }
 
-function EmptyState({ checkedAt, onViewTimetable }: { checkedAt: Date | null; onViewTimetable: () => void }) {
+function CaughtUp({ checkedAt, onViewTimetable }: { checkedAt: Date | null; onViewTimetable: () => void }) {
   return (
-    <View style={styles.empty}>
-      <View style={styles.emptyIcon}>
-        <Ionicons name="checkmark" size={44} color={Status.onTime.border} />
-      </View>
-      <Text style={styles.emptyTitle}>You&apos;re all caught up</Text>
-      <Text style={styles.emptyBody}>
-        When a lesson is cancelled, moved or changes room, it will show up here.
-      </Text>
+    <EmptyState
+      icon="checkmark-circle-outline"
+      title="You're all caught up"
+      text="When a lesson is cancelled, moved or changes room, it will show up here.">
       <Button label="View timetable" variant="secondary" onPress={onViewTimetable} />
       {checkedAt ? <Text style={styles.muted}>Last checked {formatTime(checkedAt)}</Text> : null}
-    </View>
+    </EmptyState>
   );
 }
 
 function ArchiveEmpty() {
   return (
-    <View style={styles.empty}>
-      <Text style={styles.emptyTitle}>Nothing archived yet</Text>
-      <Text style={styles.emptyBody}>Changes you mark as read are kept here.</Text>
-    </View>
+    <EmptyState icon="archive-outline" title="Nothing archived yet" text="Changes you mark as read are kept here." />
   );
 }
 
@@ -247,10 +230,10 @@ function ProblemNotice({
         : "Couldn't load your changes. Try again in a moment.";
 
   return (
-    <View style={styles.notice} accessibilityRole="alert">
+    <Banner>
       <Text style={styles.noticeText}>{text}</Text>
       {problem !== 'session' ? <Button label="Try again" variant="secondary" onPress={onRetry} /> : null}
-    </View>
+    </Banner>
   );
 }
 
@@ -259,17 +242,6 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: Spacing.three, paddingBottom: Spacing.four, alignItems: 'center' },
   column: { width: '100%', maxWidth: MaxContentWidth, gap: Spacing.three },
   flex: { flex: 1, gap: Spacing.one },
-
-  header: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
-  headerIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: Radius.base,
-    backgroundColor: Colors.light.backgroundElement,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerTitle: { fontFamily: Font.textBold, fontSize: 24, color: Brand.navy },
 
   toggle: {
     flexDirection: 'row',
@@ -283,17 +255,9 @@ const styles = StyleSheet.create({
   tabText: { fontFamily: Font.textSemiBold, fontSize: 14, color: Colors.light.textSecondary },
   tabTextActive: { color: Brand.navy },
 
-  summary: {
-    gap: Spacing.three,
-    padding: Spacing.three,
-    borderRadius: Radius.card,
-    borderWidth: 1,
-    borderColor: Brand.border,
-    backgroundColor: Brand.white,
-  },
   summaryTop: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.three },
   eyebrow: { fontFamily: Font.labelSemiBold, fontSize: 12, letterSpacing: 1, color: Status.changed.text },
-  summaryTitle: { fontFamily: Font.textBold, fontSize: 20, color: Brand.navy },
+  summaryTitle: { fontFamily: Font.textBold, fontSize: TitleSize.section, color: Brand.navy },
   refresh: {
     width: 44,
     height: 44,
@@ -318,32 +282,7 @@ const styles = StyleSheet.create({
 
   list: { gap: Spacing.three },
 
-  empty: { alignItems: 'center', gap: Spacing.three, paddingVertical: Spacing.five, paddingHorizontal: Spacing.three },
-  emptyIcon: {
-    width: 96,
-    height: 96,
-    borderRadius: Radius.pill,
-    backgroundColor: Brand.navy,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  emptyTitle: { fontFamily: Font.textBold, fontSize: 20, color: Brand.navy, textAlign: 'center' },
-  emptyBody: {
-    fontFamily: Font.text,
-    fontSize: 15,
-    lineHeight: 22,
-    color: Colors.light.textSecondary,
-    textAlign: 'center',
-  },
   muted: { fontFamily: Font.label, fontSize: 13, color: Colors.light.textSecondary, textAlign: 'center' },
 
-  notice: {
-    gap: Spacing.three,
-    padding: Spacing.three,
-    borderRadius: Radius.card,
-    borderWidth: 1,
-    borderColor: Brand.border,
-    backgroundColor: Brand.white,
-  },
   noticeText: { fontFamily: Font.text, fontSize: 14, color: Colors.light.text },
 });

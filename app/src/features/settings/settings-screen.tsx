@@ -3,17 +3,18 @@ import Constants from 'expo-constants';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { api, NetworkError, onUnauthorized, UnauthorizedError, type Profile } from '@/shared/api';
 import { Button } from '@/shared/components/button';
+import { Card } from '@/shared/components/card';
+import { ScreenHeader } from '@/shared/components/screen-header';
 import { usePushState } from '@/shared/push/push-state';
 import type { PushState } from '@/shared/push/types';
 import { changesStore, lessonCache } from '@/shared/storage';
 import { sortLessonsByStart } from '@/shared/storage/sort-lessons';
 import { announceSynced } from '@/shared/sync/synced';
 import { Font } from '@/shared/theme/fonts';
-import { Brand, Colors, MaxContentWidth, Radius, Spacing, Status } from '@/shared/theme/theme';
+import { Brand, Colors, MaxContentWidth, Radius, Spacing, Status, TitleSize } from '@/shared/theme/theme';
 
 import { Row, Section, ToggleRow } from './settings-rows';
 
@@ -71,7 +72,6 @@ function initials(name: string): string {
  * and invent nothing. Unlinking asks first, then removes the device on the server and signs out.
  */
 export function SettingsScreen() {
-  const insets = useSafeAreaInsets();
   const router = useRouter();
   const push = usePushState();
   const [syncing, setSyncing] = useState(true);
@@ -203,13 +203,9 @@ export function SettingsScreen() {
           : `Synced ${formatClock(syncedAt)}`;
 
   return (
-    <ScrollView
-      style={styles.screen}
-      contentContainerStyle={[styles.content, { paddingTop: insets.top + Spacing.three }]}>
+    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <View style={styles.column}>
-        <Text style={styles.title} accessibilityRole="header">
-          Settings
-        </Text>
+        <ScreenHeader title="Settings" />
 
         <ProfileCard profile={profile} syncTone={syncTone} syncLabel={syncLabel} />
 
@@ -283,7 +279,7 @@ function ProfileCard({
   const name = profile?.display_name ?? null;
   const pill = SYNC_PILL[syncTone];
   return (
-    <View style={styles.profile}>
+    <Card>
       <View style={styles.profileTop}>
         <View style={styles.avatar}>
           {name ? (
@@ -311,7 +307,7 @@ function ProfileCard({
           <Text style={[styles.pillText, { color: pill.fg }]}>{syncLabel}</Text>
         </View>
       </View>
-    </View>
+    </Card>
   );
 }
 
@@ -350,7 +346,7 @@ function UnlinkDevice() {
   }
 
   return (
-    <View style={styles.confirm}>
+    <Card tone="danger">
       <Text style={styles.confirmTitle}>Unlink this device?</Text>
       <Text style={styles.confirmBody}>
         You&apos;ll stop getting alerts here and will need to scan your QR code again to come back. Your
@@ -363,7 +359,7 @@ function UnlinkDevice() {
       ) : null}
       <Button label="Unlink" variant="destructive" disabled={busy} onPress={unlink} />
       <Button label="Cancel" variant="secondary" disabled={busy} onPress={() => setConfirming(false)} />
-    </View>
+    </Card>
   );
 }
 
@@ -371,16 +367,7 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: Colors.light.background },
   content: { paddingHorizontal: Spacing.three, paddingBottom: Spacing.four, alignItems: 'center' },
   column: { width: '100%', maxWidth: MaxContentWidth, gap: Spacing.three },
-  title: { fontFamily: Font.textBold, fontSize: 24, color: Brand.navy },
 
-  profile: {
-    gap: Spacing.three,
-    padding: Spacing.three,
-    borderRadius: Radius.card,
-    borderWidth: 1,
-    borderColor: Brand.border,
-    backgroundColor: Brand.white,
-  },
   profileTop: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
   avatar: {
     width: 56,
@@ -392,7 +379,7 @@ const styles = StyleSheet.create({
   },
   avatarText: { fontFamily: Font.textBold, fontSize: 20, color: Brand.white },
   profileText: { flex: 1, gap: Spacing.half },
-  profileName: { fontFamily: Font.textBold, fontSize: 20, color: Brand.navy },
+  profileName: { fontFamily: Font.textBold, fontSize: TitleSize.section, color: Brand.navy },
   profileClass: { fontFamily: Font.label, fontSize: 14, color: Colors.light.textSecondary },
   divider: { height: 1, backgroundColor: Brand.border },
   syncRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: Spacing.two },
@@ -418,15 +405,7 @@ const styles = StyleSheet.create({
   },
 
   unlink: { backgroundColor: Status.cancelled.surface, borderColor: Status.cancelled.border },
-  confirm: {
-    gap: Spacing.three,
-    padding: Spacing.three,
-    borderRadius: Radius.card,
-    borderWidth: 1,
-    borderColor: Status.cancelled.border,
-    backgroundColor: Status.cancelled.surface,
-  },
-  confirmTitle: { fontFamily: Font.textBold, fontSize: 18, color: Status.cancelled.text },
+  confirmTitle: { fontFamily: Font.textBold, fontSize: TitleSize.card, color: Status.cancelled.text },
   confirmBody: { fontFamily: Font.text, fontSize: 14, lineHeight: 20, color: Colors.light.text },
   error: { fontFamily: Font.textSemiBold, fontSize: 14, color: Status.cancelled.text },
 });

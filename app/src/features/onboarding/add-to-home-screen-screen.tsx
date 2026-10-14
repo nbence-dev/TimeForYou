@@ -4,6 +4,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/shared/components/button';
+import { ScreenHeader } from '@/shared/components/screen-header';
 import { isIosNonSafari } from '@/shared/pwa/install';
 import { useSession } from '@/shared/session/session';
 import { Font } from '@/shared/theme/fonts';
@@ -42,20 +43,10 @@ export function AddToHomeScreenScreen() {
   const steps = isIosNonSafari() ? [OPEN_IN_SAFARI, ...STEPS] : STEPS;
 
   return (
-    <View style={[styles.screen, { paddingTop: insets.top }]}>
-      <View style={styles.topBar}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Skip for now"
-          hitSlop={8}
-          onPress={closeInstallGuide}
-          style={styles.close}>
-          <Ionicons name="close" size={26} color={Brand.navy} />
-        </Pressable>
-      </View>
-
+    <View style={styles.screen}>
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.column}>
+          <ScreenHeader title="Turn on notifications" onClose={closeInstallGuide} closeLabel="Skip for now" />
           <View style={styles.hero}>
             <View style={styles.heroIcon}>
               <Ionicons name="notifications-outline" size={40} color={Brand.navy} />
@@ -63,9 +54,6 @@ export function AddToHomeScreenScreen() {
                 <Ionicons name="add" size={16} color={Brand.white} />
               </View>
             </View>
-            <Text style={styles.title} accessibilityRole="header">
-              Turn on notifications
-            </Text>
             <Text style={styles.subtitle}>
               On iPhone, alerts only work once TimeForYou is on your Home Screen.
             </Text>
@@ -122,16 +110,7 @@ export function AddToHomeScreenScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: Colors.light.background },
-  topBar: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two,
-    borderBottomWidth: 1,
-    borderBottomColor: Brand.border,
-  },
-  close: { padding: Spacing.one },
-  content: { padding: Spacing.three, alignItems: 'center' },
+  content: { paddingHorizontal: Spacing.three, paddingBottom: Spacing.three, alignItems: 'center' },
   column: { width: '100%', maxWidth: MaxContentWidth, gap: Spacing.three },
   hero: { alignItems: 'center', gap: Spacing.two, paddingVertical: Spacing.three },
   heroIcon: {
@@ -155,7 +134,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: Brand.orange,
   },
-  title: { fontFamily: Font.textBold, fontSize: 26, color: Brand.navy, textAlign: 'center' },
   subtitle: { fontFamily: Font.text, fontSize: 16, lineHeight: 24, color: Colors.light.textSecondary, textAlign: 'center' },
   step: {
     flexDirection: 'row',

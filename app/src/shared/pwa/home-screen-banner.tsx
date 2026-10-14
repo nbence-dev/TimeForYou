@@ -1,12 +1,12 @@
-import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text } from 'react-native';
 
+import { Banner } from '@/shared/components/banner';
 import { usePushState } from '@/shared/push/push-state';
 import { needsHomeScreenInstall } from '@/shared/pwa/install';
 import { useSession } from '@/shared/session/session';
 import { Font } from '@/shared/theme/fonts';
-import { Radius, Spacing, Status } from '@/shared/theme/theme';
+import { Status } from '@/shared/theme/theme';
 
 // Dismissing hides the banner until the tab is closed (#67). sessionStorage can throw in private
 // browsing or with site data blocked, so both helpers fail quietly.
@@ -48,39 +48,18 @@ export function HomeScreenBanner() {
   };
 
   return (
-    <View style={styles.banner} accessibilityRole="alert">
-      <Ionicons name="notifications-off-outline" size={20} color={Status.cancelled.text} />
-      <View style={styles.body}>
-        <Text style={styles.message}>
-          Notifications are off. Add TimeForYou to your Home Screen to get live room change alerts.
-        </Text>
-        <Pressable onPress={openInstallGuide} accessibilityRole="link" hitSlop={8}>
-          <Text style={styles.link}>Fix Settings →</Text>
-        </Pressable>
-      </View>
-      <Pressable
-        onPress={dismiss}
-        accessibilityRole="button"
-        accessibilityLabel="Dismiss"
-        hitSlop={8}>
-        <Ionicons name="close" size={20} color={Status.cancelled.text} />
+    <Banner tone="alert" icon="notifications-off-outline" onDismiss={dismiss}>
+      <Text style={styles.message}>
+        Notifications are off. Add TimeForYou to your Home Screen to get live room change alerts.
+      </Text>
+      <Pressable onPress={openInstallGuide} accessibilityRole="link" hitSlop={8}>
+        <Text style={styles.link}>Fix Settings →</Text>
       </Pressable>
-    </View>
+    </Banner>
   );
 }
 
 const styles = StyleSheet.create({
-  banner: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: Spacing.two,
-    padding: Spacing.three,
-    borderRadius: Radius.base,
-    borderWidth: 1,
-    backgroundColor: Status.cancelled.surface,
-    borderColor: Status.cancelled.border,
-  },
-  body: { flex: 1, gap: Spacing.one },
   message: { fontFamily: Font.text, fontSize: 14, color: Status.cancelled.text },
   link: { fontFamily: Font.textSemiBold, fontSize: 14, color: Status.cancelled.text },
 });

@@ -2,13 +2,15 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/shared/components/button';
+import { EmptyState } from '@/shared/components/empty-state';
 import { LessonCard } from '@/shared/components/lesson-card';
+import { NavArrow } from '@/shared/components/nav-arrow';
+import { ScreenHeader } from '@/shared/components/screen-header';
 import { StatusChip } from '@/shared/components/status-chip';
 import { Font } from '@/shared/theme/fonts';
-import { Brand, Colors, MaxContentWidth, Radius, Spacing, Status } from '@/shared/theme/theme';
+import { Brand, Colors, MaxContentWidth, Radius, Spacing, Status, TitleSize } from '@/shared/theme/theme';
 import type { Lesson } from '@/shared/types/lesson';
 
 import { cardStatusFor, dayKey, dayRange, formatDayTitle, formatTime, lessonsByDay, shiftDay } from './lesson-time';
@@ -34,7 +36,6 @@ import {
  * the lessons themselves, never a length coded here. Only the chosen day's lessons are rendered.
  */
 export function TimetableScreen() {
-  const insets = useSafeAreaInsets();
   const { lessons, refreshing, problem, refresh } = useTimetable({ retryWhileEmptyMs: RETRY_WHILE_EMPTY_MS });
   const { reload: reloadChanges } = useChangeMarkers();
   const [chosenDay, setChosenDay] = useState<string | null>(null);
@@ -65,30 +66,32 @@ export function TimetableScreen() {
   }
 
   return (
-    <View style={[styles.screen, { paddingTop: insets.top + Spacing.two }]}>
+    <View style={styles.screen}>
       <View style={styles.column}>
-        <View style={styles.header}>
-          <Text style={styles.title} accessibilityRole="header">
-            Timetable
-          </Text>
-          {problem === 'offline' && lessons.length > 0 ? <StatusChip kind="offline" /> : null}
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Go to today"
-            hitSlop={8}
-            onPress={() => goToDay(today)}
-            style={styles.iconButton}>
-            <Ionicons name="today-outline" size={24} color={Brand.navy} />
-          </Pressable>
-        </View>
+        <ScreenHeader
+          title="Timetable"
+          right={
+            <View style={styles.headerRight}>
+              {problem === 'offline' && lessons.length > 0 ? <StatusChip kind="offline" /> : null}
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Go to today"
+                hitSlop={8}
+                onPress={() => goToDay(today)}
+                style={styles.iconButton}>
+                <Ionicons name="today-outline" size={24} color={Brand.navy} />
+              </Pressable>
+            </View>
+          }
+        />
 
         {lessons.length > 0 ? (<>
         <View style={styles.weekRow}>
-          <Arrow direction="back" label="Previous week" disabled={weekIndex === 0} onPress={() => goToWeek(-1)} />
+          <NavArrow direction="back" label="Previous week" disabled={weekIndex === 0} onPress={() => goToWeek(-1)} />
           <Text style={styles.weekTitle}>
             Week {weekIndex + 1} of {weeks.length}
           </Text>
-          <Arrow
+          <NavArrow
             direction="forward"
             label="Next week"
             disabled={weekIndex >= weeks.length - 1}
@@ -124,7 +127,7 @@ export function TimetableScreen() {
 
       <ScrollView
         style={styles.body}
-        contentContainerStyle={{ paddingBottom: insets.bottom + Spacing.four }}
+        contentContainerStyle={styles.bodyContent}
         refreshControl={<RefreshControl refreshing={pulling} onRefresh={onPullToRefresh} />}>
         <View style={styles.column}>
           {lessons.length === 0 ? (
@@ -137,31 +140,6 @@ export function TimetableScreen() {
         </View>
       </ScrollView>
     </View>
-  );
-}
-
-function Arrow({
-  direction,
-  label,
-  disabled,
-  onPress,
-}: {
-  direction: 'back' | 'forward';
-  label: string;
-  disabled: boolean;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      accessibilityState={{ disabled }}
-      disabled={disabled}
-      onPress={onPress}
-      hitSlop={8}
-      style={[styles.arrow, disabled && styles.arrowDisabled]}>
-      <Ionicons name={direction === 'back' ? 'chevron-back' : 'chevron-forward'} size={22} color={Brand.navy} />
-    </Pressable>
   );
 }
 
@@ -273,11 +251,10 @@ function EmptyDay({ day, next, onGoTo }: { day: string; next: Lesson | null; onG
   const nextDay = next ? lessonDay(next) : null;
 
   return (
-    <View style={styles.emptyState}>
-      <View style={styles.emptyIcon}>
-        <Ionicons name="cafe-outline" size={36} color={Brand.navy} />
-      </View>
-      <Text style={styles.emptyTitle}>No lessons on {longWeekday(day)}</Text>
+    <EmptyState
+      icon="cafe-outline"
+      title={`No lessons on ${longWeekday(day)}`}
+      text={next && nextDay ? undefined : 'Nothing else is scheduled in this window.'}>
       {next && nextDay ? (
         <>
           <Text style={styles.emptyText}>
@@ -289,10 +266,8 @@ function EmptyDay({ day, next, onGoTo }: { day: string; next: Lesson | null; onG
           </Text>
           <Button label={`Go to ${longWeekday(nextDay)}`} variant="secondary" onPress={() => onGoTo(nextDay)} />
         </>
-      ) : (
-        <Text style={styles.emptyText}>Nothing else is scheduled in this window.</Text>
-      )}
-    </View>
+      ) : null}
+    </EmptyState>
   );
 }
 
@@ -300,29 +275,27 @@ function EmptyDay({ day, next, onGoTo }: { day: string; next: Lesson | null; onG
 function FetchingState({ problem, onRetry }: { problem: TimetableProblem; onRetry: () => void }) {
   if (problem === 'session') {
     return (
-      <View style={styles.emptyState}>
-        <Text style={styles.emptyTitle}>Your session has expired</Text>
-        <Text style={styles.emptyText}>Link your account again to see your timetable.</Text>
-      </View>
+      <EmptyState
+        icon="key-outline"
+        title="Your session has expired"
+        text="Link your account again to see your timetable."
+      />
     );
   }
 
   const offline = problem === 'offline';
   return (
-    <View style={styles.emptyState} accessibilityLiveRegion="polite">
-      {offline ? (
-        <Ionicons name="cloud-offline-outline" size={40} color={Colors.light.textSecondary} />
-      ) : (
-        <ActivityIndicator size="large" color={Brand.navy} />
-      )}
-      <Text style={styles.emptyTitle}>{offline ? "You're offline" : 'Fetching your timetable'}</Text>
-      <Text style={styles.emptyText}>
-        {offline
+    <EmptyState
+      icon={offline ? 'cloud-offline-outline' : undefined}
+      loading={!offline}
+      title={offline ? "You're offline" : 'Fetching your timetable'}
+      text={
+        offline
           ? 'Nothing is saved on this device yet. Your timetable will appear once you are back online.'
-          : 'Your lessons are on their way. This usually takes a few seconds after you link your account.'}
-      </Text>
+          : 'Your lessons are on their way. This usually takes a few seconds after you link your account.'
+      }>
       {offline || problem === 'failed' ? <Button label="Try again" variant="secondary" onPress={onRetry} /> : null}
-    </View>
+    </EmptyState>
   );
 }
 
@@ -339,13 +312,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.three,
     gap: Spacing.three,
   },
-  header: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
-  title: { flex: 1, fontFamily: Font.textBold, fontSize: 28, color: Brand.navy },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
   iconButton: { padding: Spacing.one },
   weekRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
-  weekTitle: { flex: 1, textAlign: 'center', fontFamily: Font.textBold, fontSize: 20, color: Brand.navy },
-  arrow: { width: 40, height: 40, borderRadius: Radius.pill, alignItems: 'center', justifyContent: 'center' },
-  arrowDisabled: { opacity: 0.3 },
+  weekTitle: { flex: 1, textAlign: 'center', fontFamily: Font.textBold, fontSize: TitleSize.section, color: Brand.navy },
   progress: { flexDirection: 'row', gap: Spacing.two },
   segment: { flex: 1, height: 6, borderRadius: Radius.pill, backgroundColor: Colors.light.backgroundSelected },
   segmentPast: { backgroundColor: Brand.navy },
@@ -375,9 +345,10 @@ const styles = StyleSheet.create({
   refreshing: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
   refreshingText: { fontFamily: Font.label, fontSize: 13, color: Colors.light.textSecondary },
   body: { flex: 1, marginTop: Spacing.three },
+  bodyContent: { paddingBottom: Spacing.four },
   dayBlock: { gap: Spacing.three, paddingTop: Spacing.two },
   dayHeading: { gap: Spacing.half },
-  dayTitle: { fontFamily: Font.textBold, fontSize: 22, color: Colors.light.text },
+  dayTitle: { fontFamily: Font.textBold, fontSize: TitleSize.section, color: Colors.light.text },
   daySummary: { fontFamily: Font.label, fontSize: 14, color: Colors.light.textSecondary },
   cancelledCount: { color: Status.cancelled.text },
   lessonBlock: { gap: Spacing.two },
@@ -395,16 +366,6 @@ const styles = StyleSheet.create({
     backgroundColor: Brand.white,
   },
   gapText: { fontFamily: Font.label, fontSize: 13, color: Colors.light.textSecondary, fontVariant: ['tabular-nums'] },
-  emptyState: { alignItems: 'center', gap: Spacing.three, paddingVertical: Spacing.six, paddingHorizontal: Spacing.three },
-  emptyIcon: {
-    width: 96,
-    height: 96,
-    borderRadius: Radius.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: Colors.light.backgroundElement,
-  },
-  emptyTitle: { fontFamily: Font.textBold, fontSize: 20, color: Colors.light.text, textAlign: 'center' },
   emptyText: {
     fontFamily: Font.text,
     fontSize: 15,
