@@ -62,7 +62,9 @@ export function BottomNav({ active, onSelect, changesCount = 0 }: BottomNavProps
 }
 
 const styles = StyleSheet.create({
-  outer: { paddingHorizontal: Spacing.three, backgroundColor: 'transparent' },
+  // The page colour, not transparent: behind a transparent bar the navigation library paints its own
+  // default grey (#F2F2F2), which showed as a darker band under the nav.
+  outer: { paddingHorizontal: Spacing.three, backgroundColor: Colors.light.background },
   pill: {
     backgroundColor: Brand.white,
     borderRadius: Radius.pill,
