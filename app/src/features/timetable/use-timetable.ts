@@ -13,6 +13,13 @@ import { createLatestGuard } from './latest-guard';
 /** Why the last refresh did not produce fresh data. `null` when it did (or has not finished). */
 export type TimetableProblem = 'offline' | 'session' | 'failed' | null;
 
+
+/**
+ * How often a screen asks again while the student has no lessons yet: their first poll is still
+ * running after linking (#58). Shared by Today and Timetable (#142), so both wait the same time.
+ */
+export const RETRY_WHILE_EMPTY_MS = 5_000;
+
 export type UseTimetableOptions = {
   /**
    * While there are no lessons at all, fetch again this often (ms) until some arrive. A student who

@@ -61,6 +61,28 @@ from #103 open on the laptop.
   refresh.
 - Step 4: the lessons stay on screen. They are not replaced by an error state.
 
+### TT-3 Today fills in by itself after linking (#142)
+
+**Setup:** A brand-new student: on `http://localhost:8000/demo`, add a guest. On the web, use a
+fresh Incognito window so nothing is cached, and stop the worker (`docker compose stop worker`) so
+the first poll cannot finish before the app asks. The worker uses port 8081, so start Expo while
+the worker is still running, or Expo takes that port and the worker cannot start again.
+
+**Steps:**
+
+1. Link the guest and land on Today. Open DevTools › Network, filter on `timetable`, and do not
+   click the page (a focus change also refetches, which hides the result).
+2. Wait 20 seconds.
+3. Run `Start-Sleep 10; docker compose start worker`, switch straight back to the app, and wait
+   without clicking.
+
+**Expected:**
+
+- After step 1, Today shows "Loading…" and "Loading your timetable…", not "No lessons".
+- During step 2, a `timetable` request is sent about every 5 seconds, each returning `[]`.
+- After step 3, the lessons appear on Today within a few seconds, with no reload, and no further
+  `timetable` requests are sent.
+
 ## Add to Home Screen (#67)
 
 A2HS-1 and A2HS-3 need a real iPhone: iOS only opens the app full-screen (and delivers Web Push)
