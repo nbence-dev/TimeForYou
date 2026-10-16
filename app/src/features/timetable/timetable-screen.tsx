@@ -72,7 +72,6 @@ export function TimetableScreen() {
           title="Timetable"
           right={
             <View style={styles.headerRight}>
-              {problem === 'offline' && lessons.length > 0 ? <StatusChip kind="offline" /> : null}
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel="Go to today"
@@ -85,6 +84,12 @@ export function TimetableScreen() {
             </View>
           }
         />
+
+        {problem === 'offline' && lessons.length > 0 ? (
+          <View style={styles.offlineRow}>
+            <StatusChip kind="offline" />
+          </View>
+        ) : null}
 
         {lessons.length > 0 ? (<>
         <View style={styles.weekRow}>
@@ -325,6 +330,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.light.backgroundElement,
   },
   todayButtonText: { fontFamily: Font.textSemiBold, fontSize: 14, color: Brand.navy },
+  offlineRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
   weekRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
   weekTitle: { flex: 1, textAlign: 'center', fontFamily: Font.textBold, fontSize: TitleSize.section, color: Brand.navy },
   progress: { flexDirection: 'row', gap: Spacing.two },
