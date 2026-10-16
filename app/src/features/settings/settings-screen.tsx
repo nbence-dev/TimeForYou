@@ -22,11 +22,16 @@ import { Row, Section, ToggleRow } from './settings-rows';
 
 // What the Notification status row tells a student to do, and what it says when it cannot help (#155).
 const NOTIFICATION_HINT: Partial<Record<PushState, string>> = {
-  default: 'Tap to turn on notifications',
-  denied: 'Tap to see how to turn them on',
-  unsupported: 'Tap to see why',
-  failed: 'Tap to try again',
+  registered: 'On for this device',
+  default: 'Off. Switch on to get change alerts',
+  denied: 'Blocked. Switch on to see how to allow them',
+  unsupported: 'Unavailable here. Switch on to see why',
+  failed: 'Setup failed. Switch on to try again',
 };
+const TURN_OFF_HELP =
+  Platform.OS === 'web'
+    ? 'To turn notifications off, click the lock icon next to the address, open Site settings and set Notifications to Block.'
+    : "To turn notifications off, open your phone's Settings, find TimeForYou under Apps, and turn off Notifications.";
 
 // A refused permission cannot be asked for again, so point at where it is changed.
 const DENIED_HELP =
@@ -37,17 +42,8 @@ const UNSUPPORTED_HELP =
   Platform.OS === 'web'
     ? "Notifications aren't available here. On an iPhone, open TimeForYou from your Home Screen first. Some browsers and private windows don't support them."
     : "Notifications aren't available on this device.";
-const DISMISSED_HELP = 'Notifications are still off. Tap the row again to turn them on.';
+const DISMISSED_HELP = 'Notifications are still off. Switch it on again to turn them on.';
 const FAILED_HELP = "Couldn't finish setting up notifications. Try again in a moment.";
-
-const NOTIFICATION_LABEL: Record<PushState, string> = {
-  checking: '',
-  registered: 'On',
-  denied: 'Off',
-  default: 'Not set up',
-  failed: 'Error',
-  unsupported: 'Unavailable',
-};
 
 type SyncTone = 'ok' | 'problem' | 'busy';
 
@@ -218,8 +214,12 @@ export function SettingsScreen() {
     }
   }
 
-  // Nothing to do once notifications are on, and nothing known yet while the launch check runs.
-  const canActOnPush = push !== 'registered' && push !== 'checking';
+  // Switching on asks for permission or explains what to do. A page cannot revoke permission, so
+  // switching off only says where to do that.
+  async function onNotificationSwitch(next: boolean) {
+    if (next) return onNotificationStatusPress();
+    setPushHelp({ text: TURN_OFF_HELP, shownFor: push });
+  }
 
   // Shows the new position at once, then saves it; if saving fails it flips back and says why.
   async function toggleAlerts(next: boolean) {
@@ -284,12 +284,12 @@ export function SettingsScreen() {
               {alertsError}
             </Text>
           ) : null}
-          <Row
+          <ToggleRow
             icon="checkmark-circle-outline"
             title="Notification status"
-            subtitle={canActOnPush ? NOTIFICATION_HINT[push] : undefined}
-            value={settingUpPush ? 'Setting up…' : NOTIFICATION_LABEL[push]}
-            onPress={canActOnPush ? () => void onNotificationStatusPress() : undefined}
+            subtitle={settingUpPush ? 'Setting up…' : NOTIFICATION_HINT[push]}
+            value={push === 'checking' ? null : push === 'registered'}
+            onChange={(next) => void onNotificationSwitch(next)}
             disabled={settingUpPush}
           />
           {pushHelp && pushHelp.shownFor === push ? (
