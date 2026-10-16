@@ -785,3 +785,73 @@ Compare each against the first one you open. Nothing here changes behaviour; it 
 | SC-5 | Switch off notifications for the app (or open it in Safari, not from the Home Screen) | The notifications prompt and the Home Screen banner have the same corner radius and the dismiss X in the same place |
 | SC-6 | Turn on airplane mode and open Today, Timetable and Changes | The Offline chip sits in the header on all three, and the empty or loading state looks the same: circle, title, text |
 | SC-7 | Scroll to the bottom of every screen above | The last card is not hidden behind the bottom nav or the home indicator, and the gap is the same |
+
+## Turning notifications on again from Settings (#155)
+
+The **Notification status** row under NOTIFICATIONS in Settings is tappable whenever notifications are
+not on. It needs push to be set up, so run the web app with the four `EXPO_PUBLIC_FIREBASE_*` values
+set (copy them from the Firebase console, or use the live site). Without them the row says
+**Unavailable** (ENS-4).
+
+To put Chrome into each permission state: click the **lock icon** left of the address, open **Site
+settings**, find **Notifications**, set it to **Ask (default)** (or **Reset permission**), **Block** or
+**Allow**, then **reload** the page.
+
+### ENS-1 Permission is "default" (prompt closed or never answered)
+
+**Steps:**
+
+1. Set Notifications to **Ask (default)** and reload. Leave the "Turn on notifications" strip at the
+   top **showing**.
+2. Open **Settings**. Tap **Notification status**.
+3. In Chrome's prompt, close it without choosing (press Escape), then tap the row again and choose
+   **Allow**.
+4. Repeat steps 1 to 3, but this time close the strip with its X first. This is the case a tester hit:
+   with the strip gone, the row is the only way back in.
+
+**Expected:**
+
+- Step 2 shows **Not set up** with "Tap to turn on notifications"; tapping asks Chrome for permission.
+- After closing the prompt, the row stays **Not set up** and a note says notifications are still off.
+  Chrome may switch the site to **Block** after several dismissals in a row; if the second tap shows
+  the "blocked" instructions instead of a prompt, that is Chrome, so continue with ENS-2.
+- After **Allow**, the row reads **On** with no reload, and a `web_push` row appears in `devices`. In the
+  first run the top strip (and the Home Screen banner, if shown) disappear too, which shows Settings and
+  the strip share one state.
+
+### ENS-2 Permission is "denied" (blocked)
+
+**Steps:**
+
+1. Set Notifications to **Block** and reload. Open **Settings** and tap **Notification status**.
+2. Tap it again.
+
+**Expected:**
+
+- The row reads **Off** with "Tap to see how to turn them on". Tapping shows short instructions (lock
+  icon, Site settings, Notifications, Allow, reload); Chrome does **not** show a prompt.
+- The instructions can be closed with their X and come back on the next tap. The status stays accurate.
+
+### ENS-3 Permission is "granted"
+
+**Steps:**
+
+1. Set Notifications to **Allow** and reload. Open **Settings**.
+
+**Expected:**
+
+- The row reads **On** and is not tappable. If setup fails (for example Firebase not reachable), it
+  reads **Error** with "Tap to try again"; tapping retries the setup.
+
+### ENS-4 Notifications unsupported or not configured
+
+**Steps:**
+
+1. Run the web app **without** the Firebase values (or open it in a browser or private window that does
+   not support push). Open **Settings** and tap **Notification status**.
+
+**Expected:**
+
+- The row reads **Unavailable** with "Tap to see why". Tapping shows an explanation: on an iPhone open
+  TimeForYou from the Home Screen first, and some browsers and private windows do not support
+  notifications.
