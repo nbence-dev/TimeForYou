@@ -83,6 +83,22 @@ the worker is still running, or Expo takes that port and the worker cannot start
 - After step 3, the lessons appear on Today within a few seconds, with no reload, and no further
   `timetable` requests are sent.
 
+### TT-4 The Today button says what it does (#153)
+
+**Steps:**
+
+1. Open the **Timetable** tab and look at the top-right corner, without tapping anything.
+2. Tap a different day, then tap the button in the corner.
+3. Make the app offline (stop the `api` container) and look at the header again. On a phone, or a
+   browser window about 400px wide, check nothing wraps or gets cut off.
+
+**Expected:**
+
+- Step 1 shows a small pill with a calendar icon and the word **Today**. A first-time user can tell
+  what it does.
+- Step 2 jumps back to today's day.
+- Step 3 shows the Offline chip next to the Today pill, with the title still on one line.
+
 ## Add to Home Screen (#67)
 
 A2HS-1 and A2HS-3 need a real iPhone: iOS only opens the app full-screen (and delivers Web Push)
@@ -843,3 +859,73 @@ unpause api` is the closest to a very slow tunnel.
 
 - The offline message with a **Try again** button, and no spinner. With the server up but failing, it
   reads "Couldn't load your timetable" with **Try again**.
+
+## Turning notifications on again from Settings (#155)
+
+The **Notification status** row under NOTIFICATIONS in Settings is tappable whenever notifications are
+not on. It needs push to be set up, so run the web app with the four `EXPO_PUBLIC_FIREBASE_*` values
+set (copy them from the Firebase console, or use the live site). Without them the row says
+**Unavailable** (ENS-4).
+
+To put Chrome into each permission state: click the **lock icon** left of the address, open **Site
+settings**, find **Notifications**, set it to **Ask (default)** (or **Reset permission**), **Block** or
+**Allow**, then **reload** the page.
+
+### ENS-1 Permission is "default" (prompt closed or never answered)
+
+**Steps:**
+
+1. Set Notifications to **Ask (default)** and reload. Leave the "Turn on notifications" strip at the
+   top **showing**.
+2. Open **Settings**. Tap **Notification status**.
+3. In Chrome's prompt, close it without choosing (press Escape), then tap the row again and choose
+   **Allow**.
+4. Repeat steps 1 to 3, but this time close the strip with its X first. This is the case a tester hit:
+   with the strip gone, the row is the only way back in.
+
+**Expected:**
+
+- Step 2 shows **Not set up** with "Tap to turn on notifications"; tapping asks Chrome for permission.
+- After closing the prompt, the row stays **Not set up** and a note says notifications are still off.
+  Chrome may switch the site to **Block** after several dismissals in a row; if the second tap shows
+  the "blocked" instructions instead of a prompt, that is Chrome, so continue with ENS-2.
+- After **Allow**, the row reads **On** with no reload, and a `web_push` row appears in `devices`. In the
+  first run the top strip (and the Home Screen banner, if shown) disappear too, which shows Settings and
+  the strip share one state.
+
+### ENS-2 Permission is "denied" (blocked)
+
+**Steps:**
+
+1. Set Notifications to **Block** and reload. Open **Settings** and tap **Notification status**.
+2. Tap it again.
+
+**Expected:**
+
+- The row reads **Off** with "Tap to see how to turn them on". Tapping shows short instructions (lock
+  icon, Site settings, Notifications, Allow, reload); Chrome does **not** show a prompt.
+- The instructions can be closed with their X and come back on the next tap. The status stays accurate.
+
+### ENS-3 Permission is "granted"
+
+**Steps:**
+
+1. Set Notifications to **Allow** and reload. Open **Settings**.
+
+**Expected:**
+
+- The row reads **On** and is not tappable. If setup fails (for example Firebase not reachable), it
+  reads **Error** with "Tap to try again"; tapping retries the setup.
+
+### ENS-4 Notifications unsupported or not configured
+
+**Steps:**
+
+1. Run the web app **without** the Firebase values (or open it in a browser or private window that does
+   not support push). Open **Settings** and tap **Notification status**.
+
+**Expected:**
+
+- The row reads **Unavailable** with "Tap to see why". Tapping shows an explanation: on an iPhone open
+  TimeForYou from the Home Screen first, and some browsers and private windows do not support
+  notifications.

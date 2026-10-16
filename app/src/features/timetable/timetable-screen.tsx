@@ -73,18 +73,24 @@ export function TimetableScreen() {
           title="Timetable"
           right={
             <View style={styles.headerRight}>
-              {problem === 'offline' && lessons.length > 0 ? <StatusChip kind="offline" /> : null}
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel="Go to today"
                 hitSlop={8}
                 onPress={() => goToDay(today)}
-                style={styles.iconButton}>
-                <Ionicons name="today-outline" size={24} color={Brand.navy} />
+                style={styles.todayButton}>
+                <Ionicons name="today-outline" size={20} color={Brand.navy} />
+                <Text style={styles.todayButtonText}>Today</Text>
               </Pressable>
             </View>
           }
         />
+
+        {problem === 'offline' && lessons.length > 0 ? (
+          <View style={styles.offlineRow}>
+            <StatusChip kind="offline" />
+          </View>
+        ) : null}
 
         {lessons.length > 0 ? (<>
         <View style={styles.weekRow}>
@@ -316,7 +322,18 @@ const styles = StyleSheet.create({
     gap: Spacing.three,
   },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
-  iconButton: { padding: Spacing.one },
+  // The word next to the icon: a bare glyph did not say what the button does (#153).
+  todayButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.one,
+    minHeight: 36,
+    paddingHorizontal: Spacing.three,
+    borderRadius: Radius.pill,
+    backgroundColor: Colors.light.backgroundElement,
+  },
+  todayButtonText: { fontFamily: Font.textSemiBold, fontSize: 14, color: Brand.navy },
+  offlineRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
   weekRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
   weekTitle: { flex: 1, textAlign: 'center', fontFamily: Font.textBold, fontSize: TitleSize.section, color: Brand.navy },
   progress: { flexDirection: 'row', gap: Spacing.two },

@@ -1,5 +1,14 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import Animated, {
+  interpolateColor,
+  useAnimatedStyle,
+  useDerivedValue,
+  useSharedValue,
+  withSpring,
+  type SharedValue,
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Brand, Colors, Radius, Spacing } from '@/shared/theme/theme';
@@ -23,38 +32,87 @@ export type BottomNavProps = {
   changesCount?: number;
 };
 
+const TRACK_PADDING = Spacing.one;
+
+/** The navy pill glides to the chosen tab; icon and label fade colour with it, so nothing snaps. */
+function NavTab({
+  tab,
+  index,
+  position,
+  onPress,
+  isActive,
+  badge,
+}: {
+  tab: (typeof NAV_TABS)[number];
+  index: number;
+  position: SharedValue<number>;
+  onPress: () => void;
+  isActive: boolean;
+  badge: number;
+}) {
+  // 1 when the pill is over this tab, 0 when it is a tab or more away.
+  const closeness = useDerivedValue(() => Math.max(0, 1 - Math.abs(position.value - index)));
+  const labelStyle = useAnimatedStyle(() => ({
+    color: interpolateColor(closeness.value, [0, 1], [Colors.light.textSecondary, Brand.white]),
+  }));
+  const whiteIcon = useAnimatedStyle(() => ({ opacity: closeness.value }));
+  const greyIcon = useAnimatedStyle(() => ({ opacity: 1 - closeness.value }));
+
+  return (
+    <Pressable
+      accessibilityRole="tab"
+      accessibilityLabel={tab.label}
+      accessibilityState={{ selected: isActive }}
+      onPress={onPress}
+      style={styles.tab}>
+      <View style={styles.iconBox}>
+        <Animated.View style={greyIcon}>
+          <Ionicons name={tab.icon} size={22} color={Colors.light.textSecondary} />
+        </Animated.View>
+        <Animated.View style={[StyleSheet.absoluteFill, whiteIcon]}>
+          <Ionicons name={tab.icon} size={22} color={Brand.white} />
+        </Animated.View>
+        {badge > 0 ? (
+          <View style={styles.badge} accessibilityLabel={`${badge} unseen changes`}>
+            <Text style={styles.badgeText}>{badge > 9 ? '9+' : badge}</Text>
+          </View>
+        ) : null}
+      </View>
+      <Animated.Text style={[styles.label, labelStyle]} numberOfLines={1}>
+        {tab.label}
+      </Animated.Text>
+    </Pressable>
+  );
+}
+
 export function BottomNav({ active, onSelect, changesCount = 0 }: BottomNavProps) {
   const insets = useSafeAreaInsets();
+  const activeIndex = Math.max(0, NAV_TABS.findIndex((t) => t.key === active));
+  const position = useSharedValue(activeIndex);
+  const [trackWidth, setTrackWidth] = useState(0);
+
+  useEffect(() => {
+    position.value = withSpring(activeIndex, { damping: 20, stiffness: 220, mass: 0.8 });
+  }, [activeIndex, position]);
+
+  const tabWidth = (trackWidth - TRACK_PADDING * 2) / NAV_TABS.length;
+  const pillStyle = useAnimatedStyle(() => ({ transform: [{ translateX: position.value * tabWidth }] }));
   return (
     <View style={[styles.outer, { paddingBottom: Math.max(insets.bottom, Spacing.two) }]}>
       <View style={styles.pill}>
-        <View style={styles.track}>
-          {NAV_TABS.map((tab) => {
-            const isActive = tab.key === active;
-            const showBadge = tab.key === 'changes' && changesCount > 0;
-            const fg = isActive ? Brand.white : Colors.light.textSecondary;
-            return (
-              <Pressable
-                key={tab.key}
-                accessibilityRole="tab"
-                accessibilityLabel={tab.label}
-                accessibilityState={{ selected: isActive }}
-                onPress={() => onSelect(tab.key)}
-                style={[styles.tab, isActive && styles.tabActive]}>
-                <View>
-                  <Ionicons name={tab.icon} size={22} color={fg} />
-                  {showBadge ? (
-                    <View style={styles.badge} accessibilityLabel={`${changesCount} unseen changes`}>
-                      <Text style={styles.badgeText}>{changesCount > 9 ? '9+' : changesCount}</Text>
-                    </View>
-                  ) : null}
-                </View>
-                <Text style={[styles.label, { color: fg }]} numberOfLines={1}>
-                  {tab.label}
-                </Text>
-              </Pressable>
-            );
-          })}
+        <View style={styles.track} onLayout={(e) => setTrackWidth(e.nativeEvent.layout.width)}>
+          {trackWidth > 0 ? <Animated.View style={[styles.indicator, { width: tabWidth }, pillStyle]} /> : null}
+          {NAV_TABS.map((tab, i) => (
+            <NavTab
+              key={tab.key}
+              tab={tab}
+              index={i}
+              position={position}
+              isActive={tab.key === active}
+              badge={tab.key === 'changes' ? changesCount : 0}
+              onPress={() => onSelect(tab.key)}
+            />
+          ))}
         </View>
       </View>
     </View>
@@ -81,8 +139,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: Colors.light.backgroundElement,
     borderRadius: Radius.pill,
-    padding: Spacing.one,
+    padding: TRACK_PADDING,
   },
+  indicator: {
+    position: 'absolute',
+    top: TRACK_PADDING,
+    bottom: TRACK_PADDING,
+    left: TRACK_PADDING,
+    borderRadius: Radius.pill,
+    backgroundColor: Brand.navy,
+  },
+  iconBox: { width: 22, height: 22 },
   tab: {
     flex: 1,
     minHeight: 56,
@@ -91,7 +158,6 @@ const styles = StyleSheet.create({
     gap: Spacing.half,
     borderRadius: Radius.pill,
   },
-  tabActive: { backgroundColor: Brand.navy },
   label: { fontFamily: Font.labelSemiBold, fontSize: 11 },
   badge: {
     position: 'absolute',

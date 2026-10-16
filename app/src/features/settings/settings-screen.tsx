@@ -2,13 +2,15 @@ import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { api, NetworkError, onUnauthorized, UnauthorizedError, type Profile } from '@/shared/api';
+import { Banner } from '@/shared/components/banner';
 import { Button } from '@/shared/components/button';
 import { Card } from '@/shared/components/card';
 import { ScreenHeader } from '@/shared/components/screen-header';
-import { usePushState } from '@/shared/push/push-state';
+import { enablePush } from '@/shared/push';
+import { setPushState, usePushState } from '@/shared/push/push-state';
 import type { PushState } from '@/shared/push/types';
 import { changesStore, lessonCache } from '@/shared/storage';
 import { sortLessonsByStart } from '@/shared/storage/sort-lessons';
@@ -18,14 +20,30 @@ import { Brand, Colors, MaxContentWidth, Radius, Spacing, Status, TitleSize } fr
 
 import { Row, Section, ToggleRow } from './settings-rows';
 
-const NOTIFICATION_LABEL: Record<PushState, string> = {
-  checking: '',
-  registered: 'On',
-  denied: 'Off',
-  default: 'Not set up',
-  failed: 'Error',
-  unsupported: 'Unavailable',
+// What the Notification status row tells a student to do, and what it says when it cannot help (#155).
+const NOTIFICATION_HINT: Partial<Record<PushState, string>> = {
+  registered: 'On for this device',
+  default: 'Off. Switch on to get change alerts',
+  denied: 'Blocked. Switch on to see how to allow them',
+  unsupported: 'Unavailable here. Switch on to see why',
+  failed: 'Setup failed. Switch on to try again',
 };
+const TURN_OFF_HELP =
+  Platform.OS === 'web'
+    ? 'To turn notifications off, click the lock icon next to the address, open Site settings and set Notifications to Block.'
+    : "To turn notifications off, open your phone's Settings, find TimeForYou under Apps, and turn off Notifications.";
+
+// A refused permission cannot be asked for again, so point at where it is changed.
+const DENIED_HELP =
+  Platform.OS === 'web'
+    ? 'Notifications are blocked. In your browser, click the lock icon next to the address, open Site settings, set Notifications to Allow, then reload. On an iPhone, use Settings > Notifications > TimeForYou.'
+    : "Notifications are blocked. Open your phone's Settings, find TimeForYou under Apps, and turn on Notifications.";
+const UNSUPPORTED_HELP =
+  Platform.OS === 'web'
+    ? "Notifications aren't available here. On an iPhone, open TimeForYou from your Home Screen first. Some browsers and private windows don't support them."
+    : "Notifications aren't available on this device.";
+const DISMISSED_HELP = 'Notifications are still off. Switch it on again to turn them on.';
+const FAILED_HELP = "Couldn't finish setting up notifications. Try again in a moment.";
 
 type SyncTone = 'ok' | 'problem' | 'busy';
 
@@ -83,6 +101,10 @@ export function SettingsScreen() {
   const [alerts, setAlerts] = useState<boolean | null>(null);
   const [savingAlerts, setSavingAlerts] = useState(false);
   const [alertsError, setAlertsError] = useState<string | null>(null);
+  const [settingUpPush, setSettingUpPush] = useState(false);
+  const [pushHelp, setPushHelp] = useState<{ text: string; shownFor: PushState } | null>(null);
+  // Set at once, unlike `settingUpPush`, so a second tap before the next render sends nothing.
+  const pushRequestInFlight = useRef(false);
   const mounted = useRef(true);
   // Set the moment a 401 or an unlink signs the student out, so a fetch still in flight cannot save
   // their data back after the wipe.
@@ -164,6 +186,41 @@ export function SettingsScreen() {
     };
   }, []);
 
+  // The Notification status row: ask for permission again, or explain what to do instead. The request
+  // runs straight from the tap (a browser, and iOS above all, ignores one that is not).
+  async function onNotificationStatusPress() {
+    setPushHelp(null);
+    if (push === 'denied') return setPushHelp({ text: DENIED_HELP, shownFor: 'denied' });
+    if (push === 'unsupported') return setPushHelp({ text: UNSUPPORTED_HELP, shownFor: 'unsupported' });
+
+    // `default` asks for permission again; `failed` retries the setup, as permission is already granted.
+    if (pushRequestInFlight.current) return;
+    pushRequestInFlight.current = true;
+    setSettingUpPush(true);
+    try {
+      const next = await enablePush();
+      setPushState(next);
+      if (!mounted.current) return;
+      if (next === 'default') setPushHelp({ text: DISMISSED_HELP, shownFor: next });
+      else if (next === 'denied') setPushHelp({ text: DENIED_HELP, shownFor: next });
+      else if (next === 'unsupported') setPushHelp({ text: UNSUPPORTED_HELP, shownFor: next });
+      else if (next === 'failed') setPushHelp({ text: FAILED_HELP, shownFor: next });
+    } catch {
+      setPushState('failed');
+      if (mounted.current) setPushHelp({ text: FAILED_HELP, shownFor: 'failed' });
+    } finally {
+      pushRequestInFlight.current = false;
+      if (mounted.current) setSettingUpPush(false);
+    }
+  }
+
+  // Switching on asks for permission or explains what to do. A page cannot revoke permission, so
+  // switching off only says where to do that.
+  async function onNotificationSwitch(next: boolean) {
+    if (next) return onNotificationStatusPress();
+    setPushHelp({ text: TURN_OFF_HELP, shownFor: push });
+  }
+
   // Shows the new position at once, then saves it; if saving fails it flips back and says why.
   async function toggleAlerts(next: boolean) {
     const before = alerts;
@@ -235,7 +292,19 @@ export function SettingsScreen() {
               {alertsError}
             </Text>
           ) : null}
-          <Row icon="checkmark-circle-outline" title="Notification status" value={NOTIFICATION_LABEL[push]} />
+          <ToggleRow
+            icon="checkmark-circle-outline"
+            title="Notification status"
+            subtitle={settingUpPush ? 'Setting up…' : NOTIFICATION_HINT[push]}
+            value={push === 'checking' ? null : push === 'registered'}
+            onChange={(next) => void onNotificationSwitch(next)}
+            disabled={settingUpPush}
+          />
+          {pushHelp && pushHelp.shownFor === push ? (
+            <Banner tone="info" icon="information-circle-outline" onDismiss={() => setPushHelp(null)}>
+              <Text style={styles.pushHelp}>{pushHelp.text}</Text>
+            </Banner>
+          ) : null}
         </Section>
 
         <Section label="Calendar">
@@ -404,6 +473,7 @@ const styles = StyleSheet.create({
   pillDot: { width: 8, height: 8, borderRadius: Radius.pill },
   pillText: { fontFamily: Font.labelSemiBold, fontSize: 13, fontVariant: ['tabular-nums'] },
 
+  pushHelp: { fontFamily: Font.text, fontSize: 14, lineHeight: 20, color: Colors.light.text },
   alertsError: {
     fontFamily: Font.textSemiBold,
     fontSize: 13,
