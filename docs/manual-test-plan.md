@@ -83,6 +83,22 @@ the worker is still running, or Expo takes that port and the worker cannot start
 - After step 3, the lessons appear on Today within a few seconds, with no reload, and no further
   `timetable` requests are sent.
 
+### TT-4 The Today button says what it does (#153)
+
+**Steps:**
+
+1. Open the **Timetable** tab and look at the top-right corner, without tapping anything.
+2. Tap a different day, then tap the button in the corner.
+3. Make the app offline (stop the `api` container) and look at the header again. On a phone, or a
+   browser window about 400px wide, check nothing wraps or gets cut off.
+
+**Expected:**
+
+- Step 1 shows a small pill with a calendar icon and the word **Today**. A first-time user can tell
+  what it does.
+- Step 2 jumps back to today's day.
+- Step 3 shows the Offline chip next to the Today pill, with the title still on one line.
+
 ## Add to Home Screen (#67)
 
 A2HS-1 and A2HS-3 need a real iPhone: iOS only opens the app full-screen (and delivers Web Push)
