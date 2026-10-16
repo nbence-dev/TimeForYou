@@ -8,6 +8,7 @@ import { EmptyState } from '@/shared/components/empty-state';
 import { LessonCard } from '@/shared/components/lesson-card';
 import { NavArrow } from '@/shared/components/nav-arrow';
 import { ScreenHeader } from '@/shared/components/screen-header';
+import { LoadingSkeleton } from '@/shared/components/skeleton';
 import { StatusChip } from '@/shared/components/status-chip';
 import { HomeScreenBanner } from '@/shared/pwa/home-screen-banner';
 import { Font } from '@/shared/theme/fonts';
@@ -121,7 +122,7 @@ export function TodayScreen() {
             ))}
           </View>
         ) : (
-          <EmptyDay loading={waitingForLessons} />
+          <EmptyDay loading={waitingForLessons} onRetry={refresh} />
         )}
       </View>
     </ScrollView>
@@ -134,9 +135,9 @@ function summary(total: number, remaining: number, isToday: boolean): string {
   return isToday ? `${remaining} of ${noun(total)} still to come` : noun(total);
 }
 
-function EmptyDay({ loading }: { loading: boolean }) {
+function EmptyDay({ loading, onRetry }: { loading: boolean; onRetry: () => void }) {
   return loading ? (
-    <EmptyState loading title="Loading your timetable" />
+    <LoadingSkeleton label="Loading your timetable" onRetry={onRetry} />
   ) : (
     <EmptyState icon="cafe-outline" title="No lessons on this day" />
   );

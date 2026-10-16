@@ -5,6 +5,7 @@ import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, T
 
 import { Button } from '@/shared/components/button';
 import { EmptyState } from '@/shared/components/empty-state';
+import { LoadingSkeleton } from '@/shared/components/skeleton';
 import { LessonCard } from '@/shared/components/lesson-card';
 import { NavArrow } from '@/shared/components/nav-arrow';
 import { ScreenHeader } from '@/shared/components/screen-header';
@@ -283,18 +284,20 @@ function FetchingState({ problem, onRetry }: { problem: TimetableProblem; onRetr
     );
   }
 
+  // Still fetching (the first poll can take a few seconds after linking): skeleton rows, not a blank page.
+  if (problem === null) return <LoadingSkeleton label="Fetching your timetable" onRetry={onRetry} />;
+
   const offline = problem === 'offline';
   return (
     <EmptyState
-      icon={offline ? 'cloud-offline-outline' : undefined}
-      loading={!offline}
-      title={offline ? "You're offline" : 'Fetching your timetable'}
+      icon={offline ? 'cloud-offline-outline' : 'alert-circle-outline'}
+      title={offline ? "You're offline" : "Couldn't load your timetable"}
       text={
         offline
           ? 'Nothing is saved on this device yet. Your timetable will appear once you are back online.'
-          : 'Your lessons are on their way. This usually takes a few seconds after you link your account.'
+          : 'Something went wrong on our side. Try again in a moment.'
       }>
-      {offline || problem === 'failed' ? <Button label="Try again" variant="secondary" onPress={onRetry} /> : null}
+      <Button label="Try again" variant="secondary" onPress={onRetry} />
     </EmptyState>
   );
 }

@@ -190,14 +190,19 @@ export function NoteEditScreen({ lessonId, noteId }: { lessonId: string; noteId?
             ) : null}
 
             <View style={styles.actions}>
-              <Button label={saving ? 'Saving…' : 'Save note'} disabled={saving} onPress={() => void save()} />
+              <Button
+                label={saving && !confirmingDelete ? 'Saving…' : 'Save note'}
+                loading={saving && !confirmingDelete}
+                disabled={saving}
+                onPress={() => void save()}
+              />
               {noteId ? (
                 confirmingDelete ? (
                   <View style={styles.confirm} accessibilityRole="alert">
                     <Text style={styles.confirmText}>Delete this note?</Text>
                     <View style={styles.confirmButtons}>
                       <View style={styles.flex}>
-                        <Button label="Delete" variant="destructive" disabled={saving} onPress={() => void remove()} />
+                        <Button label="Delete" variant="destructive" loading={saving} onPress={() => void remove()} />
                       </View>
                       <View style={styles.flex}>
                         <Button label="Cancel" variant="secondary" disabled={saving} onPress={() => setConfirmingDelete(false)} />

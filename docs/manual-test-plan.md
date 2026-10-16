@@ -785,3 +785,61 @@ Compare each against the first one you open. Nothing here changes behaviour; it 
 | SC-5 | Switch off notifications for the app (or open it in Safari, not from the Home Screen) | The notifications prompt and the Home Screen banner have the same corner radius and the dismiss X in the same place |
 | SC-6 | Turn on airplane mode and open Today, Timetable and Changes | The Offline chip sits in the header on all three, and the empty or loading state looks the same: circle, title, text |
 | SC-7 | Scroll to the bottom of every screen above | The last card is not hidden behind the bottom nav or the home indicator, and the gap is the same |
+
+## Loading and failure feedback (#102)
+
+To slow the network down, use the browser's DevTools throttling ("Slow 3G"), or stop the `api`
+container and start it again. For a hung request, `docker compose pause api` and `docker compose
+unpause api` is the closest to a very slow tunnel.
+
+### NF-1 First load shows a skeleton, never a blank screen
+
+**Steps:**
+
+1. Sign in with nothing saved yet (a new browser profile, or clear the site's data), pause the `api`
+   container, and open **Today**, **Timetable** and **Changes** one after another.
+2. Leave one open for about 10 seconds, then unpause the container.
+
+**Expected:**
+
+- Each shows grey lesson-card-shaped rows that pulse, not an empty page.
+- After about 6 seconds a line says "Taking longer than usual. Check your connection…".
+- After the container is back, the rows are replaced by the real lessons or changes on their own (Today
+  and Timetable retry every 5 seconds).
+
+### NF-2 Saved lessons stay on screen
+
+**Steps:**
+
+1. With lessons saved on the device, pause the `api` container and reload **Today** and **Timetable**.
+
+**Expected:**
+
+- The saved lessons show straight away. No skeleton appears, and nothing flashes while the refresh
+  hangs.
+
+### NF-3 Buttons that send a request show a spinner
+
+**Steps:**
+
+1. Pause the `api` container, then tap **Unlink this device** and confirm with **Unlink**. Repeat with
+   **Reset link** (Calendar subscription), **Save note** and **Delete** on a note, and **Turn on
+   notifications** where it is offered. Unpause the container each time to let it finish.
+2. Open **Settings** and watch **Sync now** while it works.
+
+**Expected:**
+
+- The button shows a spinner next to its label and cannot be tapped again until the request ends. The
+  other button beside it (Cancel) is disabled too.
+- **Sync now** reads "Syncing…" while it works.
+
+### NF-4 A failed first load is an error with Try again
+
+**Steps:**
+
+1. With nothing saved, stop the `api` container (so requests fail at once) and open **Timetable**.
+
+**Expected:**
+
+- The offline message with a **Try again** button, and no spinner. With the server up but failing, it
+  reads "Couldn't load your timetable" with **Try again**.

@@ -232,7 +232,7 @@ function ResetLink({ onNewUrl }: { onNewUrl: (url: string) => void }) {
           {error}
         </Text>
       ) : null}
-      <Button label="Reset link" variant="destructive" disabled={busy} onPress={reset} />
+      <Button label="Reset link" variant="destructive" loading={busy} onPress={reset} />
       <Button label="Cancel" variant="secondary" disabled={busy} onPress={() => setConfirming(false)} />
     </Card>
   );

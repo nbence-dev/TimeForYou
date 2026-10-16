@@ -79,7 +79,7 @@ export function PushPrompt() {
         <Button
           label="Turn on notifications"
           variant="accent"
-          disabled={busy}
+          loading={busy}
           onPress={async () => {
             setBusy(true);
             try {
