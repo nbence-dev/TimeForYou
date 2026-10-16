@@ -65,7 +65,7 @@ gh api --method POST /repos/nbence-dev/TimeForYou/milestones \
   -f description="<what this week unblocks>. Spec #3."
 ```
 
-The milestone is what makes `gh issue list --milestone "…" --label ready-for-agent` — the command
+The milestone is what makes `gh issue list --milestone "…" --label ready` — the command
 CONTRIBUTING §7a tells teammates to run — mean "startable right now".
 
 ---
@@ -111,8 +111,8 @@ Seam A: <scenarios> | Seam B: <cases> | None (config/docs only)
    ```
    Note it takes the child's numeric **`id`**, not its issue number.
 3. **Label:** vertical (`api`, `worker`, `platform`, `onboarding`, `timetable`, `notify`,
-   `webuntis`, `release`) + milestone + `ready-for-agent`.
-4. **Anything not startable gets `blocked`, not `ready-for-agent`**, plus a banner at the top of
+   `webuntis`, `release`) + milestone + `ready`.
+4. **Anything not startable gets `blocked`, not `ready`**, plus a banner at the top of
    the body naming what it waits for and pointing at the ticket that unblocks it. This is not
    optional: the first ticket ever claimed on this project was the one blocked by two others,
    because nothing distinguished it.
@@ -130,13 +130,13 @@ Seam A: <scenarios> | Seam B: <cases> | None (config/docs only)
 ### Sanity check
 
 ```bash
-gh issue list --milestone "Week N — <theme>" --label ready-for-agent   # what a teammate sees
+gh issue list --milestone "Week N — <theme>" --label ready   # what a teammate sees
 gh api /repos/nbence-dev/TimeForYou/issues/3/sub_issues --jq 'length'  # still 8 epics
 gh api /repos/nbence-dev/TimeForYou/issues/<epic> --jq .sub_issues_summary
 ```
 
 Then open one ticket and ask: **could someone unfamiliar start this without asking a question?**
-If not, it is not `ready-for-agent`.
+If not, it is not `ready`.
 
 ---
 

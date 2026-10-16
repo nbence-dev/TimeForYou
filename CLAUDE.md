@@ -37,7 +37,7 @@ has not opened yet, **not a gap to fill**. See `docs/backlog-process.md` before 
 To see what is startable right now:
 
 ```bash
-gh issue list --milestone "$(gh api /repos/nbence-dev/TimeForYou/milestones --jq '.[0].title')" --label ready-for-agent
+gh issue list --milestone "$(gh api /repos/nbence-dev/TimeForYou/milestones --jq '.[0].title')" --label ready
 ```
 
 `blocked` means another issue must land first — the ticket says which, at the top.

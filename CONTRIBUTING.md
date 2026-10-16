@@ -177,14 +177,14 @@ you see the whole tree with its progress.
 To find your next task:
 
 ```bash
-gh issue list --milestone "Week 1 — foundations" --label ready-for-agent
+gh issue list --milestone "Week 1 — foundations" --label ready
 ```
 
 Read that as: **the current milestone**, minus anything blocked. Then:
 
 | Signal | Means |
 | --- | --- |
-| `ready-for-agent` | Spec is complete enough to start without asking a question |
+| `ready` | Spec is complete enough to start without asking a question |
 | `blocked` | Something else must land first. The ticket says what, at the top |
 | Assignee set | Taken. Talk to them before touching it |
 | No assignee | Free. **Assign it to yourself before you branch** |
