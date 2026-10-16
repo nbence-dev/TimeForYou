@@ -248,7 +248,15 @@ export function SettingsScreen() {
     void sync(true);
   }
 
-  const syncChip = problem === 'offline' ? 'Offline' : problem ? "Couldn't sync" : syncedAt ? 'Synced' : '';
+  const syncChip = syncing
+    ? 'Syncing…'
+    : problem === 'offline'
+      ? 'Offline'
+      : problem
+        ? "Couldn't sync"
+        : syncedAt
+          ? 'Synced'
+          : '';
   const syncTone: SyncTone = problem ? 'problem' : syncing || !syncedAt ? 'busy' : 'ok';
   const syncLabel =
     problem === 'offline'
@@ -426,7 +434,7 @@ function UnlinkDevice() {
           {error}
         </Text>
       ) : null}
-      <Button label="Unlink" variant="destructive" disabled={busy} onPress={unlink} />
+      <Button label="Unlink" variant="destructive" loading={busy} onPress={unlink} />
       <Button label="Cancel" variant="secondary" disabled={busy} onPress={() => setConfirming(false)} />
     </Card>
   );

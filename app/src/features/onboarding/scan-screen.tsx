@@ -132,7 +132,7 @@ export function ScanScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: Brand.scanBackdrop },
-  centered: { justifyContent: 'center', padding: Spacing.three },
+  centered: { justifyContent: 'center', alignItems: 'center', padding: Spacing.three },
   overlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', gap: Spacing.four },
   heading: { fontFamily: Font.textBold, fontSize: TitleSize.screen, color: Brand.white },
   frame: {

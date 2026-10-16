@@ -8,6 +8,7 @@ import { Button } from '@/shared/components/button';
 import { Card } from '@/shared/components/card';
 import { EmptyState } from '@/shared/components/empty-state';
 import { ScreenHeader } from '@/shared/components/screen-header';
+import { LoadingSkeleton } from '@/shared/components/skeleton';
 import { StatusChip } from '@/shared/components/status-chip';
 import { Font } from '@/shared/theme/fonts';
 import { Brand, Colors, MaxContentWidth, Radius, Spacing, Status, TitleSize } from '@/shared/theme/theme';
@@ -68,7 +69,7 @@ export function ChangesScreen() {
         {problem ? <ProblemNotice problem={problem} onRetry={refresh} /> : null}
 
         {!loaded || !ready ? (
-          <EmptyState loading title="Loading changes" />
+          <LoadingSkeleton label="Loading changes" onRetry={refresh} />
         ) : view === 'archive' ? (
           archivedChanges.length === 0 ? (
             problem ? null : <ArchiveEmpty />
