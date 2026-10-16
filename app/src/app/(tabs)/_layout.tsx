@@ -20,9 +20,9 @@ export default function TabsLayout() {
     <ChangeMarkersProvider>
       <View style={{ flex: 1 }}>
         <PushPrompt />
-                <NotesOutboxSync />
+        <NotesOutboxSync />
         <Tabs
-          screenOptions={{ headerShown: false }}
+          screenOptions={{ headerShown: false, animation: 'fade' }}
           tabBar={({ state, navigation }) => {
             const current = state.routes[state.index].name;
             const active = (Object.keys(ROUTE_FOR) as NavTabKey[]).find(
