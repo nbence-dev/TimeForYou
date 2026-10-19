@@ -5,6 +5,7 @@ import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, T
 
 import { Button } from '@/shared/components/button';
 import { EmptyState } from '@/shared/components/empty-state';
+import { LoadingSkeleton } from '@/shared/components/skeleton';
 import { LessonCard } from '@/shared/components/lesson-card';
 import { NavArrow } from '@/shared/components/nav-arrow';
 import { ScreenHeader } from '@/shared/components/screen-header';
@@ -72,18 +73,24 @@ export function TimetableScreen() {
           title="Timetable"
           right={
             <View style={styles.headerRight}>
-              {problem === 'offline' && lessons.length > 0 ? <StatusChip kind="offline" /> : null}
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel="Go to today"
                 hitSlop={8}
                 onPress={() => goToDay(today)}
-                style={styles.iconButton}>
-                <Ionicons name="today-outline" size={24} color={Brand.navy} />
+                style={styles.todayButton}>
+                <Ionicons name="today-outline" size={20} color={Brand.navy} />
+                <Text style={styles.todayButtonText}>Today</Text>
               </Pressable>
             </View>
           }
         />
+
+        {problem === 'offline' && lessons.length > 0 ? (
+          <View style={styles.offlineRow}>
+            <StatusChip kind="offline" />
+          </View>
+        ) : null}
 
         {lessons.length > 0 ? (<>
         <View style={styles.weekRow}>
@@ -283,18 +290,20 @@ function FetchingState({ problem, onRetry }: { problem: TimetableProblem; onRetr
     );
   }
 
+  // Still fetching (the first poll can take a few seconds after linking): skeleton rows, not a blank page.
+  if (problem === null) return <LoadingSkeleton label="Fetching your timetable" onRetry={onRetry} />;
+
   const offline = problem === 'offline';
   return (
     <EmptyState
-      icon={offline ? 'cloud-offline-outline' : undefined}
-      loading={!offline}
-      title={offline ? "You're offline" : 'Fetching your timetable'}
+      icon={offline ? 'cloud-offline-outline' : 'alert-circle-outline'}
+      title={offline ? "You're offline" : "Couldn't load your timetable"}
       text={
         offline
           ? 'Nothing is saved on this device yet. Your timetable will appear once you are back online.'
-          : 'Your lessons are on their way. This usually takes a few seconds after you link your account.'
+          : 'Something went wrong on our side. Try again in a moment.'
       }>
-      {offline || problem === 'failed' ? <Button label="Try again" variant="secondary" onPress={onRetry} /> : null}
+      <Button label="Try again" variant="secondary" onPress={onRetry} />
     </EmptyState>
   );
 }
@@ -313,7 +322,18 @@ const styles = StyleSheet.create({
     gap: Spacing.three,
   },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
-  iconButton: { padding: Spacing.one },
+  // The word next to the icon: a bare glyph did not say what the button does (#153).
+  todayButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.one,
+    minHeight: 36,
+    paddingHorizontal: Spacing.three,
+    borderRadius: Radius.pill,
+    backgroundColor: Colors.light.backgroundElement,
+  },
+  todayButtonText: { fontFamily: Font.textSemiBold, fontSize: 14, color: Brand.navy },
+  offlineRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
   weekRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
   weekTitle: { flex: 1, textAlign: 'center', fontFamily: Font.textBold, fontSize: TitleSize.section, color: Brand.navy },
   progress: { flexDirection: 'row', gap: Spacing.two },

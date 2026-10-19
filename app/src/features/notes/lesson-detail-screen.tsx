@@ -193,7 +193,7 @@ function NoteCard({
           <Text style={styles.confirmText}>Delete this note?</Text>
           <View style={styles.confirmButtons}>
             <View style={styles.flex}>
-              <Button label="Delete" variant="destructive" disabled={busy} onPress={onConfirmDelete} />
+              <Button label="Delete" variant="destructive" loading={busy} onPress={onConfirmDelete} />
             </View>
             <View style={styles.flex}>
               <Button label="Cancel" variant="secondary" disabled={busy} onPress={onCancelDelete} />
