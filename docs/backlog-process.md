@@ -16,8 +16,8 @@ into the tickets you actually branch from.
 
 **Only the current milestone's tickets exist.** Later waves are epics with no children, on purpose.
 
-The reason is written in the project's own history: the plan reversed materially twice between
-`grill-me-1.md` and `grill-me-2.md` — the C# port of `thenoim/webuntis` became a Node sidecar, and
+The reason is written in the project's own history: the plan reversed materially twice during
+planning — the C# port of `thenoim/webuntis` became a Node sidecar, and
 four backend services collapsed to two plus libraries — both times because an estimate met
 reality. Tickets written for week 4 on day 2 would have described work nobody ends up doing.
 
@@ -159,7 +159,7 @@ From #3's timeline. Themes, not tickets — the tickets get written when the wav
 | 4 | Oct 12–18 | Cloudflare Tunnel · cross-device sync · ICS in Apple/Google Calendar · demo script |
 | 5 | Oct 19–23 | **CD freeze Oct 21** · bug bash · rehearsals · MacBook prep · **showcase Oct 23** |
 
-**Cut order if the team slips** (`grill-me-2.md` §6): demo-controller UI → Hangfire dashboard
+**Cut order if the team slips** ([issue #3](https://github.com/nbence-dev/TimeForYou/issues/3)): demo-controller UI → Hangfire dashboard
 polish → calendar-notes-in-description.
 
 Wave 2 opens with the **Seam A harness** because every scenario ticket after it depends on that
