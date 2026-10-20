@@ -43,6 +43,22 @@ add-to-home-screen guide. There is no native iOS app and no paid Apple account i
 | :---: | :---: |
 | ![Lesson and note](docs/screenshots/lesson-note.png) | ![Settings](docs/screenshots/settings.png) |
 
+**Onboarding and offline**
+
+| Scan QR code | Offline: Today | Offline: note queued |
+| :---: | :---: | :---: |
+| ![Scan QR code](docs/screenshots/qr-scan.png) | ![Today, offline](docs/screenshots/offline-today.png) | ![Note waiting to sync](docs/screenshots/offline-note.png) |
+
+**Calendar feed and linked devices**
+
+| Calendar subscription | Lessons in Google Calendar | Linked devices |
+| :---: | :---: | :---: |
+| ![Calendar subscription](docs/screenshots/calendar-subscription.png) | ![Lessons in Google Calendar](docs/screenshots/calendar-google.png) | ![Linked devices](docs/screenshots/linked-devices.png) |
+
+**iPhone** — the built-in add-to-home-screen guide.
+
+![iPhone add-to-home-screen guide](docs/screenshots/ios-add-to-home-screen.png)
+
 **Push notification** — one grouped notification per poll cycle, naming the lead change.
 
 ![Push notification](docs/screenshots/notification.png)
@@ -50,6 +66,12 @@ add-to-home-screen guide. There is no native iOS app and no paid Apple account i
 **Demo controller** — the mock's `/demo` page, used to cancel or move a lesson and trigger a push.
 
 ![Demo controller](docs/screenshots/demo-controller.png)
+
+---
+
+## Demo video
+
+[![Watch the TimeForYou walkthrough on YouTube](https://img.youtube.com/vi/HrlrF7bU8Tk/maxresdefault.jpg)](https://www.youtube.com/watch?v=HrlrF7bU8Tk&t=18s)
 
 ---
 
