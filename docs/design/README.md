@@ -2,9 +2,7 @@
 
 How the app looks, and how to keep it looking like one app. Ticket: #80.
 
-The designs were made in the Stitch project "TimeForYou — Phase 1 reference". **The copies in
-[`screens/`](./screens/) are what you build from.** Stitch links are not stable and are not
-the reference.
+**The copies in [`screens/`](./screens/) are what you build from.** They are the reference.
 
 ## What binds and what does not
 
@@ -15,7 +13,7 @@ the reference.
 | The layout and the order of things on a screen | Small spacing differences |
 | The bottom nav in [`screens/nav.png`](./screens/nav.png) | |
 
-Not every screen shows the current nav. Stitch left some screens with an older bottom bar.
+Not every screen shows the current nav. Some screens still show an older bottom bar.
 **`nav.png` is the only nav standard**, with one correction: `nav.png`, `today.png` and
 `today-offline.png` label the second tab "Week". **The label is "Timetable".** The four tabs are
 Today, Timetable, Changes, Settings.

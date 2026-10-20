@@ -8,7 +8,7 @@
 ## 0a. Changelog — what changed after Deliverable 3
 
 Deliverable 3 was submitted from the 2026-08-29 version of this brief. A second planning session
-on 2026-09-21 (`grill-me-2.md`) reversed several decisions once implementation effort was
+on 2026-09-21 (see [issue #3](https://github.com/nbence-dev/TimeForYou/issues/3)) reversed several decisions once implementation effort was
 estimated properly. **Sections below have been updated to match; the submitted deliverable
 reflects the older design.** The differences, in full:
 
@@ -39,7 +39,7 @@ API and no scrapeable surface, and the team has no access to a real WebUntis ten
 even for testing. Nothing had been built against WebUntis yet, so this is a redirect, not a
 refactor. Dated record: the (now-deleted) handoff note this session amended from.
 
-| What | Grill-me-2 said (2026-09-21) | Now | Why |
+| What | The 2026-09-21 plan said | Now | Why |
 | --- | --- | --- | --- |
 | WebUntis access | **Node sidecar** wrapping `thenoim/webuntis`, flipped between the real tenant and the mock via `SIDECAR_UPSTREAM_URL` | **No sidecar.** `mock` is the system's only backend, permanently — not a demo stand-in | There is no real tenant left to flip to; a sidecar that only ever speaks to a mock proves nothing |
 | Containers | Six (api, worker, sidecar, mock, db, cloudflared) | **Five** (sidecar removed) | See above |
@@ -714,7 +714,7 @@ flowchart TB
 **On the sidecar (dead plan).** Two designs were tried and cut in sequence. The 2026-08-29 brief
 had the WebUntis client as a **C# port** of the npm package — reverse-engineering WebUntis's
 undocumented mobile-SSO flow was estimated at 3–5 dev-days against a 1-day budget, so the port was
-cut in favour of a **Node sidecar** wrapping the package instead (grill-me-2, 2026-09-21). That
+cut in favour of a **Node sidecar** wrapping the package instead (2026-09-21 planning session). That
 plan lasted two days: the university turned out to have switched to an internal system with no
 reachable WebUntis tenant at all, so a sidecar whose only real target was the mock proved nothing
 (§0a.1). `TimeForYou.WebUntis` keeps the same public C# interface through both reversals — only
