@@ -1,8 +1,10 @@
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
+import { useEffect } from 'react';
 import { View } from 'react-native';
 
 import { BrandSplash } from '@/shared/components/brand-splash';
+import { keepAppShellOffline } from '@/shared/pwa/service-worker';
 import { SessionProvider, useSession } from '@/shared/session/session';
 import { useAppFonts } from '@/shared/theme/fonts';
 
@@ -11,6 +13,8 @@ SplashScreen.preventAutoHideAsync().catch(() => {});
 
 export default function RootLayout() {
   const fontsReady = useAppFonts();
+  // Web only: lets an installed PWA open with no signal. A no-op on native.
+  useEffect(() => void keepAppShellOffline(), []);
   if (!fontsReady) return null;
   return (
     <SessionProvider>
